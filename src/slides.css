@@ -1,0 +1,371 @@
+/* One-off slide deck styled after the Claude Code desktop app (dark theme). Route: /slides */
+
+.slides-root {
+  --cc-bg: #262624;
+  --cc-bg-deep: #1f1e1d;
+  --cc-bg-raised: #32312d;
+  --cc-text: #faf9f5;
+  --cc-text-soft: #c9c7bc;
+  --cc-muted: #918f86;
+  --cc-faint: #706e65;
+  --cc-border: #3e3d38;
+  --cc-coral: #d97757;
+  --cc-green: #67b177;
+  --cc-font-mono:
+    "SF Mono", ui-monospace, "JetBrains Mono", "Cascadia Code", menlo, consolas, monospace;
+  --cc-font-serif: "Copernicus", "Tiempos Text", "Iowan Old Style", palatino, georgia, serif;
+
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--cc-font-mono);
+  color: var(--cc-text);
+  background: var(--cc-bg);
+}
+
+/* macOS titlebar */
+
+.slides-titlebar {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  height: 2.75rem;
+  padding-inline: 1rem;
+  border-bottom: 1px solid var(--cc-border);
+  background: var(--cc-bg-deep);
+}
+
+.slides-lights {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.slides-light {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+}
+
+.slides-light-close {
+  background: #ff5f57;
+}
+
+.slides-light-min {
+  background: #febc2e;
+}
+
+.slides-light-max {
+  background: #28c840;
+}
+
+.slides-title {
+  position: absolute;
+  inset-inline: 0;
+  font-size: 0.75rem;
+  color: var(--cc-muted);
+  text-align: center;
+  pointer-events: none;
+}
+
+.slides-fullscreen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-left: auto;
+  border: none;
+  border-radius: 0.375rem;
+  background: none;
+  color: var(--cc-muted);
+  cursor: pointer;
+}
+
+.slides-fullscreen:hover {
+  background: var(--cc-bg-raised);
+  color: var(--cc-text);
+}
+
+.slides-fullscreen:focus-visible {
+  outline: 2px solid var(--cc-coral);
+  outline-offset: 1px;
+}
+
+/* Slide stage (the part that transitions) */
+
+.slides-stage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  width: min(100% - 3rem, 54rem);
+  margin-inline: auto;
+  padding-block: 2rem;
+  view-transition-name: slide-stage;
+}
+
+/* The Claude Code prompt box, promoted to slide headline */
+
+.slides-prompt {
+  display: flex;
+  gap: 0.7em;
+  align-items: baseline;
+  padding: 0.9em 1em;
+  border: 1px solid var(--cc-border);
+  border-radius: 0.625rem;
+  background: var(--cc-bg-deep);
+  font-size: clamp(1.4rem, 3.4vw, 2.5rem);
+  overflow-wrap: anywhere;
+}
+
+.slides-prompt-caret {
+  color: var(--cc-coral);
+}
+
+.slides-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  margin-left: 0.18em;
+  vertical-align: text-bottom;
+  background: var(--cc-text);
+  animation: slides-blink 1.06s steps(1, end) infinite;
+}
+
+@keyframes slides-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Response lines under the prompt */
+
+.slides-points {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2.4rem;
+  padding-left: 0.35rem;
+  font-family: var(--cc-font-serif);
+  font-size: clamp(1.1rem, 1.9vw, 1.45rem);
+  color: var(--cc-text-soft);
+}
+
+.slides-point {
+  display: flex;
+  gap: 0.75em;
+  align-items: baseline;
+}
+
+.slides-point-dot {
+  color: var(--cc-green);
+}
+
+/* Title slide: the welcome box */
+
+.slides-welcome {
+  width: fit-content;
+  padding: 1.6rem 2.2rem;
+  border: 1px solid var(--cc-border);
+  border-radius: 0.75rem;
+  background: var(--cc-bg-deep);
+}
+
+.slides-welcome-heading {
+  font-size: clamp(1.6rem, 3.6vw, 2.6rem);
+}
+
+.slides-welcome-sub {
+  margin-top: 0.7rem;
+  font-family: var(--cc-font-serif);
+  font-size: clamp(1rem, 1.7vw, 1.25rem);
+  color: var(--cc-muted);
+}
+
+.slides-hint {
+  margin-top: 2.2rem;
+  font-family: var(--cc-font-serif);
+  font-size: 1rem;
+  color: var(--cc-faint);
+}
+
+/* Statusline */
+
+.slides-statusline {
+  display: flex;
+  flex-shrink: 0;
+  gap: 1.5rem;
+  justify-content: space-between;
+  padding: 0.45rem 1rem;
+  overflow: hidden;
+  border-top: 1px solid var(--cc-border);
+  background: var(--cc-bg-deep);
+  font-size: 0.78rem;
+  color: var(--cc-muted);
+  white-space: nowrap;
+}
+
+.slides-statusline-group {
+  display: flex;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.slides-asterisk {
+  color: var(--cc-coral);
+}
+
+.slides-bar-fill {
+  color: var(--cc-coral);
+}
+
+.slides-bar-rest {
+  color: var(--cc-faint);
+}
+
+@media (width < 40rem) {
+  .slides-nav-hint {
+    display: none;
+  }
+}
+
+.slides-timer {
+  min-width: 4ch;
+}
+
+.slides-timer-low {
+  color: var(--cc-coral);
+}
+
+.slides-pulse {
+  display: inline-block;
+  animation: slides-pulse 2s ease-in-out infinite;
+}
+
+@keyframes slides-pulse {
+  50% {
+    opacity: 0.35;
+    rotate: 90deg;
+  }
+}
+
+/* Optional screenshot / video per slide */
+
+.slides-media {
+  max-width: 100%;
+  max-height: min(45vh, 30rem);
+  margin-top: 2.2rem;
+  border: 1px solid var(--cc-border);
+  border-radius: 0.625rem;
+}
+
+/* Bits and pieces */
+
+.slides-num {
+  color: var(--cc-faint);
+}
+
+.slides-kbd {
+  display: inline-block;
+  padding: 0 0.4em;
+  border: 1px solid var(--cc-border);
+  border-radius: 0.25em;
+  background: var(--cc-bg-raised);
+  font-family: var(--cc-font-mono);
+  font-size: 0.82em;
+  line-height: 1.5;
+}
+
+.slides-dim {
+  color: var(--cc-faint);
+}
+
+.slides-code {
+  font-family: var(--cc-font-mono);
+  font-size: 0.88em;
+  color: var(--cc-coral);
+}
+
+.slides-link {
+  color: var(--cc-text-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--cc-faint);
+  text-underline-offset: 0.2em;
+}
+
+.slides-link:hover {
+  color: var(--cc-coral);
+  text-decoration-color: currentcolor;
+}
+
+.slides-link:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--cc-coral);
+  outline-offset: 2px;
+}
+
+/* View transitions: subtle directional fade + drift, stage only */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(slide-stage) {
+  animation: slides-exit-fwd 240ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+::view-transition-new(slide-stage) {
+  animation: slides-enter-fwd 240ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+html[data-slide-dir="back"]::view-transition-old(slide-stage) {
+  animation-name: slides-exit-back;
+}
+
+html[data-slide-dir="back"]::view-transition-new(slide-stage) {
+  animation-name: slides-enter-back;
+}
+
+@keyframes slides-exit-fwd {
+  to {
+    opacity: 0;
+    translate: -16px 0;
+  }
+}
+
+@keyframes slides-enter-fwd {
+  from {
+    opacity: 0;
+    translate: 16px 0;
+  }
+}
+
+@keyframes slides-exit-back {
+  to {
+    opacity: 0;
+    translate: 16px 0;
+  }
+}
+
+@keyframes slides-enter-back {
+  from {
+    opacity: 0;
+    translate: -16px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(slide-stage),
+  ::view-transition-new(slide-stage) {
+    animation: none;
+  }
+
+  .slides-cursor,
+  .slides-pulse {
+    animation: none;
+  }
+}
