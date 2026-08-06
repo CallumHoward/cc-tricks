@@ -57,7 +57,7 @@
     "eslint-plugin-react-you-might-not-need-an-effect": "^1.0.0",
     "eslint-plugin-testing-library": "^7.16.2",
     "fallow": "^2.89.0",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
     "lefthook": "^2.1.9",
     "nitro": "latest",
     "oxfmt": "^0.54.0",
