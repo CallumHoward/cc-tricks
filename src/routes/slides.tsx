@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
+
+import { Kbd } from "#/components/kbd";
+import { QrCode } from "#/components/qr-code";
+import { TRICKS } from "#/components/tricks";
+import type { Media, Trick } from "#/components/tricks";
 
 import slidesCss from "../slides.css?url";
 
@@ -18,197 +23,8 @@ export const Route = createFileRoute("/slides")({
 const SLIDE_SECONDS = 15;
 const BAR_CELLS = 14;
 
-function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="slides-kbd">{children}</kbd>;
-}
-
-function Dot() {
-  return <span className="slides-dim"> · </span>;
-}
-
-/** Screenshot (.png/.jpg/.webp) or video (.mp4/.webm/.mov), served from public/slides/ */
-type Media = { src: string; alt: string };
-
-type Trick = {
-  n: number;
-  input: React.ReactNode;
-  points: React.ReactNode[];
-  media?: Media[];
-};
-
-const TRICKS: Trick[] = [
-  {
-    n: 1,
-    input: "/recap",
-    points: [],
-    media: [
-      { src: "/slides/recap.png", alt: "/recap summarising the session in the terminal" },
-      { src: "/slides/recap-desktop.png", alt: "/recap in the Claude Code desktop app" },
-    ],
-  },
-  {
-    n: 2,
-    input: (
-      <>
-        <Kbd>esc</Kbd> <Kbd>esc</Kbd>
-      </>
-    ),
-    points: ["rewind the conversation"],
-    media: [{ src: "/slides/rewind.png", alt: "the rewind picker after pressing esc esc" }],
-  },
-  { n: 3, input: "--worktree", points: ["Claude-managed git worktrees"] },
-  {
-    n: 4,
-    input: (
-      <>
-        /color
-        <Dot />
-        /rename
-      </>
-    ),
-    points: [],
-    media: [{ src: "/slides/color-rename.png", alt: "/color and /rename in action" }],
-  },
-  {
-    n: 5,
-    input: "!",
-    points: ["run a shell command and add the output to Claude’s context"],
-    media: [{ src: "/slides/inline-shell.png", alt: "a ! shell command and its output inline" }],
-  },
-  {
-    n: 6,
-    input: (
-      <>
-        <Kbd>←</Kbd> <span className="slides-dim">or</span> --agents
-      </>
-    ),
-    points: ["for agents"],
-    media: [{ src: "/slides/agents.png", alt: "the agents panel" }],
-  },
-  {
-    n: 7,
-    input: "/resume",
-    points: [],
-    media: [{ src: "/slides/resume.png", alt: "the /resume session picker" }],
-  },
-  {
-    n: 8,
-    input: "/statusline",
-    points: [
-      <>
-        or <code className="slides-code">npx -y ccstatusline@latest</code>
-      </>,
-    ],
-    media: [{ src: "/slides/statusline.png", alt: "a customised statusline" }],
-  },
-  { n: 9, input: "auto mode", points: [] },
-  {
-    n: 10,
-    input: (
-      <>
-        <Kbd>ctrl</Kbd>+<Kbd>t</Kbd>
-      </>
-    ),
-    points: ["tasks"],
-  },
-  {
-    n: 11,
-    input: (
-      <>
-        <Kbd>ctrl</Kbd>+<Kbd>s</Kbd>
-      </>
-    ),
-    points: ["stash"],
-  },
-  {
-    n: 12,
-    input: (
-      <>
-        <Kbd>opt</Kbd>+<Kbd>p</Kbd>
-      </>
-    ),
-    points: [
-      <>
-        models — e.g. for changing models with <code className="slides-code">/model</code>
-      </>,
-    ],
-    media: [{ src: "/slides/select-model.png", alt: "the model picker" }],
-  },
-  {
-    n: 13,
-    input: "/ide",
-    points: ["also shortcuts to share files or line ranges"],
-  },
-  {
-    n: 14,
-    input: (
-      <>
-        /remote
-        <Dot />
-        /teleport
-      </>
-    ),
-    points: [],
-  },
-  { n: 15, input: "/advisor", points: [] },
-  { n: 16, input: "/insights", points: [] },
-  {
-    n: 17,
-    input: (
-      <>
-        /btw
-        <Dot />
-        /fork
-      </>
-    ),
-    points: [
-      <>
-        <code className="slides-code">/btw</code> is async and imports context
-      </>,
-    ],
-  },
-  {
-    n: 18,
-    input: "/tui fullscreen",
-    points: ["expand “Ran shell command”", "sticky prompt header"],
-  },
-  {
-    n: 19,
-    input: "/goal",
-    points: [
-      <a key="goal-docs" className="slides-link" href="https://code.claude.com/docs/en/goal">
-        keep Claude working toward a goal — docs
-      </a>,
-    ],
-  },
-  {
-    n: 20,
-    input: "readline",
-    points: [
-      <>
-        <Kbd>ctrl</Kbd>+<Kbd>x</Kbd> <Kbd>ctrl</Kbd>+<Kbd>e</Kbd> — edit the prompt in $EDITOR
-      </>,
-      <>
-        <Kbd>ctrl</Kbd>+<Kbd>a</Kbd> / <Kbd>ctrl</Kbd>+<Kbd>e</Kbd> — jump to start / end of line
-      </>,
-      <>
-        <Kbd>ctrl</Kbd>+<Kbd>r</Kbd> — search prompt history
-      </>,
-      <>
-        map <Kbd>shift</Kbd>+<Kbd>enter</Kbd>
-      </>,
-      <a
-        key="readline-sheet"
-        className="slides-link"
-        href="https://readline.kablamo.org/emacs.html"
-      >
-        readline cheat sheet
-      </a>,
-    ],
-  },
-];
-
-const TOTAL = TRICKS.length + 1;
+// title + tricks + outro
+const TOTAL = TRICKS.length + 2;
 
 function isVideo(src: string) {
   return /\.(mp4|webm|mov)$/.test(src);
@@ -240,7 +56,10 @@ function TitleSlide() {
         <p className="slides-welcome-heading">
           <span className="slides-asterisk">✳</span> Claude Code tricks
         </p>
-        <p className="slides-welcome-sub">20 tricks × {SLIDE_SECONDS}s, pechakucha style</p>
+        <p className="slides-welcome-sub">
+          {TRICKS.length} tricks × {SLIDE_SECONDS}s, pechakucha style
+        </p>
+        <p className="slides-welcome-author">Callum Howard</p>
       </div>
       <p className="slides-hint">
         press <Kbd>→</Kbd> to begin
@@ -284,6 +103,45 @@ function TrickSlide({ trick }: { trick: Trick }) {
   );
 }
 
+const subscribeNoop = () => () => {};
+
+function OutroSlide() {
+  // origin is only knowable client-side; SSR renders the frame without the QR
+  const origin = useSyncExternalStore(
+    subscribeNoop,
+    () => window.location.origin,
+    () => undefined,
+  );
+  const shownotesUrl = origin ? `${origin}/shownotes` : undefined;
+
+  return (
+    <div className="slides-outro">
+      <div className="slides-outro-info">
+        <p className="slides-outro-heading">
+          <span className="slides-asterisk">✳</span> shownotes
+        </p>
+        {shownotesUrl && (
+          <a className="slides-link slides-outro-url" href="/shownotes">
+            {shownotesUrl.replace(/^https?:\/\//, "")}
+          </a>
+        )}
+        <div className="slides-outro-bio">
+          <p className="slides-outro-name">Callum Howard</p>
+          <p className="slides-outro-role">Frontend Software Engineer @ Checkbox</p>
+          <a className="slides-link" href="https://callumhoward.com">
+            callumhoward.com
+          </a>
+        </div>
+      </div>
+      {shownotesUrl && (
+        <div className="slides-qr-card">
+          <QrCode value={shownotesUrl} className="slides-qr" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 const KEY_TARGETS = new Map<string, (current: number) => number>([
   ["ArrowRight", (current) => current + 1],
   ["PageDown", (current) => current + 1],
@@ -294,50 +152,36 @@ const KEY_TARGETS = new Map<string, (current: number) => number>([
   ["End", () => TOTAL - 1],
 ]);
 
-function FullscreenButton() {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+function toggleFullscreen() {
+  if (document.fullscreenElement) void document.exitFullscreen();
+  else void document.documentElement.requestFullscreen();
+}
 
-  useEffect(() => {
-    const onFullscreenChange = () => setIsFullscreen(document.fullscreenElement != null);
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, []);
+function TimerChip({ secondsLeft, paused }: { secondsLeft: number; paused: boolean }) {
+  const timerClass = [
+    "slides-timer",
+    paused ? "slides-timer-paused" : "",
+    !paused && secondsLeft <= 5 ? "slides-timer-low" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
-    <button
-      type="button"
-      className="slides-fullscreen"
-      aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-      title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-      onClick={(event) => {
-        if (document.fullscreenElement) void document.exitFullscreen();
-        else void document.documentElement.requestFullscreen();
-        // return focus to the deck so space/enter keep navigating slides
-        event.currentTarget.blur();
-      }}
-    >
-      <svg
-        viewBox="0 0 16 16"
-        width="14"
-        height="14"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        {isFullscreen ? (
-          <path d="M2 6h4V2M14 6h-4V2M2 10h4v4M14 10h-4v4" />
-        ) : (
-          <path d="M6 2H2v4M10 2h4v4M6 14H2v-4M10 14h4v-4" />
-        )}
-      </svg>
-    </button>
+    <span className={timerClass}>
+      <span className="slides-asterisk slides-pulse">✳</span> {secondsLeft}s
+    </span>
   );
 }
 
-function Statusline({ index, secondsLeft }: { index: number; secondsLeft: number }) {
+function Statusline({
+  index,
+  secondsLeft,
+  paused,
+}: {
+  index: number;
+  secondsLeft: number;
+  paused: boolean;
+}) {
   const filled = Math.round(((index + 1) / TOTAL) * BAR_CELLS);
 
   return (
@@ -350,11 +194,7 @@ function Statusline({ index, secondsLeft }: { index: number; secondsLeft: number
         <span>⎇ main</span>
       </div>
       <div className="slides-statusline-group">
-        {index > 0 && (
-          <span className={secondsLeft <= 5 ? "slides-timer slides-timer-low" : "slides-timer"}>
-            <span className="slides-asterisk slides-pulse">✳</span> {secondsLeft}s
-          </span>
-        )}
+        {index > 0 && <TimerChip secondsLeft={secondsLeft} paused={paused} />}
         <span aria-hidden>
           <span className="slides-bar-fill">{"█".repeat(filled)}</span>
           <span className="slides-bar-rest">{"░".repeat(BAR_CELLS - filled)}</span>
@@ -368,40 +208,102 @@ function Statusline({ index, secondsLeft }: { index: number; secondsLeft: number
   );
 }
 
-function SlidesDeck() {
-  const [index, setIndex] = useState(0);
-  const [secondsLeft, setSecondsLeft] = useState(SLIDE_SECONDS);
-  const indexRef = useRef(0);
-  const secondsRef = useRef(SLIDE_SECONDS);
+/* functional traffic lights: red restarts, yellow pauses the timer, green fullscreens */
+function Titlebar({
+  paused,
+  onRestart,
+  onTogglePause,
+}: {
+  paused: boolean;
+  onRestart: () => void;
+  onTogglePause: () => void;
+}) {
+  return (
+    <header className="slides-titlebar">
+      <div className="slides-lights">
+        <button
+          type="button"
+          className="slides-light slides-light-close"
+          aria-label="Go to first slide"
+          title="First slide"
+          onClick={(event) => {
+            onRestart();
+            event.currentTarget.blur();
+          }}
+        />
+        <button
+          type="button"
+          className="slides-light slides-light-min"
+          aria-label={paused ? "Resume timer" : "Pause timer"}
+          title={paused ? "Resume timer" : "Pause timer"}
+          onClick={(event) => {
+            onTogglePause();
+            event.currentTarget.blur();
+          }}
+        />
+        <button
+          type="button"
+          className="slides-light slides-light-max"
+          aria-label="Toggle fullscreen"
+          title="Fullscreen"
+          onClick={(event) => {
+            toggleFullscreen();
+            event.currentTarget.blur();
+          }}
+        />
+      </div>
+      <span className="slides-title">Claude Code — ~/git/cc-tricks</span>
+    </header>
+  );
+}
 
-  const goTo = useCallback((next: number) => {
-    const clamped = Math.min(Math.max(next, 0), TOTAL - 1);
-    const current = indexRef.current;
-    if (clamped === current) return false;
-    indexRef.current = clamped;
-    secondsRef.current = SLIDE_SECONDS;
-    document.documentElement.dataset.slideDir = clamped > current ? "fwd" : "back";
-    document.startViewTransition(() => {
-      flushSync(() => {
-        setIndex(clamped);
-        setSecondsLeft(SLIDE_SECONDS);
-      });
-    });
-    window.history.replaceState(null, "", clamped === 0 ? window.location.pathname : `#${clamped}`);
-    return true;
-  }, []);
+function SlideContent({ index }: { index: number }) {
+  if (index === 0) return <TitleSlide />;
+  const trick = TRICKS.at(index - 1);
+  if (trick) return <TrickSlide trick={trick} />;
+  return <OutroSlide />;
+}
 
-  // Deep-link: /slides#7 opens at trick 7
+/** Directional view transition + hash update for a slide change */
+function startSlideTransition(current: number, next: number, commit: () => void) {
+  document.documentElement.dataset.slideDir = next > current ? "fwd" : "back";
+  document.startViewTransition(() => {
+    flushSync(commit);
+  });
+  window.history.replaceState(null, "", next === 0 ? window.location.pathname : `#${next}`);
+}
+
+/** Deep-link: /slides#7 opens at trick 7 */
+function useHashDeepLink(goTo: (next: number) => boolean) {
   useEffect(() => {
     const fromHash = Number.parseInt(window.location.hash.slice(1), 10);
+    // eslint-disable-next-line no-effect/no-pass-data-to-parent -- one-shot sync from the URL hash
     if (Number.isInteger(fromHash) && fromHash >= 1 && fromHash < TOTAL) goTo(fromHash);
   }, [goTo]);
+}
 
-  // PechaKucha-style countdown: paused on the title slide, restarts on every slide
-  // change, auto-advances at zero (and parks at 0s on the final slide)
+/**
+ * PechaKucha-style countdown: idle on the title slide, restarts on every slide change,
+ * auto-advances at zero (and parks at 0s on the final slide)
+ */
+function useCountdown({
+  index,
+  paused,
+  goTo,
+  indexRef,
+  secondsRef,
+  setSecondsLeft,
+}: {
+  index: number;
+  paused: boolean;
+  goTo: (next: number) => boolean;
+  indexRef: React.RefObject<number>;
+  secondsRef: React.RefObject<number>;
+  setSecondsLeft: (seconds: number) => void;
+}) {
   useEffect(() => {
-    if (index === 0) return;
-    const id = setInterval(() => {
+    if (index === 0 || paused) return;
+    const tick = () => {
       const next = Math.max(0, secondsRef.current - 1);
       secondsRef.current = next;
       if (next === 0) {
@@ -409,10 +311,13 @@ function SlidesDeck() {
       } else {
         setSecondsLeft(next);
       }
-    }, 1000);
+    };
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [index, goTo]);
+  }, [index, paused, goTo, indexRef, secondsRef, setSecondsLeft]);
+}
 
+function useSlideKeys(goTo: (next: number) => boolean, indexRef: React.RefObject<number>) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = KEY_TARGETS.get(event.key);
@@ -422,27 +327,46 @@ function SlidesDeck() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [goTo]);
+  }, [goTo, indexRef]);
+}
 
-  const trick = index > 0 ? TRICKS[index - 1] : undefined;
+function SlidesDeck() {
+  const [index, setIndex] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(SLIDE_SECONDS);
+  const [paused, setPaused] = useState(false);
+  const indexRef = useRef(0);
+  const secondsRef = useRef(SLIDE_SECONDS);
+
+  const goTo = useCallback((next: number) => {
+    const clamped = Math.min(Math.max(next, 0), TOTAL - 1);
+    const current = indexRef.current;
+    if (clamped === current) return false;
+    indexRef.current = clamped;
+    secondsRef.current = SLIDE_SECONDS;
+    startSlideTransition(current, clamped, () => {
+      setIndex(clamped);
+      setSecondsLeft(SLIDE_SECONDS);
+    });
+    return true;
+  }, []);
+
+  useHashDeepLink(goTo);
+  useCountdown({ index, paused, goTo, indexRef, secondsRef, setSecondsLeft });
+  useSlideKeys(goTo, indexRef);
 
   return (
-    <div className="slides-root">
-      <header className="slides-titlebar">
-        <div className="slides-lights" aria-hidden>
-          <span className="slides-light slides-light-close" />
-          <span className="slides-light slides-light-min" />
-          <span className="slides-light slides-light-max" />
-        </div>
-        <span className="slides-title">Claude Code — ~/git/cc-tricks</span>
-        <FullscreenButton />
-      </header>
+    <div className="cc-theme slides-root">
+      <Titlebar
+        paused={paused}
+        onRestart={() => goTo(0)}
+        onTogglePause={() => setPaused((wasPaused) => !wasPaused)}
+      />
 
       <main className="slides-stage" aria-live="polite">
-        {trick ? <TrickSlide trick={trick} /> : <TitleSlide />}
+        <SlideContent index={index} />
       </main>
 
-      <Statusline index={index} secondsLeft={secondsLeft} />
+      <Statusline index={index} secondsLeft={secondsLeft} paused={paused} />
     </div>
   );
 }

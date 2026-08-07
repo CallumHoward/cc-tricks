@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SlidesRouteImport } from './routes/slides'
+import { Route as ShownotesRouteImport } from './routes/shownotes'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SlidesRoute = SlidesRouteImport.update({
   id: '/slides',
   path: '/slides',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShownotesRoute = ShownotesRouteImport.update({
+  id: '/shownotes',
+  path: '/shownotes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -25,27 +31,31 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/shownotes': typeof ShownotesRoute
   '/slides': typeof SlidesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/shownotes': typeof ShownotesRoute
   '/slides': typeof SlidesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/shownotes': typeof ShownotesRoute
   '/slides': typeof SlidesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/slides'
+  fullPaths: '/' | '/shownotes' | '/slides'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/slides'
-  id: '__root__' | '/' | '/slides'
+  to: '/' | '/shownotes' | '/slides'
+  id: '__root__' | '/' | '/shownotes' | '/slides'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ShownotesRoute: typeof ShownotesRoute
   SlidesRoute: typeof SlidesRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/slides'
       fullPath: '/slides'
       preLoaderRoute: typeof SlidesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shownotes': {
+      id: '/shownotes'
+      path: '/shownotes'
+      fullPath: '/shownotes'
+      preLoaderRoute: typeof ShownotesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ShownotesRoute: ShownotesRoute,
   SlidesRoute: SlidesRoute,
 }
 export const routeTree = rootRouteImport
