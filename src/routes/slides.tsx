@@ -26,19 +26,26 @@ function Dot() {
   return <span className="slides-dim"> · </span>;
 }
 
+/** Screenshot (.png/.jpg/.webp) or video (.mp4/.webm/.mov), served from public/slides/ */
+type Media = { src: string; alt: string };
+
 type Trick = {
   n: number;
   input: React.ReactNode;
   points: React.ReactNode[];
-  /**
-   * Screenshot (.png/.jpg/.webp) or video (.mp4/.webm/.mov), served from public/, e.g.
-   * "/slides/worktree.mp4"
-   */
-  media?: { src: string; alt: string };
+  media?: Media[];
 };
 
 const TRICKS: Trick[] = [
-  { n: 1, input: "/recap", points: [] },
+  {
+    n: 1,
+    input: "/recap",
+    points: [],
+    media: [
+      { src: "/slides/recap.png", alt: "/recap summarising the session in the terminal" },
+      { src: "/slides/recap-desktop.png", alt: "/recap in the Claude Code desktop app" },
+    ],
+  },
   {
     n: 2,
     input: (
@@ -47,6 +54,7 @@ const TRICKS: Trick[] = [
       </>
     ),
     points: ["rewind the conversation"],
+    media: [{ src: "/slides/rewind.png", alt: "the rewind picker after pressing esc esc" }],
   },
   { n: 3, input: "--worktree", points: ["Claude-managed git worktrees"] },
   {
@@ -59,11 +67,13 @@ const TRICKS: Trick[] = [
       </>
     ),
     points: [],
+    media: [{ src: "/slides/color-rename.png", alt: "/color and /rename in action" }],
   },
   {
     n: 5,
     input: "!",
     points: ["run a shell command and add the output to Claude’s context"],
+    media: [{ src: "/slides/inline-shell.png", alt: "a ! shell command and its output inline" }],
   },
   {
     n: 6,
@@ -73,8 +83,14 @@ const TRICKS: Trick[] = [
       </>
     ),
     points: ["for agents"],
+    media: [{ src: "/slides/agents.png", alt: "the agents panel" }],
   },
-  { n: 7, input: "/resume", points: [] },
+  {
+    n: 7,
+    input: "/resume",
+    points: [],
+    media: [{ src: "/slides/resume.png", alt: "the /resume session picker" }],
+  },
   {
     n: 8,
     input: "/statusline",
@@ -83,6 +99,7 @@ const TRICKS: Trick[] = [
         or <code className="slides-code">npx -y ccstatusline@latest</code>
       </>,
     ],
+    media: [{ src: "/slides/statusline.png", alt: "a customised statusline" }],
   },
   { n: 9, input: "auto mode", points: [] },
   {
@@ -115,6 +132,7 @@ const TRICKS: Trick[] = [
         models — e.g. for changing models with <code className="slides-code">/model</code>
       </>,
     ],
+    media: [{ src: "/slides/select-model.png", alt: "the model picker" }],
   },
   {
     n: 13,
@@ -196,7 +214,7 @@ function isVideo(src: string) {
   return /\.(mp4|webm|mov)$/.test(src);
 }
 
-function SlideMedia({ media }: { media: NonNullable<Trick["media"]> }) {
+function SlideMedia({ media }: { media: Media }) {
   if (isVideo(media.src)) {
     // key forces a reload (and autoplay) when the slide changes
     return (
@@ -241,6 +259,14 @@ function TrickSlide({ trick }: { trick: Trick }) {
           <span className="slides-cursor" aria-hidden />
         </span>
       </h1>
+      {trick.media && (
+        // keyed so the delayed fade-in restarts on every slide change
+        <div key={trick.n} className="slides-media-row">
+          {trick.media.map((media) => (
+            <SlideMedia key={media.src} media={media} />
+          ))}
+        </div>
+      )}
       {trick.points.length > 0 && (
         <ul className="slides-points">
           {trick.points.map((point, i) => (
@@ -254,7 +280,6 @@ function TrickSlide({ trick }: { trick: Trick }) {
           ))}
         </ul>
       )}
-      {trick.media && <SlideMedia media={trick.media} />}
     </>
   );
 }
