@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { flushSync } from "react-dom";
 
 import { QrCode } from "#/components/qr-code";
+import { SupportStack } from "#/components/support-icons";
 import { TRICKS } from "#/components/tricks";
 import type { Media, Trick } from "#/components/tricks";
 
@@ -110,6 +111,7 @@ function TrickSlide({ trick }: { trick: Trick }) {
           ))}
         </ul>
       )}
+      <SupportStack support={trick.support} />
     </>
   );
 }

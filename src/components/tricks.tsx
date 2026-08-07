@@ -1,4 +1,5 @@
 import { Dot, Kbd } from "#/components/kbd";
+import type { Surface } from "#/components/support-icons";
 
 /** Screenshot (.png/.jpg/.webp) or video (.mp4/.webm/.mov), served from public/slides/ */
 export type Media = { src: string; alt: string };
@@ -7,6 +8,8 @@ export type Trick = {
   n: number;
   input: React.ReactNode;
   points: React.ReactNode[];
+  /** Surfaces where the trick works or a close equivalent exists (fixed render order) */
+  support: readonly Surface[];
   media?: Media[];
   /** One-liner shown on /shownotes when the slide itself has no points */
   summary?: string;
@@ -17,6 +20,7 @@ export type Trick = {
 export const TRICKS: Trick[] = [
   {
     n: 1,
+    support: ["claude-term", "claude-app", "codex-term"],
     input: "/recap",
     points: [],
     media: [
@@ -28,6 +32,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 2,
+    support: ["claude-term", "claude-app", "codex-term", "codex-app"],
     input: (
       <>
         <Kbd>esc</Kbd> <Kbd>esc</Kbd>
@@ -42,12 +47,14 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 3,
+    support: ["claude-term", "claude-app", "codex-app"],
     input: "--worktree",
     points: ["Claude-managed git worktrees"],
     docs: [{ label: "Worktrees", href: "https://code.claude.com/docs/en/worktrees" }],
   },
   {
     n: 4,
+    support: ["claude-term", "codex-term", "codex-app"],
     input: (
       <>
         /color
@@ -65,6 +72,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 5,
+    support: ["claude-term", "codex-term"],
     input: "!",
     points: ["run a shell command and add the output to Claude’s context"],
     media: [{ src: "/slides/inline-shell.png", alt: "a ! shell command and its output inline" }],
@@ -72,6 +80,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 6,
+    support: ["claude-term", "claude-app", "codex-term", "codex-app"],
     input: (
       <>
         <Kbd>←</Kbd> <span className="slides-dim">or</span> --agents
@@ -86,6 +95,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 7,
+    support: ["claude-term", "claude-app", "codex-term", "codex-app"],
     input: "/resume",
     points: [],
     media: [{ src: "/slides/resume.png", alt: "the /resume session picker" }],
@@ -94,6 +104,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 8,
+    support: ["claude-term"],
     input: "/statusline",
     points: [
       <>
@@ -108,6 +119,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 9,
+    support: ["claude-term", "claude-app", "codex-term", "codex-app"],
     input: "auto mode",
     points: [],
     summary: "let Claude work without permission prompts",
@@ -120,6 +132,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 10,
+    support: ["claude-term"],
     input: (
       <>
         <Kbd>ctrl</Kbd>+<Kbd>s</Kbd>
@@ -130,6 +143,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 11,
+    support: ["claude-term", "claude-app", "codex-term", "codex-app"],
     input: (
       <>
         <Kbd>opt</Kbd>+<Kbd>p</Kbd>
@@ -145,6 +159,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 12,
+    support: ["claude-term", "claude-app", "codex-term", "codex-app"],
     input: (
       <>
         /remote
@@ -164,6 +179,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 13,
+    support: ["claude-term", "claude-app", "codex-term", "codex-app"],
     input: "/advisor",
     points: [],
     summary: "a second model reviews the work at key moments",
@@ -171,6 +187,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 14,
+    support: ["claude-term", "claude-app"],
     input: "/insights",
     points: [],
     summary: "a report on your sessions: project areas, patterns, friction points",
@@ -178,6 +195,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 15,
+    support: ["claude-term", "claude-app", "codex-term", "codex-app"],
     input: (
       <>
         /btw
@@ -203,6 +221,7 @@ export const TRICKS: Trick[] = [
   },
   {
     n: 16,
+    support: ["claude-term", "codex-term"],
     input: "readline",
     points: [
       <>
