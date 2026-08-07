@@ -358,6 +358,22 @@
   line-height: 1.5;
 }
 
+.slides-kbd-button {
+  padding: 0.1em 0.6em;
+  color: inherit;
+  cursor: pointer;
+}
+
+.slides-kbd-button:hover {
+  border-color: var(--cc-coral);
+  color: var(--cc-text);
+}
+
+.slides-kbd-button:focus-visible {
+  outline: 2px solid var(--cc-coral);
+  outline-offset: 2px;
+}
+
 .slides-dim {
   color: var(--cc-faint);
 }

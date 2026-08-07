@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 
-import { Kbd } from "#/components/kbd";
 import { QrCode } from "#/components/qr-code";
 import { TRICKS } from "#/components/tricks";
 import type { Media, Trick } from "#/components/tricks";
@@ -49,7 +48,7 @@ function SlideMedia({ media }: { media: Media }) {
   return <img className="slides-media" src={media.src} alt={media.alt} />;
 }
 
-function TitleSlide() {
+function TitleSlide({ onBegin }: { onBegin: () => void }) {
   return (
     <>
       <div className="slides-welcome">
@@ -62,7 +61,19 @@ function TitleSlide() {
         <p className="slides-welcome-author">Callum Howard</p>
       </div>
       <p className="slides-hint">
-        press <Kbd>→</Kbd> to begin
+        press{" "}
+        <button
+          type="button"
+          className="slides-kbd slides-kbd-button"
+          aria-label="Next slide"
+          onClick={(event) => {
+            onBegin();
+            event.currentTarget.blur();
+          }}
+        >
+          →
+        </button>{" "}
+        to begin
       </p>
     </>
   );
@@ -257,8 +268,8 @@ function Titlebar({
   );
 }
 
-function SlideContent({ index }: { index: number }) {
-  if (index === 0) return <TitleSlide />;
+function SlideContent({ index, onBegin }: { index: number; onBegin: () => void }) {
+  if (index === 0) return <TitleSlide onBegin={onBegin} />;
   const trick = TRICKS.at(index - 1);
   if (trick) return <TrickSlide trick={trick} />;
   return <OutroSlide />;
@@ -363,7 +374,7 @@ function SlidesDeck() {
       />
 
       <main className="slides-stage" aria-live="polite">
-        <SlideContent index={index} />
+        <SlideContent index={index} onBegin={() => goTo(1)} />
       </main>
 
       <Statusline index={index} secondsLeft={secondsLeft} paused={paused} />
