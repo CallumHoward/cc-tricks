@@ -90,6 +90,7 @@
 /* Slide stage (the part that transitions) */
 
 .slides-stage {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -98,6 +99,42 @@
   margin-inline: auto;
   padding-block: 2rem;
   view-transition-name: slide-stage;
+}
+
+/* Supported-surface icons, stacked in the bottom-right corner of the stage */
+
+.slides-support {
+  position: absolute;
+  right: 0;
+  bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.slides-support-icon {
+  display: block;
+}
+
+.slides-support-claude {
+  color: var(--cc-coral);
+}
+
+.slides-support-codex {
+  color: var(--cc-text-soft);
+}
+
+.slides-support-badge {
+  fill: var(--cc-bg-deep);
+  stroke: var(--cc-muted);
+}
+
+.slides-support-bar {
+  stroke: var(--cc-muted);
+}
+
+.slides-support-caret {
+  stroke: var(--cc-text);
 }
 
 /* The Claude Code prompt box, promoted to slide headline */
