@@ -2,7 +2,7 @@ import type { Config } from "stylelint";
 
 const config: Config = {
   extends: ["stylelint-config-standard"],
-  ignoreFiles: ["dist/**", ".output/**", "node_modules/**"],
+  ignoreFiles: [".agents/**", "dist/**", ".output/**", "node_modules/**"],
   reportDescriptionlessDisables: true,
   reportInvalidScopeDisables: true,
   reportNeedlessDisables: true,
