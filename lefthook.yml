@@ -1,7 +1,7 @@
 pre-commit:
   parallel: true
   jobs:
-    - run: pnpm exec oxlint --quiet --fix '{staged_files}'
+    - run: pnpm exec oxlint --quiet --fix --no-error-on-unmatched-pattern '{staged_files}'
       glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
       stage_fixed: true
     - run: pnpm exec stylelint --fix '{staged_files}'
