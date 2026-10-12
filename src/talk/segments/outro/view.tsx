@@ -18,6 +18,7 @@ import { setStyle, setText, typeClip, useFrameRef } from "#/talk/kit/tui/use-fra
 import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { scriptFor } from "#/talk/script";
 import { HomeRest } from "#/talk/segments/shared/home";
+import { SHOWNOTES_URL, shownotesLabel } from "#/talk/shownotes-url";
 
 import {
   BAR,
@@ -206,11 +207,7 @@ function References({ host }: { host: string }) {
         end={OUT.l1At + 0.45}
         className="type-body fin-ink"
       />
-      <Typed
-        text={`${host}${qr.ui[1] ?? "/shownotes"}`}
-        at={OUT.urlAt}
-        className="type-code fin-url"
-      />
+      <Typed text={host} at={OUT.urlAt} className="type-code fin-url" />
       <div className="fin-ref-list">
         {qr.refs.map((ref, i) => {
           const [title = ref.label, source] = ref.label.split(" · ");
@@ -306,9 +303,8 @@ function PlateBot() {
 
 /** Outro-thesis → outro-qr: the short clean bar, then the prompt box as an ivory QR plate. */
 function BonePlate() {
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
-  const host = typeof window === "undefined" ? "" : window.location.host;
-  const value = `${origin}/shownotes`;
+  const value = SHOWNOTES_URL;
+  const host = shownotesLabel(value);
   return (
     <World camera={CRANE}>
       <Thesis />

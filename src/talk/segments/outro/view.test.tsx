@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { Clock } from "#/engine/clock/clock";
 import { StageProvider } from "#/engine/stage/react";
 import { createStage } from "#/engine/stage/stage";
+import { NOTION_SHOWNOTES } from "#/talk/shownotes-url";
 
 import OutroSegment from "./view";
 
@@ -45,9 +46,7 @@ describe("OutroSegment", () => {
 
   it("should show the shownotes QR and the references at the last stop", () => {
     renderAt(293.5);
-    expect(
-      screen.getByTitle("QR code linking to http://localhost:3000/shownotes"),
-    ).toBeInTheDocument();
+    expect(screen.getByTitle(`QR code linking to ${NOTION_SHOWNOTES}`)).toBeInTheDocument();
     expect(screen.getByText("Orchestrating Parallel Agents")).toBeVisible();
     expect(screen.getByText("Shownotes,")).toBeVisible();
   });
