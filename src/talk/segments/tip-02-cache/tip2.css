@@ -1,0 +1,164 @@
+/* Tip 2 plate styling: palette tokens only. */
+
+.t2-tag {
+  padding: 2px 14px;
+  border: 2px solid var(--muted);
+  border-radius: 6px;
+  background: var(--bg-deep);
+  color: var(--soft);
+  letter-spacing: 0.08em;
+}
+
+.t2-bracket {
+  height: 14px;
+  border: 3px solid var(--text);
+  border-top: 0;
+}
+
+.t2-bracket--clay {
+  border-color: var(--clay);
+}
+
+.t2-emboss {
+  width: 72px;
+  height: 72px;
+  color: var(--clay-wash-35);
+  line-height: 0;
+}
+
+.t2-emboss svg {
+  width: 72px;
+  height: 72px;
+}
+
+.t2-drawer-tag {
+  padding: 0 14px;
+  border: 2px solid var(--clay-wash-55);
+  border-radius: 6px;
+  background: var(--bg-deep);
+  color: var(--clay-hi);
+}
+
+.t2-strike {
+  position: absolute;
+  top: 52%;
+  right: -6px;
+  left: -6px;
+  height: 4px;
+  background: var(--clay);
+  transform-origin: 0 50%;
+}
+
+.t2-col-value {
+  width: 160px;
+  color: var(--text);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.t2-table {
+  display: grid;
+  gap: 4px;
+}
+
+.t2-table__row > div {
+  display: grid;
+  grid-template-columns: 250px 150px 120px;
+  font-variant-numeric: tabular-nums;
+}
+
+.t2-w1 .dk-root {
+  display: none;
+}
+
+.t2-w1 .wg,
+.t2-w2 .wg {
+  gap: 18px;
+}
+
+.t2-strip {
+  display: flex;
+  gap: 6px;
+}
+
+.t2-strip__block {
+  --frost: 0;
+
+  width: 26px;
+  height: 26px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--clay) calc((1 - var(--frost)) * 100%), var(--clay-wash-20));
+  box-shadow: inset 0 0 0 calc(var(--frost) * 3px) color-mix(in srgb, var(--bone) 35%, transparent);
+  transform-origin: 50% 100%;
+}
+
+.t2-code {
+  color: var(--text);
+}
+
+.t2-on-clay {
+  color: var(--on-clay);
+}
+
+.t2-notice {
+  color: var(--tui-dim);
+}
+
+.t2-rings {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+}
+
+.t2-ice__body {
+  fill: color-mix(in srgb, var(--bone) 16%, transparent);
+  stroke: color-mix(in srgb, var(--bone) 70%, transparent);
+  stroke-width: 3;
+}
+
+.t2-ice__shine,
+.t2-ice__crack {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.t2-ice__crack {
+  stroke-width: 2;
+  opacity: 0.7;
+}
+
+.t2-clock__face {
+  fill: var(--bg-deep);
+  stroke: var(--soft);
+  stroke-width: 4;
+}
+
+.t2-clock__tick {
+  stroke: var(--muted);
+  stroke-width: 4;
+}
+
+.t2-clock__hour {
+  stroke: var(--soft);
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.t2-clock__minute {
+  stroke: var(--clay);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.t2-clock__pin {
+  fill: var(--clay);
+}
+
+.t2-w1 .wg-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  max-width: 600px;
+}

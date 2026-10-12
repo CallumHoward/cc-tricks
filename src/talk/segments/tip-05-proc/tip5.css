@@ -1,0 +1,40 @@
+.t5-card {
+  display: grid;
+  gap: 4px;
+  padding: 16px 28px;
+  box-sizing: border-box;
+  transform-origin: 50% 50%;
+}
+
+.t5-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.t5-tag {
+  padding: 2px 14px;
+  border: 2px solid var(--clay);
+  border-radius: 999px;
+  color: var(--clay-hi);
+}
+
+.t5-ruler .dk-axis + g ~ g:nth-of-type(5) {
+  visibility: var(--p1, visible);
+}
+
+.t5-ruler .dk-axis + g ~ g:nth-of-type(6) {
+  visibility: var(--p2, visible);
+}
+
+.t5-ruler .dk-axis + g ~ g:nth-of-type(7) {
+  visibility: var(--p3, visible);
+}
+
+.t5-haiku {
+  padding: 2px 12px;
+  border: 2px solid var(--soft);
+  border-radius: 8px;
+  background: var(--bg-deep);
+  color: var(--text);
+}

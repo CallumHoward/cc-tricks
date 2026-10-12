@@ -1,0 +1,8 @@
+/* W7 sits in the rebuilt Settings › Usage panel as the Limit resets row: one line, not a stack. */
+.t10-reset-row .wg-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+  background: var(--bg-deep);
+}

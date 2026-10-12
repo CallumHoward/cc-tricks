@@ -1,0 +1,101 @@
+/* Outro plates: recap, the thesis over the short bar, and the QR plate (ink on ivory). */
+
+.fin-abs,
+.fin-thesis,
+.fin-cooked,
+.fin-refs {
+  position: absolute;
+}
+
+.fin-em .km-rr-word {
+  font-style: italic;
+}
+
+.fin-rule {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 3px;
+  margin-top: -1.5px;
+  background: var(--ink);
+  transform-origin: 0 50%;
+}
+
+.fin-cooked {
+  color: var(--ink);
+}
+
+.fin-refs {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--ink);
+}
+
+.fin-words {
+  margin: 0;
+}
+
+.fin-words span {
+  display: inline-block;
+  margin-right: 0.24em;
+}
+
+.fin-ink {
+  color: var(--ink);
+}
+
+.fin-url {
+  color: var(--clay-deep);
+}
+
+.fin-ref-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 26px;
+}
+
+.fin-ref .tui-dim {
+  color: var(--ink-soft);
+}
+
+.fin-ref .tui-agent-name {
+  color: var(--ink);
+}
+
+.fin-ref-source {
+  display: flex;
+  align-items: center;
+  margin-left: 2ch;
+  color: var(--ink-muted);
+}
+
+.fin-ref-source .tui-hook {
+  border-color: var(--ink-muted);
+}
+
+.fin-ghost-bar {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed var(--ink-muted);
+  border-radius: 4px;
+}
+
+.fin-tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 34px;
+  height: 34px;
+}
+
+.fin-tile > * {
+  position: absolute;
+  inset: 0;
+}
+
+.fin-tile-ink {
+  background: var(--void);
+}

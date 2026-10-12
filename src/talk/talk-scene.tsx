@@ -27,11 +27,15 @@ function SegmentLayer({ window, children }: { window: MountWindow; children: Rea
     const el = ref.current;
     if (!el) return;
     const visible = frame.tau >= window.start && frame.tau < window.end;
-    const next = visible ? "visible" : "hidden";
-    if (el.style.visibility !== next) el.style.visibility = next;
+    // Opacity, not visibility: kit parts set `visibility: visible` on themselves and would leak through
+    const next = visible ? "1" : "0";
+    if (el.style.opacity !== next) {
+      el.style.opacity = next;
+      el.style.pointerEvents = visible ? "" : "none";
+    }
   });
   return (
-    <div ref={ref} style={{ ...fill, visibility: "hidden" }}>
+    <div ref={ref} style={{ ...fill, opacity: 0, pointerEvents: "none" }}>
       {children}
     </div>
   );

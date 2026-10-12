@@ -1,0 +1,289 @@
+/* Cold open, title, spoiler and foreword plates. Motion is written per frame; no transitions. */
+
+.so-fill {
+  position: absolute;
+  inset: 0;
+}
+
+.so-abs {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.so-rise {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  color: var(--ink, var(--text));
+  white-space: nowrap;
+}
+
+.so-rise-line {
+  display: block;
+  clip-path: inset(-0.5em -0.3em 0 -0.3em);
+  padding-bottom: 0.1em;
+}
+
+.so-rise-word {
+  display: inline-block;
+  transform: translate3d(0, 115%, 0);
+  will-change: transform;
+}
+
+.so-rise-word + .so-rise-word {
+  margin-left: 0.24em;
+}
+
+.so-rise-word em {
+  font-style: italic;
+}
+
+.so-bot {
+  position: absolute;
+  transform-origin: 50% 90%;
+}
+
+.so-bot-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Cold open */
+.so-heat {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 70% 60% at 42% 48%,
+    var(--clay-wash-55) 0%,
+    var(--clay-wash-20) 45%,
+    transparent 75%
+  );
+  opacity: 0;
+}
+
+.so-echo {
+  position: absolute;
+  color: var(--soft);
+}
+
+.so-echo b {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+[data-dive="pre"] .km-dive-glyph {
+  visibility: hidden;
+}
+
+[data-dive="on"] .so-spinner .tui-clay:first-child {
+  visibility: hidden;
+}
+
+/* Road plate */
+.so-sky {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at var(--sun-x) var(--sun-y), var(--clay-wash-35) 0, transparent 30%),
+    linear-gradient(180deg, var(--bg-deep) 0%, var(--bg) 70%);
+}
+
+.so-horizon {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--hairline);
+}
+
+.so-sun-disc {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--clay-hi) 0 55%, var(--clay) 100%);
+}
+
+.so-block {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 18%;
+  background: var(--clay);
+  color: var(--clay-deep);
+  box-shadow:
+    inset 0 -4px 0 rgb(0 0 0 / 20%),
+    inset 0 3px 0 rgb(255 255 255 / 18%);
+  visibility: hidden;
+}
+
+.so-block svg {
+  width: 70%;
+  height: 70%;
+}
+
+.so-byline {
+  position: absolute;
+  white-space: nowrap;
+  color: var(--soft);
+  letter-spacing: 0.02em;
+}
+
+/* Spoiler */
+.so-spoiler-kicker {
+  color: var(--clay);
+}
+
+/* Foreword: composer */
+.fw-composer {
+  position: absolute;
+  inset: 0;
+}
+
+.fw-composer-border,
+.fw-composer-fill {
+  position: absolute;
+  inset: 0;
+}
+
+.fw-composer-border {
+  background: var(--muted);
+}
+
+.fw-composer-fill {
+  background: var(--panel);
+}
+
+.fw-placeholder {
+  position: absolute;
+  color: var(--muted);
+}
+
+.fw-chip {
+  position: absolute;
+  padding: 6px 18px;
+  border: 2px solid var(--hairline);
+  border-radius: 999px;
+  color: var(--soft);
+  background: var(--bg-deep);
+}
+
+.fw-send {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--clay);
+  color: var(--on-clay);
+}
+
+.fw-caret {
+  position: absolute;
+  width: 3px;
+  background: var(--text);
+}
+
+/* Crowd */
+.fw-crowd-cell {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1100px;
+  height: 180px;
+  border: 3px solid var(--hairline);
+  border-radius: 28px;
+  box-sizing: border-box;
+  transform-origin: 50% 50%;
+  visibility: hidden;
+}
+
+.fw-crowd-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 25px;
+  background: var(--panel);
+}
+
+.fw-crowd-line {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  width: 420px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--hairline);
+}
+
+.fw-crowd-chip {
+  position: absolute;
+  right: 120px;
+  bottom: 30px;
+  width: 180px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--bg-deep);
+}
+
+.fw-crowd-caret {
+  position: absolute;
+  top: 36px;
+  left: 480px;
+  width: 4px;
+  height: 40px;
+  background: var(--soft);
+}
+
+[data-blink="a"] .fw-crowd-cell:nth-child(odd) .fw-crowd-caret,
+[data-blink="b"] .fw-crowd-cell:nth-child(even) .fw-crowd-caret {
+  visibility: hidden;
+}
+
+.fw-floor {
+  position: absolute;
+  border-top: 3px solid var(--hairline);
+  background: linear-gradient(180deg, var(--bg-deep), var(--void));
+}
+
+.fw-light {
+  position: absolute;
+  width: 1400px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(235 159 127 / 20%), transparent);
+}
+
+/* Invest */
+.fw-menu-row {
+  position: absolute;
+  overflow: hidden;
+  height: 46px;
+}
+
+.fw-menu-row > span {
+  display: flex;
+  align-items: center;
+  height: 46px;
+  padding-left: 20px;
+  color: var(--soft);
+  transform: translate3d(0, -110%, 0);
+}
+
+.fw-menu-row > span i {
+  margin-right: 1.2ch;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.fw-highlight {
+  position: absolute;
+  height: 46px;
+  border-radius: 6px;
+  background: var(--clay-wash-35);
+  box-shadow: inset 4px 0 0 var(--clay);
+}

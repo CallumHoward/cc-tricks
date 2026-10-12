@@ -1,0 +1,56 @@
+/* Shared by the seg-data segments (tip 3, tip 5, bonus). Only tokens.css vars. */
+
+.seg-home .tui-clay > svg {
+  opacity: var(--seg-glyph, 1);
+}
+
+.seg-card {
+  position: absolute;
+  padding: 24px 32px;
+  border: 2px solid var(--hairline);
+  border-radius: 20px;
+  background: var(--bg-deep);
+  color: var(--soft);
+}
+
+.seg-muted {
+  color: var(--muted);
+}
+
+.seg-soft {
+  color: var(--soft);
+}
+
+.seg-text {
+  color: var(--text);
+}
+
+.seg-clay {
+  color: var(--clay);
+}
+
+.seg-hi {
+  color: var(--clay-hi);
+}
+
+.seg-abs {
+  position: absolute;
+}
+
+.seg-nowrap {
+  white-space: nowrap;
+}
+
+/* Full-frame widget roots let blank-area clicks fall through to the stage (click to advance). */
+.seg-fill {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.seg-fill [role="button"],
+.seg-fill [role="slider"],
+.seg-fill button,
+.seg-fill .wg-card {
+  pointer-events: auto;
+}

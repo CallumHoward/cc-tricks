@@ -7,23 +7,39 @@ export const Route = createFileRoute("/shownotes")({
   component: Shownotes,
 });
 
+const display = { fontFamily: "var(--font-display)" } as const;
+
 function Shownotes() {
   return (
-    <main className="w-full max-w-3xl px-4 pb-16">
-      <h1 className="mb-2 text-4xl font-semibold">{content.title}</h1>
-      {content.subtitle ? (
-        <p className="mb-8 text-lg text-muted-foreground">
-          {content.subtitle} · {content.speaker}
-        </p>
-      ) : null}
+    <main className="w-full max-w-3xl px-5 pb-20">
+      <header className="mb-12">
+        <h1 className="mb-3 text-5xl leading-tight" style={display}>
+          {content.title}
+        </h1>
+        {content.subtitle ? (
+          <p className="text-lg text-muted-foreground">{content.subtitle}</p>
+        ) : null}
+      </header>
       {content.shownotes.map((section) => (
-        <section key={section.id} id={section.id} className="mb-10">
-          <h2 className="mb-3 text-2xl font-semibold">{section.heading}</h2>
-          {section.body.map((paragraph) => (
-            <p key={paragraph} className="mb-3 leading-relaxed">
-              {paragraph}
-            </p>
-          ))}
+        <section key={section.id} id={section.id} className="mb-12 scroll-mt-8">
+          <h2 className="mb-4 text-3xl" style={display}>
+            {section.heading}
+          </h2>
+          {section.body.length > 1 && section.id !== "foreword" && section.id !== "afterword" ? (
+            <ul className="mb-4 list-disc space-y-2 pl-6 marker:text-[#d97757]">
+              {section.body.map((point) => (
+                <li key={point} className="leading-relaxed">
+                  {point}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            section.body.map((paragraph) => (
+              <p key={paragraph} className="mb-4 text-lg leading-relaxed" style={display}>
+                {paragraph}
+              </p>
+            ))
+          )}
           {section.code?.map((snippet) => (
             <figure key={snippet.text} className="mb-4">
               {snippet.label ? (
@@ -31,16 +47,19 @@ function Shownotes() {
                   {snippet.label}
                 </figcaption>
               ) : null}
-              <pre className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-sm">
+              <pre className="overflow-x-auto rounded-lg border bg-muted p-4 font-mono text-sm leading-relaxed">
                 <code>{snippet.text}</code>
               </pre>
             </figure>
           ))}
           {section.links && section.links.length > 0 ? (
-            <ul className="list-disc pl-6">
+            <ul className="space-y-1">
               {section.links.map((link) => (
                 <li key={link.href}>
-                  <a className="underline underline-offset-4" href={link.href}>
+                  <a
+                    className="text-[#c6613f] underline decoration-[#d97757]/50 underline-offset-4 hover:decoration-[#d97757] dark:text-[#eb9f7f]"
+                    href={link.href}
+                  >
                     {link.label}
                   </a>
                 </li>
