@@ -5,7 +5,13 @@ import type { NavAction } from "#/engine/types";
 import { isPresenterMessage, openPort, type Port, type StateMessage } from "./channel";
 import { formatClock, pace } from "./console-model";
 
-export type ConsoleStop = { id: string; title: string; notes?: string };
+export type ConsoleStop = {
+  id: string;
+  title: string;
+  notes?: string;
+  /** Speaking target for this stop, in seconds */
+  target?: number;
+};
 
 type Received = { state: StateMessage | null; stopSince: number };
 
@@ -102,7 +108,13 @@ function ConsoleView({
         <span className="type-label" data-pace={status}>
           {formatClock(elapsed)} / {formatClock(budget * 1000)}
         </span>
-        <span className="type-label">stop {formatClock(onStop)}</span>
+        <span
+          className="type-label"
+          data-pace={current?.target && onStop > current.target * 1000 ? "behind" : undefined}
+        >
+          stop {formatClock(onStop)}
+          {current?.target ? ` / ${formatClock(current.target * 1000)}` : ""}
+        </span>
         <span className="type-label">
           {state.target + 1} of {state.stopIds.length}
         </span>

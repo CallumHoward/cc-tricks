@@ -7,7 +7,7 @@ import { PresenterConsole } from "./console";
 
 describe("PresenterConsole", () => {
   const STOPS = [
-    { id: "a", title: "Opening", notes: "Say hello" },
+    { id: "a", title: "Opening", notes: "Say hello", target: 25 },
     { id: "b", title: "Caching" },
   ];
 
@@ -68,5 +68,14 @@ describe("PresenterConsole", () => {
       { type: "nav", action: { type: "next" } },
       { type: "nav", action: { type: "prev" } },
     ]);
+  });
+
+  it("should show the current stop's speaking target beside the stop timer", () => {
+    const { port, receive } = fakePort();
+    render(<PresenterConsole stops={STOPS} budget={1200} port={port} />);
+
+    receive(state(0));
+
+    expect(screen.getByText(/^stop .* \/ 0:25$/)).toBeVisible();
   });
 });

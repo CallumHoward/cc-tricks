@@ -5,7 +5,7 @@ import { STOPS } from "#/talk/timeline-data";
 export type Link = { label: string; href: string };
 
 /** Speaker-facing data for one stage stop (ids match the timeline's stops). */
-export type StopContent = { id: string; title: string; notes?: string };
+export type StopContent = { id: string; title: string; notes?: string; target?: number };
 
 /** One section of the static show notes page. */
 export type ShownoteSection = {
@@ -54,6 +54,7 @@ export const content: TalkContent = {
       id: stop.id,
       title: stop.title,
       notes: notesText(scriptFor(stop.id)),
+      target: stop.speakSeconds,
     })),
   ],
   shownotes: [
