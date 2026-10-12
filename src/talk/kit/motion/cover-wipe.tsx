@@ -28,6 +28,14 @@ export function toneAt(initial: Tone, wipes: readonly Wipe[], tau: number): Tone
 
 const SPAN = 2400;
 
+/** A swap wipe paints the destination bed, so the new page sweeps in without a full-frame flash. */
+const BED_COLOR: Record<Tone, string> = {
+  dark: "var(--bg)",
+  bone: "var(--bone)",
+  clay: "var(--clay)",
+  halftone: "var(--bg)",
+};
+
 /** Opaque band sweeping across the stage at `angle`°, leading edge first; reversible. */
 export function CoverWipe({
   start,
@@ -90,7 +98,13 @@ export function BoneSwap({
     <div ref={root} className="km-tone km-bed" data-tone={initial}>
       {children}
       {wipes.map((w) => (
-        <CoverWipe key={`${w.start}-${w.to}`} start={w.start} end={w.end} angle={w.angle} />
+        <CoverWipe
+          key={`${w.start}-${w.to}`}
+          start={w.start}
+          end={w.end}
+          angle={w.angle}
+          color={BED_COLOR[w.to]}
+        />
       ))}
     </div>
   );
