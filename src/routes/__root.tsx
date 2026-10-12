@@ -44,14 +44,19 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="flex min-h-screen flex-col items-center">
         {withShell ? <AppShell theme={theme}>{children}</AppShell> : children}
-        {withShell ? (
+        <ShellOnly show={withShell}>
           <TanStackDevtools
             config={{ position: "bottom-right" }}
             plugins={[{ name: "Tanstack Router", render: <TanStackRouterDevtoolsPanel /> }]}
           />
-        ) : null}
+        </ShellOnly>
         <Scripts />
       </body>
     </html>
   );
+}
+
+// The devtools plugin strips <TanStackDevtools/> from builds, so it must sit in plain children
+function ShellOnly({ show, children }: { show: boolean; children?: React.ReactNode }) {
+  return show ? children : null;
 }
