@@ -48,11 +48,14 @@ export const content: TalkContent = {
   subtitle: SHOWNOTES.byline,
   speaker: "Callum Howard",
   budget: 20 * 60,
-  stops: STOPS.map((stop) => ({
-    id: stop.id,
-    title: stop.title,
-    notes: notesText(scriptFor(stop.id)),
-  })),
+  stops: [
+    { id: "start", title: "Ready", notes: "Press → to play the cold open." },
+    ...STOPS.map((stop) => ({
+      id: stop.id,
+      title: stop.title,
+      notes: notesText(scriptFor(stop.id)),
+    })),
+  ],
   shownotes: [
     { id: "spoiler", heading: "Spoiler", body: [SHOWNOTES.spoiler] },
     {

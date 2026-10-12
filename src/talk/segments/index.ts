@@ -22,6 +22,9 @@ import TitleSegment from "./title/view";
 /** Story seconds after a segment's last hold in which it performs its own exit (fold, pocket, whip). */
 export const EXIT_TAIL = 1.4;
 
+/** The first segment is also visible before τ 0, so the pre-roll stop shows its empty prompt. */
+const PRE_ROLL = 1;
+
 const VIEWS: Record<string, ComponentType> = {
   title: TitleSegment,
   foreword: ForewordSegment,
@@ -50,7 +53,7 @@ export const SEGMENT_ENTRIES: readonly SegmentEntry[] = SEGMENTS.map((segment, i
   return {
     id: segment.id,
     window: {
-      start: i === 0 ? segment.start : segment.start + EXIT_TAIL,
+      start: i === 0 ? segment.start - PRE_ROLL : segment.start + EXIT_TAIL,
       end: next ? next.start + EXIT_TAIL : segment.end,
     },
     View,

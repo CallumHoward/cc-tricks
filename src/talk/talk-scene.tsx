@@ -8,12 +8,14 @@ import { CssBed } from "#/talk/kit/motion";
 import { SEGMENT_ENTRIES } from "#/talk/segments";
 import { STOPS } from "#/talk/timeline-data";
 
+/** Pre-roll: the page opens on an empty prompt and the first press plays the cold open. */
+export const START_STOP: Stop = { id: "start", at: -0.6, holdSpan: 0.3, holdSpeed: 0.001 };
+
 /** Engine stops for the clock, in talk order. */
-export const TALK_STOPS: readonly Stop[] = STOPS.map(({ id, at, holdSpan }) => ({
-  id,
-  at,
-  holdSpan,
-}));
+export const TALK_STOPS: readonly Stop[] = [
+  START_STOP,
+  ...STOPS.map(({ id, at, holdSpan }) => ({ id, at, holdSpan })),
+];
 
 /** Story time at which the film ends. */
 export const TALK_END = SEGMENT_ENTRIES.at(-1)?.window.end ?? 0;
