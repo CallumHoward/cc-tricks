@@ -5,19 +5,20 @@ import { useStage } from "#/engine/stage/react";
 import { PRIORITY } from "#/engine/stage/stage";
 import { StageHost } from "#/engine/stage/stage-host";
 import type { Beat } from "#/engine/types";
+import { audioBeats, type CueAt } from "#/talk/cues";
+import { SEGMENT_ENTRIES } from "#/talk/segments";
 import { TALK_STOPS, TalkScene } from "#/talk/talk-scene";
 import { BEATS } from "#/talk/timeline-data";
 
-/** One audio beat per storyboard cue, fired when the playhead crosses its τ. */
-export const AUDIO_BEATS: readonly Beat[] = BEATS.flatMap((beat) =>
-  beat.cues.map((cue, i) => ({
-    id: `${beat.id}:${i}`,
-    start: cue.tau,
-    end: cue.tau,
-    summary: beat.id,
-    cue: cue.cue,
-  })),
+// Segments may ship `cues.ts` (export const CUES) to own the sound timing of their window
+const OVERRIDES = Object.fromEntries(
+  Object.entries(
+    import.meta.glob<{ CUES: readonly CueAt[] }>("./segments/*/cues.ts", { eager: true }),
+  ).map(([path, mod]) => [path.split("/").at(-2) ?? path, mod.CUES]),
 );
+
+/** One audio beat per cue, fired when the playhead crosses its τ. */
+const AUDIO_BEATS: readonly Beat[] = audioBeats(BEATS, SEGMENT_ENTRIES, OVERRIDES);
 
 function TalkAudio() {
   const stage = useStage();
