@@ -1,5 +1,5 @@
 import "./kit-motion.css";
-import { useRef, type CSSProperties } from "react";
+import { Fragment, useRef, type CSSProperties } from "react";
 
 import { clamp, inQuad, prog } from "#/engine/motion/ease";
 import { SPRINGS, type SpringCfg } from "#/engine/motion/spring";
@@ -62,24 +62,27 @@ export function RuleRise({
 
   return (
     <div className={`km-rr ${className}`} style={style}>
-      {lines.map((line) => {
+      {lines.map((line, li) => {
         const lineId = line[0]?.id ?? "empty";
         return (
           <span key={lineId} className="km-rr-line">
             <span className="km-rr-mask">
-              {line.map((w) => (
-                <span
-                  key={w.id}
-                  className="km-rr-word"
-                  ref={(el) => {
-                    wordEls.current[w.index] = el;
-                  }}
-                >
-                  {w.text}
-                </span>
+              {line.map((w, i) => (
+                // Real spaces keep each font's own word spacing (a full cell in mono)
+                <Fragment key={w.id}>
+                  {i > 0 ? " " : null}
+                  <span
+                    className="km-rr-word"
+                    ref={(el) => {
+                      wordEls.current[w.index] = el;
+                    }}
+                  >
+                    {w.text}
+                  </span>
+                </Fragment>
               ))}
             </span>
-            {rule ? (
+            {rule && li === lines.length - 1 ? (
               <span
                 className="km-rr-rule"
                 ref={(el) => {

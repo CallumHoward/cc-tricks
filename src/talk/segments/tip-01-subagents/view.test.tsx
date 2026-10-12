@@ -12,7 +12,8 @@ import Tip01SubagentsSegment from "./view";
 const rise = (text: string) =>
   screen.getByText(
     (_, el) =>
-      el?.classList.contains("km-rr") === true && el.textContent === text.replace(/\s+/g, ""),
+      el?.classList.contains("km-rr") === true &&
+      el.textContent?.replace(/\s+/g, "") === text.replace(/\s+/g, ""),
   );
 
 function renderAt(tau: number) {
