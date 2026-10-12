@@ -1,9 +1,11 @@
 import { useRef, type ReactNode } from "react";
 
 import { GrainOverlay } from "#/engine/gl/overlay";
+import { ShadersLayer } from "#/engine/gl/shaders-layer";
 import { ThreeLayerProvider } from "#/engine/gl/three-layer";
 import { SegmentGate, useFrame } from "#/engine/stage/react";
 import type { Frame, MountWindow, Stop } from "#/engine/types";
+import { hazeBed } from "#/talk/bed";
 import { CssBed } from "#/talk/kit/motion";
 import { SEGMENT_ENTRIES } from "#/talk/segments";
 import { STOPS } from "#/talk/timeline-data";
@@ -51,6 +53,7 @@ export function TalkScene() {
   return (
     <>
       <CssBed tone="dark" />
+      <ShadersLayer nodes={hazeBed} fallback="transparent" />
       <ThreeLayerProvider>
         {SEGMENT_ENTRIES.map(({ id, window, View }) => (
           <SegmentGate key={id} id={id} window={window}>
