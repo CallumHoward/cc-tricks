@@ -11,10 +11,9 @@ import { GLYPH_PATHS } from "#/talk/kit/tui";
 import { scriptFor } from "#/talk/script";
 import { Live, Wiped } from "#/talk/segments/tip-03-effort/bracket";
 
-import { cursorAt, stepAt, TARGETS, TB } from "./timing";
+import { cursorAt, RINGED, stepAt, TARGETS, TB } from "./timing";
 
 const script = scriptFor("b-browser");
-const SETTLE = TB.browser.at - 0.8;
 const WIN = Object.freeze({ x: 160, y: 540, w: 1600, h: 330 });
 const PLAN_LINES = [300, 250, 320, 210, 280];
 
@@ -58,7 +57,7 @@ function Steps() {
           style={{ left: t.x - 110, top: t.y - 34, width: 220, height: 68 }}
         />
       ))}
-      {TARGETS.map((t, k) => (
+      {TARGETS.slice(0, RINGED).map((t, k) => (
         <StepRing key={`ring-${t.x}-${t.y}`} k={k} />
       ))}
     </>
@@ -103,7 +102,7 @@ export function BrowserPlate() {
   return (
     <Live from={TB.laya.holdEnd} to={TB.winEnd}>
       <div className="seg-abs" style={{ left: 160, top: 196, scale: 0.7, transformOrigin: "0 0" }}>
-        <RuleRise text={"LLM plans.\nSystem One clicks."} settleBy={SETTLE - 0.2} />
+        <RuleRise text={"LLM plans.\nSystem One clicks."} settleBy={262.5} />
       </div>
       <Wiped at={262.3} className="type-body seg-text seg-abs" style={{ left: 160, top: 404 }}>
         {script.lines[0]}

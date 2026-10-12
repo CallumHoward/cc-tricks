@@ -28,6 +28,7 @@ export const COLORS = Object.freeze({
   cold: mixRgb(linear("#4a362e"), linear("#faf9f5"), 0.1),
   idle: linear("#3a3934"),
   ghost: mixRgb(linear("#4a362e"), linear("#918f86"), 0.3),
+  base: mixRgb(linear("#3a3934"), linear("#918f86"), 0.55),
 });
 
 export function mixRgb(a: Rgb, b: Rgb, u: number): Rgb {
@@ -316,7 +317,7 @@ function kvBlock(i: number, tau: number): Block {
 
 export const PRICE_VALUES = [0.4, 0.5, 0.8, 0.02] as const;
 export const PRICE_COUNTS = [15, 19, 31, 1] as const;
-export const PRICE_X = [1060, 1230, 1400, 1570] as const;
+export const PRICE_X = [1200, 1370, 1540, 1710] as const;
 export const PRICE_BASE = 880;
 export const COIN = 13.2;
 
@@ -356,8 +357,16 @@ function priceBlock(i: number, tau: number): Block {
     rx: 0,
     rz: 0,
     s: 1,
-    rgb: column === 0 ? mixRgb(COLORS.idle, COLORS.cached, 0.35) : tone,
+    rgb: column === 0 ? COLORS.base : tone,
   };
+}
+
+/** After the iris the columns sink into the floor while their tops fly up into the ring row. */
+function priceSink(i: number, tau: number): Block {
+  const b = priceBlock(i, tau);
+  const u = inOutCubic(prog(tau, T.rings, T.ringsLand - 0.1));
+  if (u <= 0) return b;
+  return { ...b, y: lerp(b.y, PRICE_BASE, u), h: b.h * (1 - u), s: u >= 1 ? 0 : 1 };
 }
 
 // ── t2-idle ──────────────────────────────────────────────────────────────────────────────────
@@ -382,7 +391,7 @@ export function pulseX(tau: number): number | null {
 function idleBlock(i: number, tau: number): Block {
   if (i >= IDLE_LEN) return hidden(IDLE_X0 + (i % IDLE_LEN) * PITCH, IDLE_Y);
   const x = IDLE_X0 + PITCH / 2 + i * PITCH;
-  const rise = outCubic(prog(tau, T.crack + i * 0.02, T.crack + 0.45 + i * 0.02));
+  const rise = outCubic(prog(tau, T.idleIn + i * 0.02, T.idleIn + 0.45 + i * 0.02));
   const grey = prog(tau, T.clock + 0.2, T.clockEnd);
   const spikeT = tau - (T.spike + i * 0.022);
   const spike =
@@ -519,8 +528,9 @@ function blend(
 /** One token block at τ (indices ≥ N_TOKENS are the ghost lane). */
 export function blockAt(i: number, tau: number): Block {
   if (i >= N_TOKENS) {
-    if (tau < T.fork || tau >= T.fold) return hidden();
-    return ghostBlock(i - N_TOKENS, tau);
+    if (tau < T.fork || tau >= T.foldEnd) return hidden();
+    const g = ghostBlock(i - N_TOKENS, tau);
+    return { ...g, s: g.s * (1 - foldAt(tau)) };
   }
   if (tau < T.dive) return barBlock(i);
   if (tau < T.kvMorph) return statelessBlock(i, tau);
@@ -529,13 +539,18 @@ export function blockAt(i: number, tau: number): Block {
   if (tau < T.plan) return kvBlock(i, tau);
   if (tau < T.plan + 1.2) return blend(i, tau, kvBlock, T.plan, priceBlock, T.plan + 1.2, 0.004);
   if (tau < T.cut) return priceBlock(i, tau);
+  if (tau < T.ringsLand) return priceSink(i, tau);
   if (tau < T.crack) return hidden();
   if (tau < 123.6) return idleBlock(i, tau);
   if (tau < 124.4) return blend(i, tau, idleBlock, 123.6, switchBlock, 124.4, 0.004);
   if (tau < T.fold) return switchBlock(i, tau);
-  const f = inOutCubic(prog(tau, T.fold, T.foldEnd));
   const b = switchBlock(i, T.fold);
-  return { ...b, s: 1 - f };
+  return { ...b, s: 1 - foldAt(tau) };
+}
+
+/** The exit squash every plate shares (0 before the fold, 1 folded). */
+function foldAt(tau: number): number {
+  return inOutCubic(prog(tau, T.fold, T.foldEnd));
 }
 
 // ── props ────────────────────────────────────────────────────────────────────────────────────
@@ -571,7 +586,7 @@ export function propsAt(tau: number): Props {
   const reply =
     outExpo(prog(tau, T.reply, T.reply + 0.6)) * (1 - inOutCubic(prog(tau, 77.0, 77.4)));
   const scan = tau >= T.scan - 0.1 && tau < T.kvMorph ? scanX(tau) : null;
-  const skip = outCubic(prog(tau, T.fork - 0.2, T.fork + 0.3)) * (tau < T.fold ? 1 : 0);
+  const skip = outCubic(prog(tau, T.fork - 0.2, T.fork + 0.3)) * (1 - foldAt(tau));
   const p = tau >= T.crack && tau < 123.6 ? pulseX(tau) : null;
   return { monolith, door, drawer, reply, scan, skip, pulse: p };
 }

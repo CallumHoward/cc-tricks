@@ -46,10 +46,10 @@ export const T10 = Object.freeze({
   exit: Object.freeze({
     boneOut: Object.freeze({ start: 247.5, end: 248.1 }),
     lineAt: 247.72,
-    punchAt: 248.02,
+    punchAt: 247.98,
     chipDur: 0.36,
-    whipAt: 248.42,
-    whipDur: 0.45,
+    whipAt: 248.38,
+    whipDur: 0.42,
   }),
 });
 
@@ -106,9 +106,10 @@ export function panelDrift(tau: number): number {
   return -8 * prog(tau, T10.resetsAt, T10.resetsHoldEnd);
 }
 
-/** The pile hops from home onto the Settings panel's lid as the panel opens (0 → 1). */
+/** The pile hops from home onto the Settings panel's lid once the lid is in place (0 → 1). */
 export function pileHop(tau: number): number {
-  return prog(tau, T10.diveAt, T10.diveAt + T10.pileHopDur, inOutCubic);
+  const from = T10.diveAt + 0.45;
+  return prog(tau, from, from + T10.pileHopDur, inOutCubic);
 }
 
 /** Ticket i of the offers board runs in along its rail and LANDs 0.3 τ-s after the previous one. */

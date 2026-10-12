@@ -17,6 +17,7 @@ export function OfferTicket({
   height = 300,
   stubWidth = 120,
   punchAt,
+  punchY = 0.24,
   tear,
   stub,
   padding = "34px 28px",
@@ -27,6 +28,8 @@ export function OfferTicket({
   height?: number;
   stubWidth?: number;
   punchAt?: number;
+  /** Punch hole height as a fraction of the ticket */
+  punchY?: number;
   tear?: (tau: number) => number;
   stub?: ReactNode;
   padding?: string;
@@ -73,7 +76,11 @@ export function OfferTicket({
         <div
           ref={hole}
           className="km-ticket-hole"
-          style={{ left: perf + stubWidth / 2, top: height * 0.24 }}
+          style={{
+            left: perf + stubWidth / 2,
+            top: height * punchY,
+            boxShadow: "inset 0 3px 0 rgb(0 0 0 / 25%), 0 0 0 3px var(--clay)",
+          }}
         />
       </div>
       <div

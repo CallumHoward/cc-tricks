@@ -21,7 +21,7 @@ export const TURN = Object.freeze({
 export const EXIT = Object.freeze({
   fold: CRACK + 0.45,
   foldEnd: CRACK + 0.73,
-  dockUp: CRACK + 0.45,
+  dockUp: CRACK + 0.5,
   completeAt: CRACK + 0.55,
   pocketAt: CRACK + 0.8,
   whipAt: CRACK + 0.87,
@@ -81,10 +81,10 @@ export const CONVERGE = Object.freeze({ start: 154.7, end: 155.2 });
 export const RELEASE = 155.5;
 
 /** Bullet time: the fall accelerates until `FALL.join`, then brakes hard into `gap` at `at`. */
-export const FALL = Object.freeze({ join: AT - 0.3, joinGap: 46, gap: 22, creep: 0.5 });
+export const FALL = Object.freeze({ join: AT - 0.3, joinGap: 30, gap: 6, creep: 0.5 });
 
 /**
- * Gap (px) between the head and the walnut: hoisted → falls (accelerating) → brakes into 22 px at
+ * Gap (px) between the head and the walnut: hoisted → falls (accelerating) → brakes into 6 px at
  * `at` → creeps 0.5 px/τ-s → 0 at CRACK.
  */
 export function hammerGap(tau: number): number {
@@ -158,6 +158,10 @@ export function dispatches(tau: number): number {
   return 30 * prog(tau, SPROUT.start, SPROUT.start + 9 * SPROUT.stagger + SPROUT.dur);
 }
 
+/** The odometer pops in once the dock has dropped clear of it. */
+export const odometerScale = (tau: number): number =>
+  tau < 153.45 ? 0 : 0.6 + 0.4 * prog(tau, 153.45, 153.75, outExpo);
+
 /** The plan (spinner, rows, odometer) folds shut once the swarm has left. */
 export function planFold(tau: number): StyleValues {
   const u = prog(tau, 154.8, 155.1, inOutExpo);
@@ -203,7 +207,7 @@ export const BOT_SPOT = Object.freeze({
 });
 export const BOT_HOPS = Object.freeze({
   out: { at: 154.3, air: 0.4 },
-  home: { at: EXIT.fold + 0.05, air: 0.28 },
+  home: { at: CRACK + 0.12, air: 0.28 },
 });
 
 export function botOffset(tau: number): { x: number; y: number } {
@@ -224,6 +228,12 @@ export function botOffset(tau: number): { x: number; y: number } {
 }
 
 // Exit -----------------------------------------------------------------------------------------
+
+/** Hammer, walnut and label squash onto the ground line before the dock rises through them. */
+export function propFold(tau: number): StyleValues {
+  const u = prog(tau, CRACK + 0.3, EXIT.dockUp, inOutExpo);
+  return { y: 40 * u, scaleY: 1 - u, opacity: u >= 1 ? 0 : 1 };
+}
 
 export function plateFold(tau: number): StyleValues {
   const u = prog(tau, EXIT.fold, EXIT.foldEnd, inOutExpo);

@@ -8,6 +8,8 @@ export const TIP7 = {
   spinnerAt: 192.92,
   lift: { start: 193.2, end: 193.8 },
   bash: 193.6,
+  /** The echo lifts into the tip title */
+  title: 194.2,
   clamp: { start: 193.62, end: 193.9 },
   squeeze: { start: 194.0, end: 194.45 },
   reruns: [194.5, 194.8, 195.1],

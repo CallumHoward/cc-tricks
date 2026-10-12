@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 
-import { inQuad, outExpo, prog } from "#/engine/motion/ease";
+import { inOutCubic, inQuad, outExpo, prog } from "#/engine/motion/ease";
 import type { Frame } from "#/engine/types";
 import { setStyle, typeClip, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 
@@ -25,6 +25,29 @@ export function During({
   });
   return (
     <div ref={ref} style={{ position: "absolute", inset: 0, display: "none", ...style }}>
+      {children}
+    </div>
+  );
+}
+
+/** Exit for a whole plate body: lifts 24 px while a clip wipes it up over `at → at + dur`. */
+export function Leave({
+  at,
+  dur = 0.35,
+  children,
+}: {
+  at: number;
+  dur?: number;
+  children: ReactNode;
+}) {
+  const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
+    const u = inOutCubic(prog(frame.tau, at, at + dur));
+    setStyle(el, "transform", u > 0 ? `translateY(${fmt(-24 * u, 1)}px)` : "none");
+    setStyle(el, "clip-path", u > 0 ? `inset(0 0 ${fmt(u * 100, 1)}% 0)` : "none");
+    setStyle(el, "visibility", u >= 1 ? "hidden" : "visible");
+  });
+  return (
+    <div ref={ref} style={{ position: "absolute", inset: 0 }}>
       {children}
     </div>
   );

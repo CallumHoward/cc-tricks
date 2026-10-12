@@ -54,3 +54,15 @@
 .seg-fill .wg-card {
   pointer-events: auto;
 }
+
+.t3-key {
+  display: grid;
+  gap: 10px;
+}
+
+.t3-key__row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  height: 40px;
+}

@@ -3,19 +3,18 @@ import { SPRINGS } from "#/engine/motion/spring";
 import { keys, sampleKeys, type Key } from "#/engine/motion/track";
 import type { Shot } from "#/talk/kit/motion";
 import { formatElapsed } from "#/talk/kit/tui";
-import { pileTiles } from "#/talk/kit/tui/tui-math";
+import { pileTiles, whipOffset } from "#/talk/kit/tui/tui-math";
 import type { Act } from "#/talk/mascot/actions";
 
 /** Outro story times (absolute τ); window [280.9, 299.5), stops at 285.5 and 293.5. */
 export const OUT = Object.freeze({
   start: 280.9,
-  whip: 280.9,
-  whipDur: 0.45,
-  recapAt: 281.3,
-  recapDur: 2.1,
-  wipeFrom: 283.1,
-  wipeTo: 283.9,
-  swap: 283.5,
+  whip: 281.1,
+  whipDur: 0.4,
+  recapAt: 281.5,
+  recapDur: 1.5,
+  wipeFrom: 283.3,
+  wipeTo: 284,
   craneTo: 284.6,
   thesisBy: 284.7,
   thesisAt: 285.5,
@@ -40,6 +39,16 @@ export const OUT = Object.freeze({
   end: 299.5,
 });
 
+/** Screen y of the opening home shot: at rest through the match cut, then whips up the scrollback. */
+export const homeY = (tau: number): number => whipOffset(tau, OUT.whip, OUT.whipDur, 1080);
+
+/** Bone plate's leading edge (px at mid-height): sweeps left → right, uncovering the bar in place. */
+export const revealEdge = (tau: number): number =>
+  lerp(-REVEAL_SLANT, 1920 + REVEAL_SLANT, inOutCubic(prog(tau, OUT.wipeFrom, OUT.wipeTo)));
+
+/** Horizontal lean of the reveal edge between mid-height and the top or bottom (px, 12°). */
+export const REVEAL_SLANT = Math.round(540 * Math.tan((12 * Math.PI) / 180));
+
 /** Every completion line of the talk, tip 1 → bonus (storyboard §4.2). */
 export const RECAP = [
   { pastVerb: "Churned", duration: "1m 30s" },
@@ -62,7 +71,7 @@ export const SCROLLBACK = [...RECAP].reverse();
 export const BAR = Object.freeze({ x: 200, y: 800, width: 1520, capacity: 100, height: 72 });
 
 const shrink = (long: number, short: number, creep = short): readonly Key[] =>
-  keys([OUT.swap, long], [OUT.craneTo, short, SPRINGS.GLIDE], [OUT.collapseFrom, creep]);
+  keys([OUT.wipeFrom, long], [OUT.craneTo, short, SPRINGS.GLIDE], [OUT.collapseFrom, creep]);
 
 /**
  * Zones shrink from the home bar to a short, mostly cached one; the last keeps creeping in the
@@ -82,17 +91,21 @@ export const BAR_KEYS = {
 
 /** Crane: from close on the bar back to the full plate, a slow push in the hold, then level. */
 export const CRANE: readonly Shot[] = [
-  { at: OUT.swap, x: 470, y: 770, zoom: 1.75 },
+  { at: OUT.wipeFrom, x: 470, y: 770, zoom: 1.75 },
   { at: OUT.craneTo, x: 960, y: 540, zoom: 1, ease: outCubic },
   { at: OUT.collapseFrom, zoom: 1.02 },
   { at: OUT.rulesTo, zoom: 1, ease: inOutCubic },
 ];
 
 /**
- * Peak height (px) of a tile's hop; tiles drop to skim the bottom rule under the references, then
- * rise.
+ * Peak height (px) of a tile's hop; tiles skim the band under the references, then rise into the
+ * QR.
  */
-const TILE_HOP = 30;
+const TILE_HOP = 90;
+
+/** Flight fractions where a tile snaps from pile size to its module, and where it inks over. */
+export const SHRINK_FROM = 0.82;
+export const INK_FROM = 0.9;
 
 /** The QR plate: the prompt box's two rules, kept inside the safe band (corners stay empty). */
 export const PLATE = Object.freeze({ left: 160, width: 1600, top: 300, bottom: 876 });
@@ -114,7 +127,11 @@ export function plateRules(tau: number, barWidth: number): { top: RuleBox; botto
 }
 
 /** Bot box left/top (240×200, ground at +180): walks the short bar, then hops onto the plate's rule. */
-export const BOT_X = keys([OUT.swap, 210], [OUT.collapseFrom, 290], [OUT.hopTo, 1500, inOutCubic]);
+export const BOT_X = keys(
+  [OUT.wipeFrom, 210],
+  [OUT.collapseFrom, 290],
+  [OUT.hopTo, 1060, inOutCubic],
+);
 
 export function botLift(tau: number): number {
   const u = prog(tau, OUT.hopFrom, OUT.hopTo);
@@ -123,16 +140,16 @@ export function botLift(tau: number): number {
 }
 
 export const BOT_ACTS: readonly Act[] = [
-  { kind: "walk", at: OUT.swap, dur: OUT.collapseFrom - OUT.swap, dx: 1, stepRate: 3 },
-  { kind: "face", at: OUT.swap, dur: OUT.collapseFrom - OUT.swap, expr: "happy" },
+  { kind: "walk", at: OUT.wipeFrom, dur: OUT.collapseFrom - OUT.wipeFrom, dx: 1, stepRate: 3 },
+  { kind: "face", at: OUT.wipeFrom, dur: OUT.collapseFrom - OUT.wipeFrom, expr: "happy" },
   { kind: "hop", at: OUT.hopFrom - 0.1, height: 30, air: 0.62 },
   { kind: "look", at: OUT.pileFrom - 0.2, dur: OUT.pileTo - OUT.pileFrom, x: -0.8, y: 0.6 },
   { kind: "look", at: OUT.flyFirst, dur: 1.4, x: -1, y: -0.3 },
   { kind: "sleepy", at: OUT.qrTo + 0.2, dur: 1e6 },
 ];
 
-/** The bot empties its pockets: tiles hop out one by one onto the rule beside it. */
-export const PILE = Object.freeze({ x: 1440, y: PLATE.bottom, size: 34 });
+/** The bot empties its pockets onto the rule just right of the QR, so the tiles' flight is short. */
+export const PILE = Object.freeze({ x: 990, y: PLATE.bottom, size: 34 });
 export const PILE_COUNT = keys([OUT.pileFrom, 0], [OUT.pileTo, 10]);
 
 export type Module = { x: number; y: number };
@@ -150,6 +167,9 @@ export type TileState = {
 
 /** τ the tile pocketed `i`-th (0 first) starts flying; the first pocketed lands last. */
 export const flightStart = (i: number): number => OUT.flyFirst + (9 - i) * OUT.flyStagger;
+
+/** τ tile `i` lands on its module. */
+export const landing = (i: number): number => flightStart(i) + OUT.flyDur;
 
 /** Module each tile fills: the first pocketed takes the very last held-back module. */
 export const tileTarget = (i: number, held: readonly Module[]): Module | undefined =>
@@ -183,8 +203,8 @@ export function tileAt(i: number, tau: number, held: readonly Module[], n: numbe
     x: lerp(from.x, to.x, e),
     y: lerp(skim, to.y, prog(u, 0.35, 1, inOutCubic)) - Math.sin(Math.PI * u) * TILE_HOP,
     rotate: lerp(from.rotate, 360, e),
-    size: lerp(PILE.size, px * 1.02, e),
-    ink: prog(u, 0.62, 1, outCubic),
+    size: lerp(PILE.size, px * 1.02, prog(u, SHRINK_FROM, 1, outCubic)),
+    ink: prog(u, INK_FROM, 1, outCubic),
     visible: true,
   };
 }

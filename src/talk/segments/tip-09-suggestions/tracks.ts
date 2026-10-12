@@ -25,9 +25,9 @@ export const T9 = Object.freeze({
   copySettle: 226.35,
   stampSettle: 226.55,
   footSettle: 226.7,
-  botWalkAt: 224.75,
-  botWalkDur: 0.95,
-  waveAt: 225.75,
+  botWalkAt: 224.65,
+  botWalkDur: 0.8,
+  waveAt: 225.5,
   exit: Object.freeze({
     foldAt: 230.0,
     foldDur: 0.3,
@@ -36,7 +36,7 @@ export const T9 = Object.freeze({
     solidDur: 0.22,
     pocketAt: 230.42,
     whipAt: 230.86,
-    whipDur: 0.48,
+    whipDur: 0.42,
   }),
 });
 
@@ -82,32 +82,39 @@ export function strikeAt(tau: number): number {
   return prog(tau, T9.strikeAt, T9.strikeAt + 0.25, outCubic);
 }
 
-const COLLAPSE_AT_STOP = 0.3;
-const COLLAPSE_CREEP = 0.06;
+const COLLAPSE_SETTLED = 0.8;
+const COLLAPSE_CREEP = 0.015;
+const COLLAPSE_OUT = 0.25;
 
 /**
- * How much of the ghost's width is left as it is sucked into the caret: 1 → 0.3 by the stop, then a
- * creep of 0.06 per τ-s (≤ 37 px/τ-s for the farthest letter).
+ * How much of the struck ghost's width is left as it is pulled toward the caret: 1 → 0.8 by `at −
+ * 0.8` (still legible), a 0.015/τ-s creep through the hold, then sucked in during the fold.
  */
 export function collapseScale(tau: number): number {
+  const settle = T9.at - 0.8;
+  const { foldAt } = T9.exit;
   if (tau <= T9.collapseAt) return 1;
-  if (tau <= T9.at) {
-    return 1 - (1 - COLLAPSE_AT_STOP) * smoothstep(prog(tau, T9.collapseAt, T9.at));
+  if (tau <= settle) {
+    return 1 - (1 - COLLAPSE_SETTLED) * smoothstep(prog(tau, T9.collapseAt, settle));
   }
-  return Math.max(0, COLLAPSE_AT_STOP - COLLAPSE_CREEP * (tau - T9.at));
+  const held = COLLAPSE_SETTLED - COLLAPSE_CREEP * (Math.min(tau, foldAt) - settle);
+  return held * (1 - prog(tau, foldAt, foldAt + COLLAPSE_OUT, inOutCubic));
 }
 
-/** Letter i of n: near letters collapse first (s^2.4), the far end lags (s^1). */
+/** Letter i of n: near letters shrink first (s^1.6), the far end lags (s^1). */
 export function letterScale(s: number, i: number, n: number): number {
-  const lag = n <= 1 ? 1 : 2.4 - (1.4 * i) / (n - 1);
+  const lag = n <= 1 ? 1 : 1.6 - (0.6 * i) / (n - 1);
   return clamp(s) ** lag;
 }
+
+/** How far the bot walks left: onto the prompt's top rule, just past the ghost's far end. */
+export const BOT_SHOO_DX = -470;
 
 /** Bot travel (px from BOT_HOME.left): walks left to shoo the ghost, hops home in the fold. */
 export function botX(tau: number): number {
   const out = inOutCubic(prog(tau, T9.botWalkAt, T9.botWalkAt + T9.botWalkDur));
   const back = inOutCubic(prog(tau, T9.exit.foldAt + 0.16, T9.exit.foldAt + 0.58));
-  return -380 * out + 380 * back;
+  return BOT_SHOO_DX * out - BOT_SHOO_DX * back;
 }
 
 /** Plate fold into the completion line (0 open → 1 folded). */

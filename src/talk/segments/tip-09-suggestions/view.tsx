@@ -53,8 +53,8 @@ const BOT_ACTS: readonly Act[] = [
   { kind: "look", at: T9.ghostAt, dur: 1.1, x: -1, y: 0.7 },
   { kind: "surprised", at: T9.ghostAt + 0.05, dur: 0.35 },
   { kind: "walk", at: T9.botWalkAt, dur: T9.botWalkDur, dx: -1, stepRate: 5 },
-  { kind: "look", at: T9.collapseAt - 0.3, dur: 4.6, x: -1, y: 0.5 },
-  { kind: "wave", at: T9.waveAt, dur: 4.2, side: "L" },
+  { kind: "look", at: T9.strikeAt - 0.3, dur: 4.9, x: -1, y: 0.6 },
+  { kind: "wave", at: T9.waveAt, dur: T9.at - 0.8 - T9.waveAt, side: "L" },
   { kind: "hop", at: T9.exit.foldAt, height: 50 },
 ];
 
@@ -68,10 +68,10 @@ function GhostCollapse() {
       style={{ position: "absolute", left: CARET_X + CH, top: PROMPT_Y, height: 0 }}
       write={(root, frame) => {
         const { tau } = frame;
-        const shown = tau >= T9.reghostAt && tau < T9.exit.foldAt + 0.05;
+        const s = collapseScale(tau);
+        const shown = tau >= T9.reghostAt && s > 0;
         put(root, "visibility", shown ? "visible" : "hidden");
         if (!shown) return;
-        const s = collapseScale(tau);
         const spans = root.children;
         for (let i = 0; i < n; i++) {
           const k = letterScale(s, i, n);
@@ -136,23 +136,17 @@ function GhostSweep() {
       <div
         style={{
           ...FILL,
-          background:
-            "linear-gradient(90deg, rgb(250 249 245 / 0%), rgb(250 249 245 / 26%) 85%, rgb(250 249 245 / 42%))",
+          background: "rgb(250 249 245 / 62%)",
+          borderRight: "4px solid var(--text)",
           borderRadius: 3,
         }}
       />
       <svg
         viewBox="0 0 100 100"
         aria-hidden
-        style={{ position: "absolute", left: "100%", top: "50%", width: 76, height: 76 }}
+        style={{ position: "absolute", left: "100%", top: "50%", width: 96, height: 96 }}
       >
-        <path
-          d={GLYPH_PATHS["✳"]}
-          fill="rgb(250 249 245 / 22%)"
-          stroke="var(--soft)"
-          strokeWidth="2.5"
-          strokeDasharray="5 4"
-        />
+        <path d={GLYPH_PATHS["✳"]} fill="var(--text)" />
       </svg>
     </Layer>
   );

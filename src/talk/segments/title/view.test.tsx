@@ -56,7 +56,14 @@ describe("opening segments", () => {
 
   it("should show both answers at the taste stop", () => {
     renderAt(36.5, <ForewordSegment />);
-    expect(screen.getByText("1. Taste: deciding well and knowing what you want")).toBeVisible();
+    const line = (text: string) => (_: string, el: Element | null) =>
+      el?.tagName === "DIV" && el.textContent === text;
+    expect(
+      screen.getByText(line("1. Taste: deciding well and knowing what you want")),
+    ).toBeVisible();
+    expect(
+      screen.getByText(line("2. Care for your craft, which comes from being in our world")),
+    ).toBeVisible();
     expect(screen.getByText("being")).toBeVisible();
   });
 

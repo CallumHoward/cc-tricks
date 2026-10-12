@@ -7,6 +7,8 @@ export const TIP8 = {
   submitAt: 210.2,
   spinnerAt: 210.4,
   dive: { start: 211.0, end: 212.2 },
+  /** The tip title lands as the board rolls */
+  title: 212.8,
   rows: [211.4, 211.9, 212.4],
   cache: { at: 214, hold: 2.5 },
   board: { foldStart: 216.55, foldEnd: 217.1 },

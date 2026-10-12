@@ -2,6 +2,7 @@ import { clamp, inOutCubic, inQuad, outCubic, prog } from "#/engine/motion/ease"
 import { SPRINGS } from "#/engine/motion/spring";
 import { keys, type Key } from "#/engine/motion/track";
 import { shotTrack, type Cam } from "#/talk/kit/motion";
+import { whipOffset } from "#/talk/kit/tui/tui-math";
 import type { Act } from "#/talk/mascot/actions";
 
 /** Afterword story times (absolute τ); window [267.4, 280.9), stops at 272 and 277. */
@@ -33,8 +34,8 @@ export const AFT = Object.freeze({
   wantedAt: 277,
   yank: 279.5,
   yankDur: 0.45,
-  whipOut: 280.35,
-  whipOutDur: 0.55,
+  whipOut: 280,
+  whipOutDur: 0.5,
   end: 280.9,
 });
 
@@ -74,13 +75,19 @@ export const BOT_X = keys(
   [AFT.peekTo, POSTER.left + POSTER.width - 92, SPRINGS.MOVE],
 );
 
-/** Horizontal squash of the bot: a sliver in the 5% gap, full width again once the bars drain. */
+/** Squeezed width that wedges the bot's profile into the 5% gap, wall to wall. */
+export const SQUEEZE = 0.62;
+
+/** Horizontal squash of the bot: wedged into the 5% gap, full width again once the bars drain. */
 export const BOT_WIDTH = keys(
   [AFT.sliverFrom, 1],
-  [AFT.sliverTo, 0.15, outCubic],
-  [AFT.widenFrom, 0.15],
+  [AFT.sliverTo, SQUEEZE, outCubic],
+  [AFT.widenFrom, SQUEEZE],
   [AFT.widenTo, 1, SPRINGS.LAND],
 );
+
+/** Squash and stretch: the squeezed bot bulges upward out of the slot. */
+export const botStretch = (width: number): number => 1 + 0.6 * (1 - width);
 
 export const BOT_ACTS: readonly Act[] = [
   { kind: "look", at: AFT.barsFrom - 0.1, dur: 0.9, x: -0.8, y: 0.1 },
@@ -144,3 +151,10 @@ export function captionWords(tau: number, total: number): number {
   const q = Math.ceil(tau * 60 - 1e-6) / 60;
   return Math.round(clamp((q - AFT.captionAt) / (AFT.captionEnd - AFT.captionAt)) * total);
 }
+
+/** Screen y of the inbound terminal: whips down to the gauges at the start. */
+export const terminalY = (tau: number): number => whipOffset(tau, AFT.whipIn, AFT.whipDur, -1080);
+
+/** Screen y of the closing home shot: rests at identity well before the outro's match cut. */
+export const homeY = (tau: number): number =>
+  terminalY(tau) + whipOffset(tau, AFT.whipOut, AFT.whipOutDur, 1080);

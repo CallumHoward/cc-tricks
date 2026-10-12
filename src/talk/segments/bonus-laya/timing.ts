@@ -51,6 +51,9 @@ export const TARGETS: readonly Pt[] = [
 
 export const stepAt = (k: number): number => 262.0 + k * 0.3;
 
+/** Targets the cursor reaches (and rings) before the exit; it is still gliding to the next. */
+export const RINGED = 4;
+
 /** Cursor: hops target to target, then glides toward step 5 at ≤ 30 px per τ-s through the hold. */
 export function cursorAt(tau: number): Pt {
   const first = TARGETS[0] as Pt;

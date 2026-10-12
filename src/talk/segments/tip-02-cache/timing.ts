@@ -52,12 +52,15 @@ export const T = Object.freeze({
   irisStart: 105.2,
   irisEnd: 106.0,
   rings: 106.4,
+  ringsLand: 107.0,
   ttlHead: 107.6,
   subRow: 109.6,
   freeze: 110.3,
   fix: 110.5,
   // idle
   crack: 115.6,
+  /** The ttl plate has wiped out by now, so nothing of the idle plate lands before it. */
+  idleIn: 115.85,
   clock: 116.1,
   clockEnd: 117.2,
   spike: 117.3,

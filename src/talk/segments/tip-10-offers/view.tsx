@@ -20,6 +20,8 @@ import { OffersBoard } from "./offers";
 import { ResetsPlate } from "./resets";
 import { chipFlight, chipPoint, pileCount, swapAt, T10 } from "./tracks";
 
+import "./view.css";
+
 const WIPES = [
   { ...T10.boneIn, to: "bone" as const },
   { ...T10.exit.boneOut, to: "dark" as const },
@@ -101,22 +103,24 @@ function ExitHome() {
 export default function Tip10OffersSegment() {
   return (
     <During from={T10.start} to={T10.end}>
-      <BoneSwap wipes={WIPES}>
-        <ScrollbackWhip at={T10.exit.whipAt} dur={T10.exit.whipDur} distance={1080}>
-          <During from={T10.start - 1} to={BOARD_FROM}>
-            <ResetsPlate />
-          </During>
-          <During from={BOARD_FROM} to={HOME_FROM}>
-            <OffersBoard />
-          </During>
-          <During from={HOME_FROM} to={Number.POSITIVE_INFINITY}>
-            <ExitHome />
-          </During>
-          <div style={{ ...FILL, transform: "translateY(-1080px)" }}>
-            <HomeRest pile={10} from={T10.exit.whipAt} to={Number.POSITIVE_INFINITY} />
-          </div>
-        </ScrollbackWhip>
-      </BoneSwap>
+      <div className="t10-swap" style={FILL}>
+        <BoneSwap wipes={WIPES}>
+          <ScrollbackWhip at={T10.exit.whipAt} dur={T10.exit.whipDur} distance={1080}>
+            <During from={T10.start - 1} to={BOARD_FROM}>
+              <ResetsPlate />
+            </During>
+            <During from={BOARD_FROM} to={HOME_FROM}>
+              <OffersBoard />
+            </During>
+            <During from={HOME_FROM} to={Number.POSITIVE_INFINITY}>
+              <ExitHome />
+            </During>
+            <div style={{ ...FILL, transform: "translateY(-1080px)" }}>
+              <HomeRest pile={10} from={T10.exit.whipAt} to={Number.POSITIVE_INFINITY} />
+            </div>
+          </ScrollbackWhip>
+        </BoneSwap>
+      </div>
     </During>
   );
 }

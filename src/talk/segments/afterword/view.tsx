@@ -20,6 +20,7 @@ import {
   BOT_ACTS,
   BOT_WIDTH,
   BOT_X,
+  botStretch,
   captionWords,
   limitsCamera,
   POSTER,
@@ -92,10 +93,11 @@ function Caption() {
 function SqueezedBot() {
   const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
     setStyle(root, "transform", `translate3d(${sampleKeys(BOT_X, frame.tau).toFixed(2)}px, 0, 0)`);
+    const width = sampleKeys(BOT_WIDTH, frame.tau);
     setStyle(
       root.firstElementChild,
       "transform",
-      `scaleX(${sampleKeys(BOT_WIDTH, frame.tau).toFixed(4)})`,
+      `scale(${width.toFixed(4)}, ${botStretch(width).toFixed(4)})`,
     );
   });
   return (

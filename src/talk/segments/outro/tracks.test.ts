@@ -8,12 +8,16 @@ import {
   elapsedSeconds,
   ESTIMATED_WALL,
   flightStart,
+  homeY,
+  INK_FROM,
   OUT,
   PLATE,
   plateFed,
   plateRules,
   QR,
   RECAP,
+  revealEdge,
+  REVEAL_SLANT,
   SCROLLBACK,
   thesisLines,
   tileAt,
@@ -101,7 +105,7 @@ describe("outro tracks", () => {
   it("should feed the plate under every held-back module before its tile inks", () => {
     for (let i = 0; i < 10; i++) {
       const m = held[9 - i] as { x: number; y: number };
-      const inks = flightStart(i) + 0.62 * OUT.flyDur;
+      const inks = flightStart(i) + INK_FROM * OUT.flyDur;
       expect(plateFed(inks, n)).toBeGreaterThanOrEqual((m.y + 1) * px);
     }
   });
@@ -117,5 +121,20 @@ describe("outro tracks", () => {
       .map((t) => t.y - t.size / 2);
     expect(tops.length).toBeGreaterThan(0);
     expect(Math.min(...tops)).toBeGreaterThan(REFS_BOTTOM);
+  });
+
+  it("should hold the home shot at identity through the match cut", () => {
+    expect(OUT.whip - OUT.start).toBeGreaterThanOrEqual(0.2);
+    for (const tau of [OUT.start, OUT.start + 0.05, OUT.whip]) expect(homeY(tau)).toBe(0);
+  });
+
+  it("should settle the recap on tip 1 before the bone plate sweeps in", () => {
+    expect(OUT.whip + OUT.whipDur).toBeLessThanOrEqual(OUT.recapAt);
+    expect(OUT.wipeFrom - (OUT.recapAt + OUT.recapDur)).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it("should sweep the bone plate's edge from off the left to off the right", () => {
+    expect(revealEdge(OUT.wipeFrom) + REVEAL_SLANT).toBeLessThanOrEqual(0);
+    expect(revealEdge(OUT.wipeTo) - REVEAL_SLANT).toBeGreaterThanOrEqual(1920);
   });
 });

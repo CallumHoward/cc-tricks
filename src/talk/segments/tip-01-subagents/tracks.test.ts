@@ -3,14 +3,21 @@ import { describe, expect, it } from "vitest";
 import { BOT_HOME } from "#/talk/segments/shared/home";
 
 import {
+  ADV,
   AT,
   botOffset,
   chipAt,
+  CHIPS,
+  contextFill,
   crateX,
   dockY,
   EXIT,
   HOLD_END,
+  MAIN_TOKENS_FINAL,
   plateFold,
+  scanAt,
+  TRANSCRIPT,
+  transcriptLine,
   spokeAt,
   spokeLand,
   SUBAGENTS,
@@ -52,6 +59,25 @@ describe("tip 1 tracks", () => {
       expect(rise / 100 / (HOLD_END.agents - AT.agents)).toBeLessThanOrEqual(1);
       expect(TICKS.at.every((t) => t > AT.agents && t + TICKS.snap < HOLD_END.agents)).toBe(true);
     });
+  });
+
+  it("should land both chips before the model stop settles", () => {
+    for (const c of CHIPS) expect(c.land).toBeLessThanOrEqual(AT.model - 0.8);
+  });
+
+  it("should fill main's context bar shorter than every subagent's", () => {
+    SUBAGENTS.forEach((a) => {
+      expect(contextFill(MAIN_TOKENS_FINAL)).toBeLessThan(contextFill(a.tokens));
+    });
+  });
+
+  it("should collapse every transcript line once the scan has read it and then hide the bar", () => {
+    TRANSCRIPT.forEach((_, i) => {
+      expect(transcriptLine(i, ADV.scan.start - 0.01)).toBeCloseTo(1, 5);
+      expect(transcriptLine(i, ADV.scan.end)).toBe(0);
+    });
+    expect(scanAt(ADV.scan.end).opacity).toBe(0);
+    expect(scanAt(AT.advisor).opacity).toBe(0);
   });
 
   it("should drift the effort chip no more than 6 px through the hold", () => {

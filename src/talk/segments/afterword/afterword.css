@@ -26,7 +26,10 @@
   margin-right: 0.26em;
 }
 
+/* A void keyline parts the clay bot from the clay fill it is wedged against */
 .fin-bot {
+  filter: drop-shadow(3px 0 0 var(--void)) drop-shadow(-3px 0 0 var(--void))
+    drop-shadow(0 -3px 0 var(--void));
   transform-origin: 120px 180px;
 }
 

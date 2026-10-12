@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { scriptFor } from "#/talk/script";
 import { renderAt } from "#/talk/segments/tip-03-effort/render-at";
 
-import { chipsWritten, cursorAt, TB } from "./timing";
+import { CUES } from "./cues";
+import { chipsWritten, cursorAt, RINGED, stepAt, TARGETS, TB } from "./timing";
 import BonusLayaSegment from "./view";
 
 describe("bonus laya", () => {
@@ -17,6 +18,20 @@ describe("bonus laya", () => {
     const b = cursorAt(TB.browser.holdEnd);
     const speed = Math.hypot(b.x - a.x, b.y - a.y) / (TB.browser.holdEnd - TB.browser.at);
     expect(speed).toBeLessThanOrEqual(30);
+  });
+
+  it("should only ring the targets the cursor has reached", () => {
+    for (let k = 0; k < RINGED; k++) expect(cursorAt(stepAt(k))).toEqual(TARGETS[k]);
+    expect(cursorAt(TB.browser.holdEnd)).not.toEqual(TARGETS[RINGED]);
+  });
+
+  it("should keep every sound cue inside the window and out of the holds", () => {
+    const holds = [TB.one, TB.laya, TB.browser].map((h) => [h.at, h.holdEnd] as const);
+    for (const { tau } of CUES) {
+      expect(tau).toBeGreaterThanOrEqual(TB.winStart);
+      expect(tau).toBeLessThan(TB.winEnd);
+      expect(holds.some(([a, b]) => tau > a && tau < b)).toBe(false);
+    }
   });
 
   it("should show the book when frozen at b-system-one", () => {

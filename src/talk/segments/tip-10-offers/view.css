@@ -1,0 +1,4 @@
+/* The dark tone shows the stage's own bed, so both boundaries match the neighbouring home shots. */
+.t10-swap > .km-bed[data-tone="dark"] {
+  background: transparent;
+}

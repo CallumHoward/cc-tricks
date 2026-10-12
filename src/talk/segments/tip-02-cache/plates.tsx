@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { inOutCubic, outCubic, outExpo, prog } from "#/engine/motion/ease";
 import type { Frame } from "#/engine/types";
 import { RingTimer } from "#/talk/kit/data/ring-timer";
@@ -7,7 +9,7 @@ import { setStyle, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import { scriptFor } from "#/talk/script";
 import { PriceOfATurn } from "#/talk/widgets/price-of-a-turn";
 
-import { Anchor, During, Rise, Typed } from "./parts";
+import { Anchor, During, Leave, Rise, Typed } from "./parts";
 import {
   COIN,
   IDLE_Y,
@@ -165,11 +167,11 @@ export function KvPlate() {
     <During from={T.kvMorph} to={out + 0.6}>
       <RuleRise
         text={"Same prefix? Reuse its\nstored K/V tensors."}
-        settleBy={91.2}
+        settleBy={90.6}
         exit={out}
         style={{ position: "absolute", left: LEFT, top: 92 }}
       />
-      <Rise at={90.4} out={out} className="type-body text-soft" style={{ left: LEFT, top: 380 }}>
+      <Rise at={90.65} out={out} className="type-body text-soft" style={{ left: LEFT, top: 380 }}>
         {s.lines[0]}
       </Rise>
       <Anchor x={KV_X0 - 34} y={KV_Y0 - KV_LAYER_PITCH * 3.6} z={0} dx={-72}>
@@ -218,7 +220,8 @@ function ColumnValue({ i }: { i: number }) {
     const u = outCubic(
       prog(frame.tau, T.columns - 0.3 + i * 0.12, T.columns + 0.4 + i * 0.12 + count * 0.012),
     );
-    const top = PRICE_BASE - COIN * count * u - 50;
+    // The bot stands on the hit column, so its value sits above the bot's head.
+    const top = PRICE_BASE - COIN * count * u - (i === 3 ? 236 : 50);
     setStyle(
       el,
       "transform",
@@ -243,68 +246,77 @@ export function PricePlate() {
   const [tableLabel, writes] = s.labels;
   const context = s.ui[0] ?? "";
   return (
-    <During from={T.plan} to={T.cut}>
+    <During from={T.plan} to={T.irisEnd + 0.4}>
       <RuleRise
         text={s.headline ?? ""}
         settleBy={99.2}
+        exit={T.irisEnd}
         style={{ position: "absolute", left: LEFT, top: 92 }}
       />
-      <Rise at={97.9} className="type-label text-muted" style={{ left: LEFT, top: 286 }}>
-        {tableLabel}
-      </Rise>
-      <div className="t2-table" style={{ position: "absolute", left: LEFT, top: 340 }}>
-        {table?.rows.map((row, r) => (
+      <Leave at={T.irisEnd}>
+        <Rise at={97.9} className="type-label text-muted" style={{ left: LEFT, top: 286 }}>
+          {tableLabel}
+        </Rise>
+        <div className="t2-table" style={{ position: "absolute", left: LEFT, top: 340 }}>
+          {table?.rows.map((row, r) => (
+            <Rise
+              key={row[0]}
+              at={98.2 + r * 0.12}
+              className="type-code t2-table__row"
+              style={{ position: "relative" }}
+            >
+              <span>{row[0]}</span>
+              <span className="text-clay">{row[1]}</span>
+              <span className="text-muted">{row[2]}</span>
+            </Rise>
+          ))}
+        </div>
+        <Typed
+          text={writes ?? ""}
+          at={98.6}
+          cps={90}
+          className="type-label text-soft"
+          style={{ left: LEFT, top: 578 }}
+        />
+        {COLUMN_NAMES.map((name, i) => (
+          <ColumnValue key={name} i={i} />
+        ))}
+        {COLUMN_NAMES.map((name, i) => (
           <Rise
-            key={row[0]}
-            at={98.2 + r * 0.12}
-            className="type-code t2-table__row"
-            style={{ position: "relative" }}
+            key={name}
+            at={T.columns + i * 0.12}
+            className="type-label text-muted"
+            style={{
+              left: (PRICE_X[i] ?? 0) - 90,
+              top: PRICE_BASE + 14,
+              width: 180,
+              textAlign: "center",
+            }}
           >
-            <span>{row[0]}</span>
-            <span className="text-clay">{row[1]}</span>
-            <span className="text-muted">{row[2]}</span>
+            {name}
           </Rise>
         ))}
-      </div>
-      <Typed
-        text={writes ?? ""}
-        at={98.6}
-        cps={90}
-        className="type-label text-soft"
-        style={{ left: LEFT, top: 578 }}
-      />
-      {COLUMN_NAMES.map((name, i) => (
-        <ColumnValue key={name} i={i} />
-      ))}
-      {COLUMN_NAMES.map((name, i) => (
         <Rise
-          key={name}
-          at={T.columns + i * 0.12}
-          className="type-label text-muted"
-          style={{
-            left: (PRICE_X[i] ?? 0) - 90,
-            top: PRICE_BASE + 14,
-            width: 180,
-            textAlign: "center",
-          }}
+          at={T.columns + 0.5}
+          className="type-label text-soft"
+          style={{ left: (PRICE_X[0] ?? 0) - 90, top: 286 }}
         >
-          {name}
+          {context}
         </Rise>
-      ))}
-      <Rise at={T.columns + 0.5} className="type-label text-soft" style={{ left: 840, top: 286 }}>
-        {context}
-      </Rise>
-      <div className="t2-w1" style={{ position: "absolute", left: 200, top: 680 }}>
-        <Rise at={99.0} style={{ position: "relative" }}>
-          <PriceOfATurn width={600} />
-        </Rise>
-      </div>
+        <div className="t2-w1" style={{ position: "absolute", left: LEFT, top: 650 }}>
+          <Rise at={99.0} style={{ position: "relative" }}>
+            <PriceOfATurn width={520} />
+          </Rise>
+        </div>
+      </Leave>
     </During>
   );
 }
 
 // ── t2-ttl ───────────────────────────────────────────────────────────────────────────────────
 
+/** Fast enough that the fix has finished typing by at − 0.8. */
+const CODE_CPS = 200;
 const STRIP_X = 820;
 const STRIP_Y = 520;
 
@@ -333,82 +345,118 @@ function FrostStrip() {
   );
 }
 
+/** Ring-row slot centres (1h first, then the 5m rings), from the `.t2-rings` flex layout. */
+const RING_ROW = { x: 1200, y: 236, gap: 18, big: 120, small: 84 };
+
+/** Each ring flies from its price column's top into the ring row as the columns sink. */
+function FlyFrom({ dx, dy, children }: { dx: number; dy: number; children: ReactNode }) {
+  const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
+    const u = 1 - outCubic(prog(frame.tau, T.rings, T.ringsLand));
+    setStyle(
+      el,
+      "transform",
+      u > 0 ? `translate3d(${(dx * u).toFixed(1)}px, ${(dy * u).toFixed(1)}px, 0)` : "none",
+    );
+  });
+  return <div ref={ref}>{children}</div>;
+}
+
+function ringOffset(slot: number, column: 1 | 2): { dx: number; dy: number } {
+  const { x, y, gap, big, small } = RING_ROW;
+  const cx = slot === 0 ? x + big / 2 : x + big + gap + (slot - 1) * (small + gap) + small / 2;
+  const cy = y + big / 2;
+  const count = PRICE_COUNTS[column] ?? 0;
+  return { dx: (PRICE_X[column] ?? 0) - cx, dy: PRICE_BASE - COIN * count - cy };
+}
+
 export function TtlPlate() {
   const s = scriptFor("t2-ttl");
   const out = holdEnd(TTL);
   const code = s.code.filter((c) => c.onStage !== false);
   const [codeA, codeB] = code;
+  const typed = (dt: number) => T.fix + dt;
   return (
-    <During from={T.irisStart} to={out + 0.6}>
+    <During from={T.irisStart} to={out + 0.4}>
       <RuleRise
         text={"Main session: 1h cache.\nSubagents: 5m."}
         settleBy={109.0}
         exit={out}
         style={{ position: "absolute", left: LEFT, top: 72 }}
       />
-      <div style={{ position: "absolute", left: 1200, top: 236 }} className="t2-rings">
-        <RingTimer label="1h" start={T.rings} burn={{ start: T.rings, end: 400 }} size={120} />
-        {[0, 1, 2, 3, 4].map((i) => (
-          <RingTimer
-            key={`r${i + 1}`}
-            label="5m"
-            start={T.rings + 0.1 + i * 0.07}
-            burn={i === 0 ? { start: T.subRow, end: T.freeze } : undefined}
-            left={i === 0 ? undefined : 1}
-            tone="cached"
-            size={84}
-          />
-        ))}
-      </div>
-      <AgentRow
-        name="cbdev tests (7m)"
-        enterAt={T.subRow}
-        className="type-code"
-        style={{ position: "absolute", left: LEFT, top: 480, width: 1000 }}
-      />
-      <FrostStrip />
-      <ReadToolRow
-        tool="Read"
-        arg={codeA?.label ?? ""}
-        at={T.fix}
-        className="type-code"
-        style={{ position: "absolute", left: LEFT, top: 596 }}
-      />
-      <Typed
-        text={codeA?.code ?? ""}
-        at={T.fix + 0.15}
-        cps={110}
-        className="type-code t2-code"
-        style={{ left: 260, top: 664 }}
-      />
-      <Typed
-        text={codeA?.caption ?? ""}
-        at={T.fix + 0.4}
-        cps={110}
-        className="type-label text-muted"
-        style={{ left: 260, top: 716 }}
-      />
-      <Typed
-        text={codeB?.code ?? ""}
-        at={T.fix + 0.5}
-        cps={110}
-        className="type-code t2-code"
-        style={{ left: 260, top: 780 }}
-      />
-      <Typed
-        text={codeB?.caption ?? ""}
-        at={T.fix + 0.85}
-        cps={110}
-        className="type-label text-muted"
-        style={{ left: 260, top: 832 }}
-      />
-      <Typed
-        text={s.footnotes[1] ?? ""}
-        at={T.fix + 1.0}
-        cps={110}
-        className="type-label text-clay"
-        style={{ left: 260, top: 890 }}
-      />
+      <Leave at={out}>
+        <Rise at={109.3} className="type-body text-soft" style={{ left: LEFT, top: 384 }}>
+          {s.lines[0]}
+        </Rise>
+        <div
+          style={{ position: "absolute", left: RING_ROW.x, top: RING_ROW.y }}
+          className="t2-rings"
+        >
+          <FlyFrom {...ringOffset(0, 2)}>
+            <RingTimer label="1h" start={T.rings} burn={{ start: T.rings, end: 400 }} size={120} />
+          </FlyFrom>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <FlyFrom key={`r${i + 1}`} {...ringOffset(i + 1, 1)}>
+              <RingTimer
+                label="5m"
+                start={T.rings + 0.1 + i * 0.07}
+                burn={i === 0 ? { start: T.subRow, end: T.freeze } : undefined}
+                left={i === 0 ? undefined : 1}
+                tone="cached"
+                size={84}
+              />
+            </FlyFrom>
+          ))}
+        </div>
+        <AgentRow
+          name="cbdev tests (7m)"
+          enterAt={T.subRow}
+          className="type-code"
+          style={{ position: "absolute", left: LEFT, top: 480, width: 1000 }}
+        />
+        <FrostStrip />
+        <ReadToolRow
+          tool="Read"
+          arg={codeA?.label ?? ""}
+          at={T.fix}
+          className="type-code"
+          style={{ position: "absolute", left: LEFT, top: 596 }}
+        />
+        <Typed
+          text={codeA?.code ?? ""}
+          at={typed(0.1)}
+          cps={CODE_CPS}
+          className="type-code t2-code"
+          style={{ left: 260, top: 664 }}
+        />
+        <Typed
+          text={codeA?.caption ?? ""}
+          at={typed(0.2)}
+          cps={CODE_CPS}
+          className="type-label text-muted"
+          style={{ left: 260, top: 716 }}
+        />
+        <Typed
+          text={codeB?.code ?? ""}
+          at={typed(0.3)}
+          cps={CODE_CPS}
+          className="type-code t2-code"
+          style={{ left: 260, top: 780 }}
+        />
+        <Typed
+          text={codeB?.caption ?? ""}
+          at={typed(0.4)}
+          cps={CODE_CPS}
+          className="type-label text-muted"
+          style={{ left: 260, top: 832 }}
+        />
+        <Typed
+          text={s.footnotes[1] ?? ""}
+          at={typed(0.5)}
+          cps={CODE_CPS}
+          className="type-label text-clay"
+          style={{ left: 260, top: 890 }}
+        />
+      </Leave>
     </During>
   );
 }
@@ -443,13 +491,13 @@ function FieldFoot({ text }: { text: string }) {
     );
   });
   return (
-    <div ref={ref} style={{ position: "absolute", inset: 0, visibility: "hidden" }}>
+    <div ref={ref} style={{ position: "absolute", inset: 0, zIndex: 21, visibility: "hidden" }}>
       <Typed
         text={text}
         at={104.1}
         cps={110}
         className="type-label t2-on-clay"
-        style={{ left: 360, top: 820 }}
+        style={{ left: 160, top: 820 }}
       />
     </div>
   );
@@ -467,7 +515,7 @@ function Clock() {
       0.06 * outCubic(prog(frame.tau, 118.6, IDLE.at)) + 0.008 * Math.max(0, frame.tau - IDLE.at);
     const minutes = (sweep + lap) * 360;
     const hand = el.querySelector(".t2-clock__minute");
-    const pop = outExpo(prog(frame.tau, T.crack, T.crack + 0.5));
+    const pop = outExpo(prog(frame.tau, T.idleIn, T.idleIn + 0.5));
     setStyle(hand, "transform", `rotate(${minutes.toFixed(2)}deg)`);
     setStyle(el, "transform", `scale(${pop.toFixed(3)})`);
   });
@@ -522,7 +570,7 @@ export function IdlePlate() {
       <div style={{ position: "absolute", left: 1210, top: 410 }}>
         <RingTimer
           label="1h"
-          start={T.crack}
+          start={T.idleIn}
           burn={{ start: T.clock, end: T.clockEnd - 0.08 }}
           size={130}
         />
@@ -556,7 +604,7 @@ export function SwitchPlate() {
     <During from={123.5} to={T.foldEnd}>
       <RuleRise
         text={"Switch effort levels,\nnot models."}
-        settleBy={128.7}
+        settleBy={127.7}
         style={{ position: "absolute", left: LEFT, top: 72 }}
       />
       {s.lines.map((line, i) => (
@@ -576,7 +624,7 @@ export function SwitchPlate() {
         style={{ position: "absolute", left: LEFT, top: 540 }}
       />
       <Anchor x={SKIP.x} y={SKIP.y} z={0} dx={-60} dy={46}>
-        <Rise at={125.0} out={T.fold - 0.2} className="type-label text-soft">
+        <Rise at={125.0} out={T.fold} className="type-label text-soft">
           /model
         </Rise>
       </Anchor>

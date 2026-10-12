@@ -20,7 +20,7 @@ import "./bonus.css";
 import { BrowserPlate } from "./browser-plate";
 import { LayaPlate } from "./laya-plate";
 import { SystemOnePlate } from "./system-one";
-import { cursorAt, TB, TB_TOKENS } from "./timing";
+import { cursorAt, RINGED, TARGETS, TB, TB_TOKENS } from "./timing";
 
 const BOOK_TOP: Pt = { x: 960, y: 470 };
 const BAR_END: Pt = { x: 1690, y: 690 };
@@ -71,12 +71,12 @@ const creep = (tau: number): StyleValues => {
 
 const fold = (tau: number) => foldAt(tau, TB.browser.holdEnd);
 
-/** Exit: the last `·` decision pounces into the completion line's ✻. */
+/** Exit: the last ringed decision pounces into the completion line's ✻. */
 function Pounce() {
   const ref = useTrack((tau: number) => {
     const end = TB.browser.holdEnd;
     const u = prog(tau, end, end + 0.3, inCubic);
-    const p = arcPoint(cursorAt(end), SPIN_AT, u, 240);
+    const p = arcPoint(TARGETS[RINGED - 1] ?? cursorAt(end), SPIN_AT, u, 240);
     return { x: p.x - 9, y: p.y - 9, scale: 1 - 0.4 * u };
   });
   return (

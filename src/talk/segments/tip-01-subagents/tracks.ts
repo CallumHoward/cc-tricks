@@ -1,4 +1,4 @@
-import { clamp, inOutExpo, outCubic, outExpo, prog } from "#/engine/motion/ease";
+import { clamp, inOutCubic, inOutExpo, outCubic, outExpo, prog } from "#/engine/motion/ease";
 import { keys, sampleKeys } from "#/engine/motion/track";
 import type { StyleValues } from "#/engine/stage/applier";
 import { HOME } from "#/talk/kit/tui";
@@ -135,12 +135,24 @@ export function subagentTokens(i: number): (tau: number) => number {
 export const LABEL_AT = 50.3;
 export const YAML_AT = 55.45;
 
-export const MAIN_TOKENS = keys([49.0, 0], [50.6, 97_300, outCubic]);
+export const MAIN_TOKENS_FINAL = 97_300;
+export const MAIN_TOKENS = keys([49.0, 0], [50.6, MAIN_TOKENS_FINAL, outCubic]);
+
+/** Context bar under each counter: full width is a 250k window. */
+export const CONTEXT = Object.freeze({
+  capacity: 250_000,
+  left: 830,
+  top: 40,
+  width: 270,
+  height: 5,
+});
+
+export const contextFill = (tokens: number): number => clamp(tokens / CONTEXT.capacity);
 export const SPINNER_TOKENS = keys([48.6, 0], [50.9, 97_300, outCubic]);
 export const SPINNER_ELAPSED = keys([48.6, 0], [50.9, 1769, outCubic]);
 export const SPINNER_VERB = [
   { at: 0, verb: "Orchestrating" },
-  { at: 50.5, verb: "Onioning" },
+  { at: 50.9, verb: "Onioning" },
 ] as const;
 
 /** Rows fold into the agent card: each squashes onto the main row, staggered. */
@@ -159,7 +171,7 @@ export function spinnerFold(tau: number): StyleValues {
 
 // Tip 1 · t1-model-effort ------------------------------------------------------------------------
 
-export const CARD = Object.freeze({ left: 200, top: 400, width: 1200, chX: 20.4, lineH: 45.9 });
+export const CARD = Object.freeze({ left: 200, top: 400, width: 1240, chX: 20.4, lineH: 45.9 });
 
 /** Centre y of YAML line `i` inside the CodeBlock. */
 export const cardLineY = (i: number): number =>
@@ -184,9 +196,19 @@ export function cardFrame(tau: number): StyleValues {
 
 /** Chip slots: `haiku` on line 3 col 7, `low` on line 4 col 8 (with 0.4ch padding each side). */
 export const CHIPS = [
-  { text: "haiku", line: 3, col: 7, from: { x: 1500, y: 640 }, launch: 55.95, land: 56.6 },
-  { text: "low", line: 4, col: 8, from: { x: 1640, y: 360 }, launch: 56.2, land: 56.95 },
+  { text: "haiku", line: 3, col: 7, from: { x: 1500, y: 640 }, launch: 55.7, land: 56.35 },
+  { text: "low", line: 4, col: 8, from: { x: 1640, y: 360 }, launch: 55.95, land: 56.65 },
 ] as const;
+
+/** Panel-coloured patch over a chip's base word, so the chip's hold drift never exposes it. */
+export function chipCover(i: number): { left: number; top: number; width: number } {
+  const c = CHIPS[i] ?? CHIPS[0];
+  return {
+    left: cardColX(c.col) - 4,
+    top: cardLineY(c.line) - 23,
+    width: c.text.length * CARD.chX + 8,
+  };
+}
 
 /** `effort: low` drifts its last 6 px in the hold; `haiku` is pasted by the bot before. */
 export function chipAt(i: number, tau: number): StyleValues {
@@ -224,6 +246,32 @@ export const ADV = Object.freeze({
   summaryAt: 64.6,
   l2At: 64.45,
 });
+
+/** The scan bar's sweep: it reads the transcript stack, then leaves. */
+export function scanAt(tau: number): { y: number; opacity: number } {
+  const u = prog(tau, ADV.scan.start, ADV.scan.end, inOutCubic);
+  return { y: 540 + 240 * u, opacity: tau < ADV.scan.start || u >= 1 ? 0 : 1 };
+}
+
+/** Dimmed transcript lines (left x, width, centre y) that the scan reads and collapses into main. */
+export const TRANSCRIPT = [
+  { width: 620, y: 572 },
+  { width: 470, y: 610 },
+  { width: 700, y: 648 },
+  { width: 540, y: 686 },
+  { width: 660, y: 724 },
+  { width: 400, y: 762 },
+] as const;
+export const TRANSCRIPT_LEFT = 640;
+export const TRANSCRIPT_IN = 60.45;
+
+/** Line i's horizontal scale: wipes on from the left, collapses once the scan has passed it. */
+export function transcriptLine(i: number, tau: number): number {
+  const l = TRANSCRIPT[i] ?? TRANSCRIPT[0];
+  const enter = prog(tau, TRANSCRIPT_IN + i * 0.06, TRANSCRIPT_IN + i * 0.06 + 0.3, outExpo);
+  const read = prog(scanAt(tau).y, l.y - 30, l.y + 10, inOutExpo);
+  return enter * (1 - read);
+}
 
 export const PANEL = Object.freeze({
   mainTop: 600,

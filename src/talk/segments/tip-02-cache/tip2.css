@@ -72,7 +72,16 @@
 }
 
 .t2-w1 .wg {
+  width: 860px;
   gap: 18px;
+}
+
+.t2-w1 .wg-row {
+  gap: 12px;
+}
+
+.t2-w1 .wg-chip {
+  padding: 0 18px;
 }
 
 .t2-strip {
@@ -158,6 +167,6 @@
 .t2-w1 .wg-readout {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 24px;
-  max-width: 600px;
+  gap: 4px 48px;
+  max-width: 860px;
 }

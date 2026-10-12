@@ -31,8 +31,10 @@ import {
   hammerTilt,
   headForm,
   headTop,
+  odometerScale,
   PLAN_ROWS,
   planFold,
+  propFold,
   plateFold,
   PLUS_AT,
   shardAt,
@@ -185,6 +187,7 @@ function Dispatches() {
   return <span ref={ref} style={{ fontVariantNumeric: "tabular-nums" }} />;
 }
 const plusTrack = (tau: number) => ({ scale: prog(tau, PLUS_AT, PLUS_AT + 0.12) });
+const odometerTrack = (tau: number) => ({ scale: odometerScale(tau) });
 
 function Plan() {
   return (
@@ -200,7 +203,16 @@ function Plan() {
         {PLAN_ROWS.map((r) => (
           <PlanRowView key={r.label} i={r.i} />
         ))}
-        <div style={{ ...abs(1130, 540), display: "flex", flexDirection: "column", gap: 4 }}>
+        <Drive
+          fn={odometerTrack}
+          style={{
+            ...abs(1130, 540),
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            transformOrigin: "0 50%",
+          }}
+        >
           <div className="type-headline tui text-clay" style={{ display: "flex" }}>
             <Dispatches />
             <Drive fn={plusTrack} style={{ position: "relative" }}>
@@ -208,7 +220,7 @@ function Plan() {
             </Drive>
           </div>
           <div className="type-label text-muted">dispatches</div>
-        </div>
+        </Drive>
       </Drive>
       <Swarm />
     </Gate>
@@ -395,9 +407,11 @@ function Walnut() {
       >
         <WalnutHalf side={-1} />
         <WalnutHalf side={1} />
-        {SHARDS.map((s, i) => (
-          <Shard key={s.r} i={i} />
-        ))}
+        <div style={{ position: "absolute", inset: 0, clipPath: "inset(-400px -400px -6px)" }}>
+          {SHARDS.map((s, i) => (
+            <Shard key={s.r} i={i} />
+          ))}
+        </div>
       </div>
       <div
         className="type-label text-soft"
@@ -421,6 +435,7 @@ const shakeTrack = (tau: number, frame: Frame) => {
 };
 
 const foldTrack = (tau: number) => plateFold(tau);
+const propTrack = (tau: number) => propFold(tau);
 const whipTrack = (tau: number) => whipUp(tau);
 const walnutEnter = (tau: number) => {
   const u = prog(tau, 154.85, 155.25);
@@ -460,10 +475,12 @@ export default function Tip04SuperpowersSegment() {
               className="type-label text-muted"
               style={{ left: 200, top: 692 }}
             />
-            <Drive fn={walnutEnter} style={{ inset: 0 }}>
-              <Walnut />
+            <Drive fn={propTrack} style={{ inset: 0, transformOrigin: `50% ${WALNUT.ground}px` }}>
+              <Drive fn={walnutEnter} style={{ inset: 0 }}>
+                <Walnut />
+              </Drive>
+              <Hammer />
             </Drive>
-            <Hammer />
           </Gate>
         </Drive>
       </Drive>

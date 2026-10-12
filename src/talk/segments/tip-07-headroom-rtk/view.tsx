@@ -16,6 +16,11 @@ import {
   type StyleMap,
 } from "#/talk/segments/tip-06-cli-agents/boundary";
 import { placeAt, type PlaceKey } from "#/talk/segments/tip-06-cli-agents/timing";
+import {
+  TIP_TITLE_LINE,
+  TIP_TITLE_TOP,
+  TipTitle,
+} from "#/talk/segments/tip-06-cli-agents/tip-title";
 
 import { blockX, pressDepth, pullAt, splitAtSeparator, splitStat, TIP7 } from "./timing";
 
@@ -39,6 +44,9 @@ const RTK_LINES = [
 ];
 
 const CLAUDE_BOX = { x: 200, y: 208, w: 256, h: 144 };
+/** The RTK plate sits under the tip title */
+const BASH_Y = TIP_TITLE_TOP + TIP_TITLE_LINE + 52;
+const BODY_TOP = [BASH_Y - 8, BASH_Y + 136, BASH_Y + 280] as const;
 const PRESS_X = 960;
 
 /** Token cost on each re-run row: bursts in, then the last digit creeps through the hold. */
@@ -58,18 +66,23 @@ function Clamp() {
       transform: `scaleY(${breathe.toFixed(4)})`,
     };
   };
+  // A bracket hugging the Bash row: 6 px jaws with short returns at both ends
   const jaw = (top: boolean) => ({
     position: "absolute" as const,
     left: 0,
     width: 520,
-    height: 10,
-    borderRadius: 4,
-    background: "var(--clay)",
-    top: top ? -8 : 50,
+    height: 16,
+    border: "6px solid var(--clay)",
+    [top ? "borderBottom" : "borderTop"]: "none",
+    borderRadius: top ? "6px 6px 0 0" : "0 0 6px 6px",
+    top: top ? -12 : 48,
     transform: `translateY(calc(var(--gap) * ${top ? -1 : 1}))`,
   });
   return (
-    <Fx fx={fx} style={{ left: 180, top: 254, width: 520, height: 52, visibility: "hidden" }}>
+    <Fx
+      fx={fx}
+      style={{ left: 180, top: BASH_Y - 3, width: 520, height: 52, visibility: "hidden" }}
+    >
       <div style={jaw(true)} />
       <div style={jaw(false)} />
       <div
@@ -109,7 +122,7 @@ function Accordion() {
         fx={stream}
         style={{
           left: 236,
-          top: 316,
+          top: BASH_Y + 59,
           width: 460,
           height: 760,
           transformOrigin: "0 0",
@@ -129,7 +142,7 @@ function Accordion() {
             })}
             style={{
               left: 236,
-              top: 322 + i * 14,
+              top: BASH_Y + 65 + i * 14,
               width: w,
               height: 6,
               borderRadius: 3,
@@ -152,12 +165,13 @@ function RtkPlate() {
         tool="Bash"
         arg="git status"
         at={D.bash}
-        style={{ position: "absolute", left: 200, top: 257 }}
+        style={{ position: "absolute", left: 200, top: BASH_Y }}
       />
+      <TipTitle text={rtk.headline ?? ""} settleBy={D.title} />
       <Clamp />
       <Accordion />
       {D.reruns.map((at, i) => (
-        <div key={at} style={{ position: "absolute", left: 200, top: 430 + i * 104 }}>
+        <div key={at} style={{ position: "absolute", left: 200, top: BASH_Y + 160 + i * 100 }}>
           <ReadToolRow
             tool="Bash"
             arg="rtk grep …"
@@ -178,8 +192,8 @@ function RtkPlate() {
         </div>
       ))}
       {RTK_LINES.map((text, i) => (
-        <div key={text} style={{ position: "absolute", left: 1080, top: [240, 396, 540][i] }}>
-          <RuleRise text={text} className="type-body" settleBy={D.lines[i] ?? 0} rule={i === 0} />
+        <div key={text} style={{ position: "absolute", left: 1080, top: BODY_TOP[i] }}>
+          <RuleRise text={text} className="type-body" settleBy={D.lines[i] ?? 0} rule={false} />
         </div>
       ))}
     </Fx>
@@ -297,7 +311,7 @@ function Pipe() {
       ))}
       <div
         className="type-label text-soft"
-        style={{ position: "absolute", left: CLAUDE_BOX.x, top: CLAUDE_BOX.y + CLAUDE_BOX.h + 8 }}
+        style={{ position: "absolute", left: CLAUDE_BOX.x, top: CLAUDE_BOX.y + CLAUDE_BOX.h + 10 }}
       >
         claude
       </div>
@@ -391,20 +405,20 @@ function Dashboard() {
       fx={card}
       style={{
         left: 200,
-        top: 716,
+        top: 704,
         width: 1040,
-        height: 168,
+        height: 180,
         borderRadius: 12,
         border: "2px solid var(--hairline)",
         background: "var(--bg)",
         clipPath: "inset(0 0 100% 0)",
       }}
     >
-      <div className="type-label text-muted" style={{ position: "absolute", left: 26, top: 8 }}>
+      <div className="type-label text-muted" style={{ position: "absolute", left: 26, top: 10 }}>
         {caption}
       </div>
       {STATS.map((stat, i) => (
-        <div key={stat.label} style={{ position: "absolute", left: 26 + i * 400, top: 44 }}>
+        <div key={stat.label} style={{ position: "absolute", left: 26 + i * 400, top: 52 }}>
           <div className="type-label text-soft">{stat.label}</div>
           <div
             className={`type-body ${i === 2 ? "text-clay" : ""}`}
@@ -419,7 +433,7 @@ function Dashboard() {
         start={D.label.start}
         cps={D.label.cps}
         className="type-label text-soft"
-        top={126}
+        top={134}
         left={26}
       />
     </Fx>
@@ -434,7 +448,15 @@ function HeadroomPlate() {
   return (
     <Fx fx={visible} style={{ inset: 0, display: "none" }}>
       <CssBed tone="halftone" />
-      <div style={{ position: "absolute", left: 200, top: 404 }}>
+      <div
+        style={{
+          position: "absolute",
+          left: 200,
+          top: 420,
+          transform: "scale(0.72)",
+          transformOrigin: "0 0",
+        }}
+      >
         <RuleRise text={headroom.headline ?? ""} settleBy={D.headline} />
       </div>
       <Pipe />
@@ -444,7 +466,7 @@ function HeadroomPlate() {
         })}
         style={{
           left: 180,
-          top: 556,
+          top: 544,
           width: 1580,
           height: 104,
           borderRadius: 10,
@@ -453,13 +475,13 @@ function HeadroomPlate() {
           transform: "scaleX(0)",
         }}
       />
-      <Typed text={line1} start={D.code.start} cps={D.code.cps} className="type-code" top={560} />
+      <Typed text={line1} start={D.code.start} cps={D.code.cps} className="type-code" top={548} />
       <Typed
         text={line2}
         start={D.code.start + Array.from(line1).length / D.code.cps}
         cps={D.code.cps}
         className="type-code"
-        top={606}
+        top={594}
         left={240}
       />
       <Typed
@@ -467,7 +489,7 @@ function HeadroomPlate() {
         start={D.foot.start}
         cps={D.foot.cps}
         className="type-label text-muted"
-        top={672}
+        top={664}
       />
       <Dashboard />
       <Stamp
@@ -482,8 +504,8 @@ function HeadroomPlate() {
 
 const PLACES: readonly PlaceKey[] = [
   { at: 193.3, x: 0, y: 0, scale: 1 },
-  { at: 193.9, x: 150, y: 290, scale: 0.7 },
-  { at: 199.2, x: 150, y: 290, scale: 0.7 },
+  { at: 193.9, x: 220, y: 290, scale: 0.7 },
+  { at: 199.2, x: 220, y: 290, scale: 0.7 },
   { at: 199.9, x: -80, y: -372, scale: 0.6 },
   { at: 208.0, x: -80, y: -372, scale: 0.6 },
   { at: 208.35, x: 0, y: 0, scale: 1 },
@@ -514,11 +536,18 @@ export default function Tip07HeadroomRtkSegment() {
             cps: D.cps,
             submitAt: D.submitAt,
             spinnerAt: D.spinnerAt,
-            tokens: (tau) => Math.max(0, tau - D.spinnerAt) * 310,
+            tokens: (tau) => 1100 * outCubic(prog(tau, D.spinnerAt, D.lift.end)),
           }}
           out={{ at: D.exit, pastVerb: "Sautéed", duration: "1m 15s" }}
-          echoFx={(frame) => ({ transform: `translateY(${px(-220 * lift(frame.tau))})` })}
-          spinnerFx={(frame) => ({ transform: `translateY(${px(310 * lift(frame.tau))})` })}
+          textFx={(frame) => {
+            const u = lift(frame.tau);
+            const up = prog(frame.tau, D.lift.start, D.lift.end, inOutCubic);
+            return {
+              transform: `translateY(${px(-200 * u)})`,
+              "clip-path": `inset(0 0 ${px(560 + 200 * u)} 0)`,
+              visibility: up >= 1 ? "hidden" : "visible",
+            };
+          }}
           stackFx={(frame) => ({ transform: `translateY(${px(600 * lift(frame.tau))})` })}
           plate={<RtkPlate />}
         />

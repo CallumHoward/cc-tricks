@@ -44,16 +44,15 @@ export const MAIN_TOKENS = 97_300;
 export const ROW_TOKENS = [171_900, 150_500, 217_600, 162_900, 231_200] as const;
 export const TOTAL_TOKENS = MAIN_TOKENS + ROW_TOKENS.reduce((a, b) => a + b, 0);
 
-/** Log-linear main-agent count: 1.2k at 0.72, 10k at 0.9, 97.3k at 1.38. */
+/** Log-linear main-agent count: 1.2k the instant the spinner shows, 10k at 0.9, 97.3k at 1.38. */
 const MAIN_KEYS: readonly (readonly [number, number])[] = [
-  [0.72, 1_200],
+  [T.spinnerAt, 1_200],
   [0.9, 10_000],
   [1.38, MAIN_TOKENS],
 ];
 
 export function mainTokensAt(tau: number): number {
   if (tau < T.spinnerAt) return 0;
-  if (tau < (MAIN_KEYS[0]?.[0] ?? 0)) return 0;
   for (let i = 1; i < MAIN_KEYS.length; i++) {
     const a = MAIN_KEYS[i - 1] as readonly [number, number];
     const b = MAIN_KEYS[i] as readonly [number, number];
@@ -67,7 +66,7 @@ export function mainTokensAt(tau: number): number {
 
 /** Row i rolls up into place like a slot reel, then its counter spins to its real value. */
 export const rowEnterAt = (i: number): number => T.rowsAt + 0.08 * i;
-const rowRoll = (i: number) => ({ start: 1.4 + 0.04 * i, end: 2.1 + 0.04 * i });
+const rowRoll = (i: number) => ({ start: 1.4 + 0.04 * i, end: 2.0 + 0.04 * i });
 
 export function rowTokenKeys(i: number): readonly Key[] {
   const { start, end } = rowRoll(i);
@@ -109,12 +108,17 @@ export const COLD_SHOTS: readonly Shot[] = [
   { at: 0, x: CHEVRON.x + (960 - 380) / 6, y: CHEVRON.y, zoom: 6, roll: -2 },
   { at: 0.37, x: CARET_END - (1460 - 960) / 6, y: CHEVRON.y, zoom: 6, roll: -2, path: "linear" },
   { at: 0.42, x: CARET_END - (1460 - 960) / 6, y: CHEVRON.y, zoom: 6, roll: -2 },
-  { at: 0.75, x: 600, y: 480, zoom: 2.05, roll: 0, ease: outExpo },
-  { at: 2.0, x: 600, y: 476, zoom: 2.15, ease: (u) => u },
+  // Tight on the spinner counter for 10k and 100k, then widen to reveal the subagents at 1M
+  { at: 0.75, x: 520, y: 508, zoom: 2.8, roll: 0, ease: outExpo },
+  { at: 1.35, x: 525, y: 500, zoom: 2.86, path: "linear" },
+  { at: 2.05, x: 590, y: 432, zoom: 2.1, ease: inOutCubic },
   { at: 3.0, ...COLD_CAM_REST, ease: inOutCubic },
 ];
 
-/** Forward-only camera punch (+4%) at each order of magnitude. */
+/** The spinner's token count in world px (the camera punches toward it). */
+export const COUNTER_AT = { x: 640, y: 516 };
+
+/** Forward-only camera punch (+7%) at each order of magnitude. */
 export function coldPunch(tau: number, v: number, crossings: readonly number[]): number {
   if (v <= 0) return 1;
   let k = 0;
@@ -122,7 +126,7 @@ export function coldPunch(tau: number, v: number, crossings: readonly number[]):
     const u = (tau - at) / 0.32;
     if (u >= 0 && u <= 1) k = Math.max(k, u < 0.2 ? outCubic(u / 0.2) : (1 - (u - 0.2) / 0.8) ** 2);
   }
-  return 1 + 0.04 * k;
+  return 1 + 0.07 * k;
 }
 
 /** Spinner ✳ box in world px (where the dive starts). */

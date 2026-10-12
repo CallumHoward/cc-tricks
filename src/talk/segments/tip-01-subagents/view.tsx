@@ -1,5 +1,8 @@
-import { inOutExpo, outExpo, prog } from "#/engine/motion/ease";
+import { Fragment } from "react";
+
+import { outExpo, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
+import { sampleKeys } from "#/engine/motion/track";
 import type { Frame } from "#/engine/types";
 import { ContextBar, RuleRise } from "#/talk/kit/motion";
 import { springFrom } from "#/talk/kit/motion/schedule";
@@ -32,7 +35,10 @@ import {
   cardFrame,
   cardLineY,
   chipAt,
+  chipCover,
   CHIPS,
+  CONTEXT,
+  contextFill,
   CRATES,
   crateRise,
   crateX,
@@ -42,6 +48,10 @@ import {
   LABEL_AT,
   MAIN_TOKENS,
   PANEL,
+  scanAt,
+  TRANSCRIPT,
+  TRANSCRIPT_LEFT,
+  transcriptLine,
   plateFold,
   ROW,
   rowFold,
@@ -70,8 +80,8 @@ const YAML = (S2.code[0]?.code ?? "").split("\n");
 const ACTS: readonly Act[] = [
   { kind: "celebrate", at: 49.05, dur: 1.1 },
   { kind: "hop", at: BOT_HOPS.toCard.at, height: 30, air: BOT_HOPS.toCard.air },
-  { kind: "point", at: 55.85, dur: 0.7, angle: -20, side: "L" },
-  { kind: "look", at: 56.7, dur: 3.2, x: -0.8, y: 0.2 },
+  { kind: "point", at: 55.6, dur: 0.7, angle: -20, side: "L" },
+  { kind: "look", at: 56.4, dur: 3.5, x: -0.8, y: 0.2 },
   { kind: "hop", at: BOT_HOPS.toCrate.at, height: 40, air: BOT_HOPS.toCrate.air },
   { kind: "walk", at: 63.35, dur: 2.5, dx: 0, stepRate: 3 },
   { kind: "sweat", at: 63.5, dur: 4.9 },
@@ -170,6 +180,32 @@ function SpokeStar() {
   );
 }
 
+/** A 250k context window under a row's counter, filled by its live token count. */
+function ContextMeter({ tokens, main }: { tokens: (tau: number) => number; main?: boolean }) {
+  const fill = (tau: number) => ({ scaleX: contextFill(tokens(tau)) });
+  return (
+    <div
+      style={{
+        ...abs(CONTEXT.left, CONTEXT.top),
+        width: CONTEXT.width,
+        height: CONTEXT.height,
+        borderRadius: CONTEXT.height / 2,
+        background: "var(--hairline)",
+        overflow: "hidden",
+      }}
+    >
+      <Drive
+        fn={fill}
+        style={{
+          inset: 0,
+          transformOrigin: "0 50%",
+          background: main ? "var(--clay-hi)" : "var(--clay-wash-55)",
+        }}
+      />
+    </div>
+  );
+}
+
 /** Hides each row's own ○ until its spoke has landed on it. */
 function SubagentRow({ i }: { i: number }) {
   const a = SUBAGENTS[i] ?? SUBAGENTS[0];
@@ -177,7 +213,9 @@ function SubagentRow({ i }: { i: number }) {
   const ref = useFrameRef<HTMLDivElement>((el: HTMLDivElement, frame: Frame) => {
     const bullet = el.querySelector(".tui-agent-inner > span");
     setStyle(bullet, "visibility", frame.tau >= land + 0.1 ? "visible" : "hidden");
+    setStyle(el.querySelector(".tui-agent-stats"), "color", "var(--muted)");
   });
+  const tokens = subagentTokens(i);
   const fold = (tau: number) => rowFold(i, tau);
   return (
     <Drive fn={fold} style={{ ...abs(ROW.left, rowTop(i)), transformOrigin: "0 50%" }}>
@@ -188,14 +226,27 @@ function SubagentRow({ i }: { i: number }) {
           action={a.action}
           actionAt={land + 0.05}
           enterAt={land - 0.3}
-          tokens={subagentTokens(i)}
+          tokens={tokens}
         />
       </div>
+      <ContextMeter tokens={tokens} />
     </Drive>
   );
 }
 
 const mainFold = (tau: number) => rowFold(-1, tau);
+const mainTokens = (tau: number) => sampleKeys(MAIN_TOKENS, tau);
+const tintMain = (el: HTMLDivElement) =>
+  setStyle(el.querySelector(".tui-agent-stats"), "color", "var(--clay-hi)");
+
+function MainRow() {
+  const ref = useFrameRef<HTMLDivElement>(tintMain);
+  return (
+    <div ref={ref}>
+      <AgentRow style={{ width: ROW.width }} main name="main" enterAt={49} tokens={MAIN_TOKENS} />
+    </div>
+  );
+}
 
 function AgentsPlate() {
   return (
@@ -238,13 +289,8 @@ function AgentsPlate() {
       </Gate>
       <Gate from={49} to={55}>
         <Drive fn={mainFold} style={{ ...abs(ROW.left, ROW.mainTop), transformOrigin: "0 50%" }}>
-          <AgentRow
-            style={{ width: ROW.width }}
-            main
-            name="main"
-            enterAt={49}
-            tokens={MAIN_TOKENS}
-          />
+          <MainRow />
+          <ContextMeter tokens={mainTokens} main />
         </Drive>
         {SUBAGENTS.map((a, i) => (
           <SubagentRow key={a.action} i={i} />
@@ -283,6 +329,19 @@ function Chip({ i }: { i: number }) {
   );
 }
 
+/** Erases the chip's base word from launch, so the pasted chip replaces it. */
+function ChipCover({ i }: { i: number }) {
+  const c = CHIPS[i] ?? CHIPS[0];
+  const box = chipCover(i);
+  const fn = (tau: number) => ({ scaleX: tau >= c.launch ? 1 : 0 });
+  return (
+    <Drive
+      fn={fn}
+      style={{ ...box, height: 46, background: "var(--bg-deep)", transformOrigin: "0 50%" }}
+    />
+  );
+}
+
 const cardTrack = (tau: number) => cardFrame(tau);
 
 function ModelPlate() {
@@ -306,15 +365,26 @@ function ModelPlate() {
         <CodeBlock lines={YAML} label={S2.code[0]?.label} at={YAML_AT} stagger={0.08} />
       </Drive>
       <Gate from={0} to={CARD_CLOSE.start + 0.05}>
+        {CHIPS.map((c, i) => (
+          <ChipCover key={c.text} i={i} />
+        ))}
         {S2.labels.map((label, i) => (
-          <TypedMono
-            key={label}
-            text={label}
-            at={55.9}
-            cps={64}
-            className="type-label text-soft"
-            style={{ left: cardColX(16), top: cardLineY(3 + i) - 18 }}
-          />
+          <Fragment key={label}>
+            <TypedMono
+              text="#"
+              at={55.9}
+              cps={64}
+              className="type-label text-muted"
+              style={{ left: cardColX(14), top: cardLineY(3 + i) - 18 }}
+            />
+            <TypedMono
+              text={label}
+              at={55.9 + 2 / 64}
+              cps={64}
+              className="type-label text-muted"
+              style={{ left: cardColX(16), top: cardLineY(3 + i) - 18, fontStyle: "italic" }}
+            />
+          </Fragment>
         ))}
         {CHIPS.map((c, i) => (
           <Chip key={c.text} i={i} />
@@ -336,14 +406,29 @@ const advisorStar = (tau: number) => {
   };
 };
 
-/** The scan bar reads the whole conversation on τ, then idles over the panel on wall time. */
-const scanTrack = (tau: number, frame: Frame) => {
-  if (tau < ADV.scan.start) return { y: 0, opacity: 0 };
-  const u = prog(tau, ADV.scan.start, ADV.scan.end, inOutExpo);
-  if (u < 1) return { y: 190 + 640 * u, opacity: 1 };
-  const idle = 590 + ((Math.sin(frame.w * 1.3) + 1) / 2) * 200;
-  return { y: idle, opacity: 0.3 };
-};
+const scanTrack = (tau: number) => scanAt(tau);
+
+/** Main's conversation as dimmed lines: the advisor's scan reads each one and it folds away. */
+function Transcript() {
+  return (
+    <Gate from={ADV.typeAt} to={ADV.scan.end + 0.05}>
+      {TRANSCRIPT.map((l, i) => (
+        <Drive
+          key={l.y}
+          fn={(tau: number) => ({ scaleX: transcriptLine(i, tau) })}
+          style={{
+            ...abs(TRANSCRIPT_LEFT, l.y - 5),
+            width: l.width,
+            height: 10,
+            borderRadius: 5,
+            background: "var(--hairline)",
+            transformOrigin: "0 50%",
+          }}
+        />
+      ))}
+    </Gate>
+  );
+}
 
 function Crate({ i }: { i: number }) {
   const c = CRATES[i] ?? CRATES[0];
@@ -454,16 +539,11 @@ function AdvisorPlate() {
           <path d={GLYPH_PATHS["✽"]} fill="var(--clay-hi)" />
         </svg>
       </Drive>
-      <Drive fn={scanTrack} style={{ left: 160, top: 0, width: 1600, height: 2 }}>
-        <div
-          style={{
-            position: "absolute",
-            inset: "-70px 0 0",
-            background: "linear-gradient(to bottom, transparent, rgb(217 119 87 / 14%))",
-          }}
-        />
-        <div style={{ position: "absolute", inset: 0, background: "var(--clay)" }} />
-      </Drive>
+      <Transcript />
+      <Drive
+        fn={scanTrack}
+        style={{ left: 160, top: -1, width: 1600, height: 3, background: "var(--clay)" }}
+      />
       <AgentRow
         style={{ ...abs(200, PANEL.mainTop), width: 400 }}
         main

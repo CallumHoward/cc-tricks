@@ -21,12 +21,15 @@ describe("title tracks", () => {
     expect(formatTokens(totalTokensAt(3))).toBe("1.03M");
   });
 
-  it("should cross each order of magnitude in order, near the tick cues", () => {
-    const [k10, k100, m1] = magnitudeCrossings();
-    expect(k10).toBeCloseTo(0.9, 1);
-    expect(k100).toBeGreaterThan(k10);
-    expect(m1).toBeGreaterThan(k100);
-    expect(m1).toBeLessThan(T.diveStart);
+  it("should cross each order of magnitude on its tick cue", () => {
+    const [k10 = 0, k100 = 0, m1 = 0] = magnitudeCrossings();
+    expect(Math.abs(k10 - 0.9)).toBeLessThan(0.03);
+    expect(Math.abs(k100 - 1.4)).toBeLessThan(0.03);
+    expect(Math.abs(m1 - 1.9)).toBeLessThan(0.03);
+  });
+
+  it("should show a readable count the instant the spinner line appears", () => {
+    expect(formatTokens(totalTokensAt(T.spinnerAt))).toBe("1.2k");
   });
 
   it("should only punch the camera while playing forward", () => {

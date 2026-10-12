@@ -1,11 +1,10 @@
 import { useRef } from "react";
 
-import { clamp, outExpo, prog } from "#/engine/motion/ease";
+import { outExpo, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
 import { useFrame } from "#/engine/stage/react";
 import type { Frame } from "#/engine/types";
 import { ContextBar, GlyphDive, World, shotTrack, type Glyph } from "#/talk/kit/motion";
-import { num, put } from "#/talk/kit/motion/dom";
 import { springFrom } from "#/talk/kit/motion/schedule";
 import { AgentRow, Chevron, GLYPH_PATHS, HOME, PromptBox, SpinnerLine } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
@@ -15,6 +14,7 @@ import { Mover, Rig, Win } from "./lib";
 import { RoadPlate } from "./road";
 import {
   COLD_SHOTS,
+  COUNTER_AT,
   PROMPT,
   ROW_TOKENS,
   T,
@@ -77,6 +77,7 @@ function ColdWorld() {
       <SpinnerLine
         verb="Bloviating"
         at={T.spinnerAt}
+        cps={4000}
         elapsed={0}
         tokens={totalTokensAt}
         className="type-label so-spinner"
@@ -105,11 +106,8 @@ function ColdWorld() {
 
 /** τ 0 → 5.6: the prompt, the ⏎, the million-token hook, then the dive into the spinner ✳. */
 export function ColdOpen() {
-  const heat = useRef<HTMLDivElement>(null);
   const gate = useRef<HTMLDivElement>(null);
   useFrame((frame: Frame) => {
-    const total = totalTokensAt(frame.tau);
-    put(heat.current, "opacity", num(clamp(Math.log10(total + 1) / 6) * 0.95, 3));
     const pre = frame.tau < T.shove + 0.4;
     if (gate.current) {
       const next = pre ? "pre" : "on";
@@ -127,11 +125,13 @@ export function ColdOpen() {
         plate={<RoadPlate />}
       >
         <Win from={-1} to={T.diveEnd + 0.05}>
-          <div ref={heat} className="so-heat" />
           <Mover
             place={(tau: number, frame: Frame) => {
               const s = coldPunch(tau, frame.v, CROSSINGS);
-              return { x: 960 * (1 - s), y: 540 * (1 - s), s };
+              const cam = coldCam(tau);
+              const fx = 960 + (COUNTER_AT.x - cam.x) * cam.zoom;
+              const fy = 540 + (COUNTER_AT.y - cam.y) * cam.zoom;
+              return { x: fx * (1 - s), y: fy * (1 - s), s };
             }}
             style={{ width: 1920, height: 1080 }}
           >

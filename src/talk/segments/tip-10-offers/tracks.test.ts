@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { sampleKeys } from "#/engine/motion/track";
+import { smear, whipOffset } from "#/talk/kit/tui/tui-math";
 import { SCRIPT } from "#/talk/script";
 
 import {
   bankedX,
+  chipFlight,
   instantX,
   panelDrift,
   pileCount,
@@ -88,5 +90,17 @@ describe("tip 10 tracks", () => {
   it("should only drift the Settings panel 8 px through the hold", () => {
     expect(panelDrift(T10.resetsAt)).toBeCloseTo(0, 5);
     expect(panelDrift(T10.resetsHoldEnd)).toBeCloseTo(-8, 5);
+  });
+
+  it("should come to rest on the home shot before the window ends", () => {
+    const { whipAt, whipDur } = T10.exit;
+    const offset = (tau: number) => whipOffset(tau, whipAt, whipDur, 1080);
+    const edge = T10.end - 0.05;
+    expect(offset(edge)).toBe(1080);
+    expect(smear(offset, edge, 0)).toEqual({ blur: 0, stretch: 1 });
+  });
+
+  it("should land the pocketed chip before the scrollback whips away", () => {
+    expect(chipFlight(T10.exit.whipAt)).toBe(1);
   });
 });

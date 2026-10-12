@@ -22,6 +22,7 @@ import { arcPoint, dialAngle, inCubic } from "./tracks";
 
 const script = scriptFor("t3-then");
 const [FOOT = "", L1 = "", L2 = "", L3 = ""] = script.lines;
+const [TOKENS_FOOT = ""] = script.footnotes;
 const SETTLE = T3.lastGen.at - 0.8;
 /** Settles so the SLAM's first contact lands on the 137.3 slam cue. */
 const STAMP_SETTLE = 137.51;
@@ -204,10 +205,13 @@ export function DialPlate() {
         >
           {FOOT}
         </Wiped>
+        <Wiped at={137.05} className="type-label seg-muted seg-abs" style={{ left: 160, top: 788 }}>
+          {TOKENS_FOOT}
+        </Wiped>
         <Stamp
           text={script.stamps[0] ?? ""}
           settleBy={STAMP_SETTLE}
-          style={{ left: 700, top: 856 }}
+          style={{ left: 760, top: 920 }}
         />
       </Layer>
       {EFFORTS.map((effort, i) => (

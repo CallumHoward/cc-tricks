@@ -9,7 +9,6 @@ import {
   Stamp,
   ZERO_GLYPH,
 } from "#/talk/kit/motion";
-import { Chevron } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
 import { scriptFor } from "#/talk/script";
 import {
@@ -22,6 +21,7 @@ import {
   type StyleMap,
 } from "#/talk/segments/tip-06-cli-agents/boundary";
 import { placeAt, type PlaceKey } from "#/talk/segments/tip-06-cli-agents/timing";
+import { TipTitle } from "#/talk/segments/tip-06-cli-agents/tip-title";
 
 import { BASE, BLOCK, ccTower, cursorTower, flapCounter, flapRows, TIP8 } from "./timing";
 
@@ -42,7 +42,8 @@ const DIVE = {
 };
 
 const COL_X = [200, 980] as const;
-const FLAP_ROW_Y = [372, 466, 560] as const;
+const HEAD_Y = 348;
+const FLAP_ROW_Y = [414, 508, 602] as const;
 const FLOOR = 860;
 const TOWER_X = [1272, 1432] as const;
 const TOWER_W = 138;
@@ -50,6 +51,10 @@ const TOWER_W = 138;
 /** The tower's label block: the H says "CC", and "Claude Code" does not fit a 138 px tower. */
 const CC_LABEL = "CC";
 const base = (tau: number) => prog(tau, D.towers.start - 0.1, D.towers.start + 0.2, outExpo);
+
+/** Each row's flap tiles fade once its roll has landed, leaving clean words on the board. */
+const tileFade = (tau: number, row: number) =>
+  prog(tau, (D.rows[row] ?? 0) + 0.85, (D.rows[row] ?? 0) + 1.1, inOutCubic);
 
 const boardFold = (tau: number, row: number) =>
   prog(tau, D.board.foldStart + row * 0.08, D.board.foldStart + row * 0.08 + 0.3, inQuad);
@@ -75,10 +80,10 @@ function FlapCounter() {
       className="tui type-code"
       style={{
         position: "absolute",
-        left: 1210,
-        top: 206,
+        left: COL_X[1],
+        top: 694,
         display: "flex",
-        gap: 4,
+        gap: 2,
         alignItems: "center",
       }}
     >
@@ -111,7 +116,7 @@ function Board() {
       {TABLE.head.map((text, i) => (
         <div
           key={text}
-          style={{ position: "absolute", left: COL_X[i], top: 306, overflow: "hidden" }}
+          style={{ position: "absolute", left: COL_X[i], top: HEAD_Y, overflow: "hidden" }}
         >
           <Fx
             fx={head(i)}
@@ -133,11 +138,13 @@ function Board() {
             key={`${r}-${lines.join("|")}`}
             fx={(frame) => ({
               transform: `rotateX(${(boardFold(frame.tau, r + 1) * 90).toFixed(1)}deg)`,
+              "--tile": (1 - tileFade(frame.tau, r)).toFixed(3),
             })}
             className="t8-flap"
             style={{
               left: COL_X[c],
               top: FLAP_ROW_Y[r],
+              ["--tile" as string]: "1",
               transformOrigin: "50% 0",
               perspective: 800,
               ["--cols" as string]: Math.max(...lines.map((line) => Array.from(line).length)),
@@ -159,9 +166,9 @@ function Board() {
 
 /** Tighter cells than the kit's default so each phrase reads as words, not spaced letters. */
 const FLAP_CSS = `
-.t8-flap .km-flap-board{grid-template-columns:repeat(var(--cols),0.72em)!important;gap:6px 3px}
-.t8-flap .km-flap-top,.t8-flap .km-flap-leaf[data-half="top"]{background:var(--hairline)}
-.t8-flap .km-flap-bot,.t8-flap .km-flap-leaf[data-half="bottom"]{background:var(--panel)}
+.t8-flap .km-flap-board{grid-template-columns:repeat(var(--cols),0.62em)!important;gap:6px 2px}
+.t8-flap .km-flap-top,.t8-flap .km-flap-leaf[data-half="top"]{background:color-mix(in srgb,var(--hairline) calc(var(--tile)*100%),transparent)}
+.t8-flap .km-flap-bot,.t8-flap .km-flap-leaf[data-half="bottom"]{background:color-mix(in srgb,var(--panel) calc(var(--tile)*100%),transparent)}
 `;
 
 function Tower({
@@ -256,23 +263,10 @@ function Plate() {
         plate={
           <>
             <CssBed tone="dark" />
+            <TipTitle text={cache.headline ?? ""} settleBy={D.title} exit={D.board.foldStart} />
             <Fx
               fx={(frame) => ({ transform: `scaleY(${(1 - boardFold(frame.tau, 0)).toFixed(4)})` })}
-              style={{ left: 200, top: 230, transformOrigin: "0 50%" }}
-            >
-              <div
-                className="tui tui-line type-body tui-text"
-                style={{ transform: "translateY(-50%)" }}
-              >
-                <span className="tui-clay">
-                  <Chevron />
-                </span>
-                <span>{` ${cache.headline ?? ""}`}</span>
-              </div>
-            </Fx>
-            <Fx
-              fx={(frame) => ({ transform: `scaleY(${(1 - boardFold(frame.tau, 0)).toFixed(4)})` })}
-              style={{ inset: 0, transformOrigin: "0 230px" }}
+              style={{ inset: 0, transformOrigin: "0 720px" }}
             >
               <FlapCounter />
             </Fx>

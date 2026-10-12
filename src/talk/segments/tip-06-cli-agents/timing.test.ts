@@ -11,10 +11,19 @@ import {
   tip6StackDy,
   TIP6,
   typedAt,
+  wrapCard,
   wrapCommand,
 } from "./timing";
 
 describe("tip 6 timing", () => {
+  it("should keep every card line within its width and lose no characters", () => {
+    for (const { code } of scriptFor("t6-others").code) {
+      const lines = wrapCard(code, 27);
+      for (const line of lines) expect(Array.from(line).length).toBeLessThanOrEqual(27);
+      expect(lines.join("").replace(/ /g, "")).toBe(code.replace(/ /g, ""));
+    }
+  });
+
   it("should never split a flag from its value when wrapping a command", () => {
     const lines = wrapCommand(
       "kiro-cli chat --v3 --no-interactive --model claude-sonnet-5.5 --effort high",

@@ -127,8 +127,9 @@ export const FW_SHOTS: readonly Shot[] = [
   { at: 30.5, x: 960, y: 540, zoom: 1 },
   { at: F.crowdOut, x: CROWD_CENTER.x, y: CROWD_CENTER.y, zoom: 0.125, ease: inOutCubic },
   { at: F.crowdIn.start, x: CROWD_CENTER.x - 60, y: CROWD_CENTER.y - 40, zoom: 0.13 },
-  { at: F.crowdIn.end, x: 900, y: 640, zoom: 0.5, ease: inOutCubic },
-  { at: F.tasteHoldEnd, x: 900, y: 640, zoom: 0.515 },
+  // Our composer and the lit floor up top, the two taste lines set large on the floor below
+  { at: F.crowdIn.end, x: 1460, y: 1040, zoom: 0.6, ease: inOutCubic },
+  { at: F.tasteHoldEnd, x: 1460, y: 1040, zoom: 0.618 },
   { at: F.toPrompt.end, x: 960, y: 540, zoom: 1, ease: inOutCubic },
 ];
 
@@ -165,7 +166,7 @@ function anchor(i: number, tau: number): Anchor {
     case 3:
       return at(1180, composerRect(tau).y);
     case 4:
-      return at(1640, MENU.y + highlightOffset(tau) + MENU.row, 0.45);
+      return at(1640, MENU.y + highlightOffset(tau), 0.6);
     default:
       return at(1480, 560);
   }

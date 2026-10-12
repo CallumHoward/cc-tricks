@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { HOP } from "#/talk/mascot/actions";
+
 import {
   AT,
+  BOT_HOPS,
   botOffset,
   CRACK,
   dispatches,
@@ -11,14 +14,16 @@ import {
   hammerGap,
   hammerTilt,
   HOLD_END,
+  odometerScale,
+  propFold,
   RELEASE,
   walnutHalf,
   WIN,
 } from "./tracks";
 
 describe("tip 4 tracks", () => {
-  it("should hang the hammer 22 px above the walnut at the stop", () => {
-    expect(hammerGap(AT)).toBeCloseTo(22, 5);
+  it("should hang the hammer 6 px above the walnut at the stop", () => {
+    expect(hammerGap(AT)).toBeCloseTo(6, 5);
   });
 
   it("should creep the hammer no faster than 0.5 px per story second and never touch the walnut in the hold", () => {
@@ -51,6 +56,21 @@ describe("tip 4 tracks", () => {
 
   it("should count thirty dispatches for ten tasks", () => {
     expect(dispatches(AT)).toBe(30);
+  });
+
+  it("should finish the bot's hop home before the window ends", () => {
+    const { at, air } = BOT_HOPS.home;
+    expect(at + HOP.anticipation + air + HOP.recover).toBeLessThanOrEqual(WIN.end - 0.02);
+  });
+
+  it("should fold the hammer and walnut away before the dock rises", () => {
+    expect(propFold(EXIT.dockUp).scaleY).toBe(0);
+    expect(propFold(CRACK + 0.2).scaleY).toBe(1);
+  });
+
+  it("should show the dispatch odometer only once the dock has dropped", () => {
+    expect(odometerScale(153.3)).toBe(0);
+    expect(odometerScale(154.3)).toBeCloseTo(1, 3);
   });
 
   it("should rest on the home shot at both window edges", () => {

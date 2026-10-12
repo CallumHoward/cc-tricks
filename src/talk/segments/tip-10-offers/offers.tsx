@@ -31,7 +31,7 @@ const BOARD = Object.freeze({
   scale: 0.84,
   left: 226,
   gap: 28,
-  railTops: [380, 635] as const,
+  railTops: [388, 643] as const,
   colW: [643, 1071] as const,
   ticket: { h: 280, stub: 100 },
 });
@@ -39,7 +39,7 @@ const ROW_H = BOARD.ticket.h * BOARD.scale;
 const colW = (col: number) => BOARD.colW[col % 2] ?? 0;
 const colX = (col: number) => BOARD.left + (col % 2) * (colW(0) * BOARD.scale + BOARD.gap);
 /** The headline sits above the board, left-aligned to it and clear of the top corner box. */
-const HEAD = { top: 196, scale: 0.62 };
+const HEAD = { top: 196, scale: 0.54 };
 /** Stamp centres as fractions of their ticket's rendered box. */
 const STAMP_AT: Readonly<Record<number, { x: number; y: number }>> = {
   1: { x: 0.71, y: 0.9 },
@@ -50,6 +50,9 @@ const PEEK_ACTS: readonly Act[] = [
   { kind: "surprised", at: T10.peekAt + 0.3, dur: 0.3 },
   { kind: "look", at: T10.peekAt + 0.2, dur: Number.POSITIVE_INFINITY, x: -1, y: 0.9 },
 ];
+
+/** Row pitch (px): a wrapped sentence and the next row sit on the same leading. */
+const ROW_PITCH = 40;
 
 /** A two-sentence row wraps between its sentences rather than mid-phrase. */
 const sentenceBreaks = (text: string) => text.replace(/\. (?=\S)/g, ".\n");
@@ -71,7 +74,8 @@ function TicketBody({ copy, closed }: { copy: TicketCopy; closed: boolean }) {
           className="type-label"
           style={{
             color: ROW_COLOR[row.tone],
-            marginTop: i === 0 ? 16 : 6,
+            marginTop: i === 0 ? 16 : 0,
+            lineHeight: `${ROW_PITCH}px`,
             whiteSpace: "pre-line",
           }}
         >
@@ -82,7 +86,10 @@ function TicketBody({ copy, closed }: { copy: TicketCopy; closed: boolean }) {
   );
 }
 
-function StubGlyph({ closed }: { closed: boolean }) {
+/** The date punch sits on the artifact ticket's `Ends …` row; its stub glyph moves above it. */
+const PUNCH_Y = 0.69;
+
+function StubGlyph({ closed, top = 0.66 }: { closed: boolean; top?: number }) {
   return (
     <svg
       viewBox="0 0 100 100"
@@ -90,7 +97,7 @@ function StubGlyph({ closed }: { closed: boolean }) {
       style={{
         position: "absolute",
         left: "50%",
-        top: "66%",
+        top: `${top * 100}%`,
         width: 64,
         height: 64,
         transform: "translate(-50%, -50%)",
@@ -104,6 +111,7 @@ function StubGlyph({ closed }: { closed: boolean }) {
 function BoardTicket({ index }: { index: number }) {
   const copy = CARDS[index] as TicketCopy;
   const closed = copy.stamp === "CLOSED";
+  const punched = index === 3;
   const run = ticketRunKeys(index);
   return (
     <Layer
@@ -122,8 +130,9 @@ function BoardTicket({ index }: { index: number }) {
         padding="26px 28px"
         stubWidth={BOARD.ticket.stub}
         tear={closed ? tearProgress : undefined}
-        punchAt={index === 3 ? T10.punchAt : undefined}
-        stub={<StubGlyph closed={closed} />}
+        punchAt={punched ? T10.punchAt : undefined}
+        punchY={PUNCH_Y}
+        stub={<StubGlyph closed={closed} top={punched ? 0.3 : undefined} />}
       >
         <TicketBody copy={copy} closed={closed} />
       </OfferTicket>

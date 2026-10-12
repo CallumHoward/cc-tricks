@@ -24,7 +24,7 @@ export const EFFORT_GLYPHS = ["✢", "✳", "✶", "✻", "✽"] as const;
 /** Where the live spinner glyph sits in the home shot (stage px). */
 export const SPIN_AT: Pt = { x: 218, y: 500 };
 
-export const DIAL = Object.freeze({ center: { x: 1300, y: 730 }, radius: 270 });
+export const DIAL = Object.freeze({ center: { x: 1370, y: 730 }, radius: 270 });
 export const DIAL_SEATS = dialSeats(DIAL.center, DIAL.radius);
 export const glyphSize = (i: number) => 64 + i * 16;
 

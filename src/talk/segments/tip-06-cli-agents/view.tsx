@@ -14,25 +14,31 @@ import {
   tip6StackDy,
   TIP6,
   wrapCommand,
+  wrapCard,
   type Point,
 } from "./timing";
+import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "./tip-title";
 
 const D = TIP6;
-const SPLIT_Y = 400;
-const ROW_Y = [462, 568, 674] as const;
-const HANDS: Point = { x: 1470, y: 300 };
-const BATON_SLOT: Point = { x: 218, y: 600 };
-/** Where each pane's baton would land, just past its chip; it creeps toward it through the hold. */
-const BATON_END = [420, 330, 300] as const;
+const SPLIT_Y = 520;
+const BASH_Y = TIP_TITLE_TOP + 2 * TIP_TITLE_LINE + 32;
+const HANDS: Point = { x: 1470, y: 420 };
+const BATON_SLOT: Point = { x: 218, y: 664 };
+/** Three side-by-side "subagent" cards for t6-others */
+const CARD = { top: 548, width: 480, gap: 40, chars: 27 } as const;
+const cardX = (i: number) => 200 + i * (CARD.width + CARD.gap);
+/** Where each card's baton would land, just past its chip; it creeps toward it through the hold. */
+const BATON_END = [432, 432, 432] as const;
 
 const kiro = scriptFor("t6-kiro");
 const others = scriptFor("t6-others");
 export const KIRO_LINES = wrapCommand(documentedKiro(kiro.code[0]?.code ?? ""), 78);
-export const OTHER_LINES = others.code.map((block) => wrapCommand(block.code, 78));
+export const OTHER_LINES = others.code.map((block) => wrapCard(block.code, CARD.chars));
 const TIP_PROMPT = kiro.headline ?? "";
+/** The title breaks after the three CLIs so line one clears the bot. */
+const TITLE = TIP_PROMPT.replace(" as your", "\nas your");
 
 const lift = (tau: number) => prog(tau, D.lift.start, D.lift.end, inOutCubic);
-const home = (tau: number) => 1 - prog(tau, D.exit, D.exit + 0.3, inOutCubic);
 
 /** Blinds: element `i` of the plate drops shut (scaleY → 0) at the exit. */
 const blind = (tau: number, i: number) =>
@@ -64,7 +70,9 @@ function Baton({
 }) {
   const fx = (frame: Frame): StyleMap => {
     const p = path(from, to, progress(frame.tau));
-    const spin = (frame.tau - show) * 540;
+    // Spins in flight, then turns ≤ 2°/τ-s once it has landed
+    const flight = Math.min(frame.tau - show, 0.9);
+    const spin = flight * 540 + Math.max(0, frame.tau - show - 0.9) * 2;
     return {
       visibility: frame.tau >= show && frame.tau < hide ? "visible" : "hidden",
       transform: `translate3d(${px(p.x - 22)}, ${px(p.y - 22)}, 0) rotate(${spin.toFixed(1)}deg)`,
@@ -81,7 +89,7 @@ const kiroTokens = (tau: number) => {
   const land = D.baton.land;
   if (tau < land) return 0;
   const burst = 2400 * outCubic(prog(tau, land, D.kiro.at - 0.8));
-  return burst + Math.max(0, tau - (D.kiro.at - 0.8)) * 38;
+  return burst + Math.max(0, tau - (D.kiro.at - 0.8)) * 40;
 };
 
 function KiroPane() {
@@ -104,7 +112,7 @@ function KiroPane() {
           start={typeEnd(i)}
           cps={D.kiroType.cps}
           className="type-code"
-          top={448 + i * 46}
+          top={SPLIT_Y + 32 + i * 46}
         />
       ))}
       <Fx fx={status} style={{ left: 200, top: BATON_SLOT.y - 22 }}>
@@ -122,44 +130,72 @@ function KiroPane() {
         start={D.labelsType.start}
         cps={D.labelsType.cps}
         className="type-label"
-        top={688}
+        top={BATON_SLOT.y + 70}
       />
       <Typed
         text={label2}
         start={D.labelsType.start + 0.12}
         cps={D.labelsType.cps}
         className="type-label text-muted"
-        top={738}
+        top={BATON_SLOT.y + 120}
       />
     </>
   );
 }
 
-function OtherRow({ i, lines }: { i: number; lines: string[] }) {
-  const top = ROW_Y[i] ?? 0;
+function OtherCard({ i, lines }: { i: number; lines: string[] }) {
+  const left = cardX(i);
   const name = lines[0]?.split(" ")[0] ?? "";
-  const fx = (frame: Frame): StyleMap => ({
-    transform: `scaleY(${(1 - blind(frame.tau, 2 + i)).toFixed(4)})`,
-  });
+  const at = D.rows[i] ?? 0;
+  const fx = (frame: Frame): StyleMap => {
+    const u = prog(frame.tau, at - 0.05, at + 0.3, outExpo);
+    return {
+      "clip-path": `inset(0 0 ${((1 - u) * 100).toFixed(2)}% 0 round 12px)`,
+      transform: `scaleY(${(1 - blind(frame.tau, 2 + i)).toFixed(4)})`,
+    };
+  };
   const starts = lines.map(
     (_, k) =>
       (D.rowType[i] ?? 0) +
       lines.slice(0, k).reduce((sum, line) => sum + Array.from(line).length, 0) / 90,
   );
   return (
-    <Fx fx={fx} style={{ inset: 0, transformOrigin: `0 ${top + 40}px` }}>
-      <Rule at={D.rows[i] ?? 0} top={top} tone="var(--hairline)" />
-      <Chip text={name} at={(D.rows[i] ?? 0) + 0.1} top={top} />
-      {lines.map((line, k) => (
-        <Typed
-          key={line}
-          text={line}
-          start={starts[k] ?? 0}
-          cps={90}
-          className="type-code"
-          top={top + 26 + k * 46}
-        />
-      ))}
+    <Fx
+      fx={fx}
+      style={{
+        left,
+        top: CARD.top,
+        width: CARD.width,
+        height: 248,
+        border: "2px solid var(--hairline)",
+        borderRadius: 12,
+        background: "var(--bg)",
+        transformOrigin: "50% 0",
+        clipPath: "inset(0 0 100% 0)",
+      }}
+    >
+      <Chip text={name} at={at + 0.1} top={44} left={22} />
+      <div
+        style={{
+          position: "absolute",
+          left: 22,
+          top: 84,
+          transform: "scale(0.9)",
+          transformOrigin: "0 0",
+        }}
+      >
+        {lines.map((line, k) => (
+          <Typed
+            key={line}
+            text={line}
+            start={starts[k] ?? 0}
+            cps={90}
+            className="type-label"
+            top={k * 40}
+            left={0}
+          />
+        ))}
+      </div>
     </Fx>
   );
 }
@@ -193,7 +229,7 @@ export function CliAgentsPlate() {
     transform: `scaleY(${(1 - blind(frame.tau, 0)).toFixed(4)})`,
   });
   const l1Fx = (frame: Frame): StyleMap => ({
-    transform: `scaleY(${(1 - blind(frame.tau, 5)).toFixed(4)})`,
+    transform: `scaleY(${(1 - blind(frame.tau, 0)).toFixed(4)})`,
   });
   return (
     <>
@@ -206,8 +242,14 @@ export function CliAgentsPlate() {
           arg="kiro-cli …"
           status="running"
           at={D.split.start}
-          style={{ position: "absolute", left: 200, top: 257 }}
+          style={{ position: "absolute", left: 200, top: BASH_Y }}
         />
+      </Fx>
+      <Fx
+        fx={(frame) => ({ transform: `scaleY(${(1 - blind(frame.tau, 0)).toFixed(4)})` })}
+        style={{ inset: 0, transformOrigin: `0 ${BASH_Y}px` }}
+      >
+        <TipTitle text={TITLE} settleBy={D.title} exit={D.exit} />
       </Fx>
       <Fx
         fx={paneFx}
@@ -225,8 +267,16 @@ export function CliAgentsPlate() {
             <KiroPane />
           </Fx>
           {OTHER_LINES.map((lines, i) => (
-            <OtherRow key={lines[0]} i={i} lines={lines} />
+            <OtherCard key={lines[0]} i={i} lines={lines} />
           ))}
+          <Fx fx={l1Fx} style={{ left: 200, top: 836, transformOrigin: "0 50%" }}>
+            <RuleRise
+              text={others.lines[0] ?? ""}
+              className="type-body"
+              settleBy={D.l1}
+              rule={false}
+            />
+          </Fx>
         </div>
       </Fx>
       <Fx
@@ -236,9 +286,6 @@ export function CliAgentsPlate() {
         <Rule at={D.split.start} top={SPLIT_Y} tone="var(--clay)" />
         <Chip text="kiro-cli" at={D.split.start + 0.12} top={SPLIT_Y} />
       </Fx>
-      <Fx fx={l1Fx} style={{ left: 200, top: 822, transformOrigin: "0 50%" }}>
-        <RuleRise text={others.lines[0] ?? ""} className="type-body" settleBy={D.l1} rule={false} />
-      </Fx>
       <Baton
         from={HANDS}
         to={BATON_SLOT}
@@ -247,13 +294,13 @@ export function CliAgentsPlate() {
         show={D.baton.launch}
         hide={D.baton.land}
       />
-      {ROW_Y.map((y, i) => (
+      {BATON_END.map((x, i) => (
         <Baton
-          key={y}
+          key={x}
           from={HANDS}
-          to={{ x: BATON_END[i] ?? 0, y }}
+          to={{ x: cardX(i) + x, y: CARD.top + 44 }}
           path={dropPoint}
-          progress={(tau) => batonProgress(tau, 186.3 + i * 0.2, D.l1, 0.9, 0.015)}
+          progress={(tau) => batonProgress(tau, 186.3 + i * 0.2, D.l1, 0.97, 0.01)}
           show={186.3 + i * 0.2}
           hide={D.exit + 0.15}
         />
@@ -277,12 +324,14 @@ export default function Tip06CliAgentsSegment() {
           tokens: (tau) => Math.max(0, tau - D.spinnerAt) * 260,
         }}
         out={{ at: D.exit, pastVerb: "Worked", duration: "1m 15s" }}
-        echoFx={(frame) => ({
-          transform: `translateY(${px(-220 * lift(frame.tau) * home(frame.tau))})`,
-        })}
-        spinnerFx={(frame) => ({
-          transform: `translateY(${px(-160 * lift(frame.tau) * home(frame.tau))})`,
-        })}
+        textFx={(frame) => {
+          const u = lift(frame.tau);
+          return {
+            transform: `translateY(${px(-200 * u)})`,
+            "clip-path": `inset(0 0 ${px(560 + 200 * u)} 0)`,
+            visibility: u >= 1 ? "hidden" : "visible",
+          };
+        }}
         stackFx={(frame) => ({ transform: `translateY(${px(tip6StackDy(frame.tau))})` })}
         plate={<CliAgentsPlate />}
       />

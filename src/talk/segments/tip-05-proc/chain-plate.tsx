@@ -131,7 +131,7 @@ export function ChainPlate() {
       </Live>
       <Live from={T5.routines.holdEnd} to={T5.winEnd}>
         <div className="seg-abs" style={{ left: 160, top: 196 }}>
-          <RuleRise text={"Line the resets up\nwith your day."} settleBy={SETTLE - 0.3} />
+          <RuleRise text={"Line the resets up\nwith your day."} settleBy={170.0} />
         </div>
         <Wiped
           at={172.3}

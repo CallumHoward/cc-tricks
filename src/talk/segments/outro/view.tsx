@@ -5,10 +5,11 @@ import { sampleKeys } from "#/engine/motion/track";
 import type { Frame } from "#/engine/types";
 import { qrModules } from "#/talk/kit/data/logic";
 import { QrGrow } from "#/talk/kit/data/qr-grow";
-import { BoneSwap, ContextBar, RuleRise, World } from "#/talk/kit/motion";
+import { ContextBar, RuleRise, World } from "#/talk/kit/motion";
 import {
   AgentRow,
   GLYPH_PATHS,
+  punch,
   ScrollbackRecap,
   ScrollbackWhip,
   StaticGlyph,
@@ -30,10 +31,13 @@ import {
   CRANE,
   cookedText,
   elapsedSeconds,
+  landing,
   OUT,
   plateRules,
   plateFed,
   QR,
+  REVEAL_SLANT,
+  revealEdge,
   SCROLLBACK,
   SHORT_ZONES,
   thesisLines,
@@ -238,10 +242,11 @@ function Tiles({ value }: { value: string }) {
       const t = tileAt(i, frame.tau, held, n);
       setStyle(el, "visibility", t.visible ? "visible" : "hidden");
       if (!t.visible) continue;
+      const scale = (t.size / 34) * (1 + 0.45 * punch(frame.tau, frame.v, landing(i), 0.16));
       setStyle(
         el,
         "transform",
-        `translate3d(${(t.x - 17).toFixed(2)}px, ${(t.y - 17).toFixed(2)}px, 0) rotate(${t.rotate.toFixed(2)}deg) scale(${(t.size / 34).toFixed(4)})`,
+        `translate3d(${(t.x - 17).toFixed(2)}px, ${(t.y - 17).toFixed(2)}px, 0) rotate(${t.rotate.toFixed(2)}deg) scale(${scale.toFixed(4)})`,
       );
       const [clay, ink] = el.children;
       setStyle(clay, "transform", `scale(${(1 - t.ink).toFixed(3)})`);
@@ -327,20 +332,39 @@ function BonePlate() {
   );
 }
 
+/** The bone plate sweeps in on its own bed, its slanted edge uncovering the short bar in place. */
+function BoneReveal({ children }: { children: ReactNode }) {
+  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
+    const e = revealEdge(frame.tau);
+    const top = (e + REVEAL_SLANT).toFixed(1);
+    const bottom = (e - REVEAL_SLANT).toFixed(1);
+    setStyle(root, "clip-path", `polygon(0 0, ${top}px 0, ${bottom}px 100%, 0 100%)`);
+  });
+  return (
+    <div
+      ref={ref}
+      className="km-tone km-bed"
+      data-tone="bone"
+      style={{ position: "absolute", inset: 0, clipPath: "inset(0 100% 0 0)" }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function OutroSegment() {
   return (
     <Gate from={OUT.start} to={OUT.end + 1}>
-      <BoneSwap
-        initial="dark"
-        wipes={[{ start: OUT.wipeFrom, end: OUT.wipeTo, to: "bone", angle: -12 }]}
-      >
-        <Gate to={OUT.swap}>
+      <div className="km-tone" style={{ position: "absolute", inset: 0 }}>
+        <Gate to={OUT.wipeTo}>
           <Recap />
         </Gate>
-        <Gate from={OUT.swap}>
+      </div>
+      <Gate from={OUT.wipeFrom}>
+        <BoneReveal>
           <BonePlate />
-        </Gate>
-      </BoneSwap>
+        </BoneReveal>
+      </Gate>
     </Gate>
   );
 }

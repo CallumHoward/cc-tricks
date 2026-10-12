@@ -5,10 +5,14 @@ import { sampleKeys } from "#/engine/motion/track";
 import {
   AFT,
   BOT_WIDTH,
+  botStretch,
   captionWords,
+  homeY,
   limitsCamera,
   POSTER_ROTATE,
   posterCurl,
+  SQUEEZE,
+  terminalY,
   WEEKLY,
   wordLines,
 } from "./tracks";
@@ -24,8 +28,9 @@ describe("afterword tracks", () => {
     expect(used(AFT.wantedAt)).toEqual([21, 1]);
   });
 
-  it("should squeeze the bot to a sliver and widen it back", () => {
-    expect(sampleKeys(BOT_WIDTH, AFT.limitsAt)).toBeCloseTo(0.15, 6);
+  it("should wedge the bot into the gap and widen it back", () => {
+    expect(sampleKeys(BOT_WIDTH, AFT.limitsAt)).toBeCloseTo(SQUEEZE, 6);
+    expect(botStretch(SQUEEZE)).toBeGreaterThan(1);
     expect(sampleKeys(BOT_WIDTH, AFT.wantedAt)).toBeCloseTo(1, 6);
   });
 
@@ -57,5 +62,16 @@ describe("afterword tracks", () => {
     expect(wordLines("On the 5.5 models, I'm nowhere near my quota.", [4, 3])).toBe(
       "On the 5.5 models,\nI'm nowhere near\nmy quota.",
     );
+  });
+
+  it("should open on the home shot at identity", () => {
+    expect(Math.abs(terminalY(AFT.start))).toBe(0);
+    expect(Math.abs(terminalY(AFT.whipIn))).toBe(0);
+  });
+
+  it("should settle the home shot at identity well before the match cut", () => {
+    const rest = AFT.whipOut + AFT.whipOutDur;
+    expect(AFT.end - rest).toBeGreaterThanOrEqual(0.3);
+    for (const tau of [rest, AFT.end - 0.05, AFT.end]) expect(homeY(tau)).toBe(0);
   });
 });

@@ -40,6 +40,30 @@ export function wrapCommand(command: string, max: number): string[] {
   return lines;
 }
 
+/**
+ * Greedy wrap for a narrow card: words never glue, and a word longer than `max` breaks before its
+ * last `[` (or hard at `max`).
+ */
+export function wrapCard(command: string, max: number): string[] {
+  const words = command.split(" ").flatMap((word) => {
+    if (Array.from(word).length <= max) return [word];
+    const cut = word.lastIndexOf("[", max);
+    const at = cut > 0 ? cut : max;
+    return [word.slice(0, at), word.slice(at)];
+  });
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && Array.from(candidate).length > max) {
+      lines.push(line);
+      line = word;
+    } else line = candidate;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 /** Kiro documents `--v3` after the subcommand (`kiro-cli chat --v3 …`). */
 export function documentedKiro(command: string): string {
   return command.replace(/^kiro-cli --v3 chat\b/, "kiro-cli chat --v3");
@@ -97,7 +121,9 @@ export const TIP6 = {
   submitAt: 179.0,
   spinnerAt: 179.2,
   /** Camera lifts the transcript; the prompt box rule becomes the pane split */
-  lift: { start: 179.3, end: 179.9, dy: -160 },
+  lift: { start: 179.3, end: 179.9, dy: -40 },
+  /** The echo lifts into the tip title, which lands well before the first stop */
+  title: 180.4,
   split: { start: 179.6, end: 179.95 },
   kiroType: { start: 179.9, cps: 110 },
   labelsType: { start: 181.1, cps: 140 },

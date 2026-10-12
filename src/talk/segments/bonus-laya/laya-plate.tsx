@@ -47,7 +47,7 @@ function Predict() {
           )}
         </div>
       </Layer>
-      <Wiped at={SETTLE - 0.5} className="seg-abs" style={{ left: 940, top: 470 }}>
+      <Wiped at={SETTLE - 0.5} className="seg-abs" style={{ left: 360, top: 904 }}>
         <div className="wg-row">
           <span className="type-label seg-soft">Billing or technical?</span>
           {GUESSES.map((g) => (
@@ -77,11 +77,11 @@ const sink = (tau: number) => {
 
 /** B-laya: the fast spinner's bars land as Laya's typed probabilities for one support email. */
 export function LayaPlate() {
-  const input = useTrack((tau: number) => ({ x: (1 - prog(tau, 255.5, 255.9, inOutCubic)) * -40 }));
+  const input = useTrack((tau: number) => ({ x: (1 - prog(tau, 255.5, 255.9, inOutCubic)) * 40 }));
   return (
     <Live from={TB.one.holdEnd} to={EXIT + 0.5}>
       <div className="seg-abs" style={{ left: 160, top: 196, scale: 0.7, transformOrigin: "0 0" }}>
-        <RuleRise text={"Text in,\nprobabilities out."} settleBy={SETTLE - 0.2} exit={EXIT} />
+        <RuleRise text={"Text in,\nprobabilities out."} settleBy={256.5} exit={EXIT} />
       </div>
       <Layer track={sink}>
         <Wiped

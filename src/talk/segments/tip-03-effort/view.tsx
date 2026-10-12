@@ -10,7 +10,7 @@ import { DialPlate } from "./dial-plate";
 import { BOT_ARC_AT, FRONTIER, T3, T3_TOKENS } from "./timing";
 import { arcPoint, pointAlong, type Pt } from "./tracks";
 
-const DIAL_BOT: Pt = { x: 1668, y: 846 };
+const DIAL_BOT: Pt = { x: 1696, y: 846 };
 const START: Pt = FRONTIER[0] ?? DIAL_BOT;
 
 /** Where the bot's feet are on the frontier (arc length) at τ, creeping 4 px/τ-s in the hold. */

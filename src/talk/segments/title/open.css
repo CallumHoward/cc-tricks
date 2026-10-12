@@ -64,18 +64,6 @@
 }
 
 /* Cold open */
-.so-heat {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse 70% 60% at 42% 48%,
-    var(--clay-wash-55) 0%,
-    var(--clay-wash-20) 45%,
-    transparent 75%
-  );
-  opacity: 0;
-}
-
 .so-echo {
   position: absolute;
   color: var(--soft);
@@ -297,4 +285,20 @@
   border-radius: 6px;
   background: var(--clay-wash-35);
   box-shadow: inset 4px 0 0 var(--clay);
+}
+
+/* Taste lines: display serif, numerals hanging in clay */
+.fw-taste-line {
+  display: flex;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.fw-taste-line + .fw-taste-line {
+  margin-top: 0.45em;
+}
+
+.fw-taste-num {
+  flex: none;
+  width: 1.15em;
 }

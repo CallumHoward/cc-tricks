@@ -52,6 +52,17 @@ describe("tip 3 effort", () => {
     expect(screen.getByText(scriptFor("t3-then").stamps[0] ?? "")).toBeVisible();
   });
 
+  it("should show the output-token footnote when frozen at t3-then", () => {
+    renderAt(T3.lastGen.at, <Tip03EffortSegment />);
+    expect(screen.getByText(scriptFor("t3-then").footnotes[0] ?? "")).toBeVisible();
+  });
+
+  it("should key the chart's models instead of an empty readout when frozen at t3-aa", () => {
+    renderAt(T3.aa.at, <Tip03EffortSegment />);
+    expect(screen.getByText("GPT-6 Astra (max)")).toBeVisible();
+    expect(screen.queryByText("Pick a point")).toBeNull();
+  });
+
   it("should show the deadpan footnote when frozen at t3-aa", () => {
     renderAt(T3.aa.at, <Tip03EffortSegment />);
     expect(screen.getByText(scriptFor("t3-aa").footnotes[1] ?? "")).toBeVisible();
