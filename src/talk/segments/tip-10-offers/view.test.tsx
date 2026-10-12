@@ -22,6 +22,8 @@ describe("tip 10 view", () => {
     expect(screen.getByText("Artifact usage promotion")).toBeVisible();
     expect(screen.getByText("NOT CLAUDE CODE")).toBeVisible();
     expect(screen.getByText("CLOSED")).toBeVisible();
+    expect(screen.getByText("Claude and Cowork · not Claude Code · not weekly")).toBeVisible();
+    expect(screen.getByText("Pooled across the org, capped at $500 a month")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Reset for free" })).toBeNull();
   });
 });

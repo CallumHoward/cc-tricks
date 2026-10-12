@@ -19,7 +19,7 @@ export const T5 = Object.freeze({
 export const T5_TOKENS = keys([T5.spinnerAt, 52_100], [T5.chain.holdEnd, 58_700]);
 
 /** The day ruler's box on stage, and its axis (the horizon). */
-export const RULER_BOX = Object.freeze({ x: 360, y: 540, w: 1400 });
+export const RULER_BOX = Object.freeze({ x: 360, y: 620, w: 1400 });
 const PAD = 60;
 export const HORIZON = RULER_BOX.y + 150;
 
@@ -39,12 +39,15 @@ export function sunAt(m: number): Pt {
   return { x: cx - ARC.rx * Math.cos(th), y: HORIZON - ARC.ry * Math.sin(th) };
 }
 
+/** Far enough past 05:00 that the sun has cleared the horizon when the routines land. */
+const DAWN = 350;
+
 /** The sun's time of day: dawn creep, a stop at each ping, then a slow afternoon creep. */
 export function sunMinute(tau: number): number {
-  if (tau < 168.4) return 320 + 5 * (Math.max(tau, 163.7) - 163.7);
+  if (tau < 168.4) return DAWN + 5 * (Math.max(tau, 163.7) - 163.7);
   if (tau < 169.2)
     return sampleKeys(
-      keys([168.4, 320 + 5 * (168.4 - 163.7)], [168.8, 640, inOutCubic], [169.2, 950, inOutCubic]),
+      keys([168.4, DAWN + 5 * (168.4 - 163.7)], [168.8, 640, inOutCubic], [169.2, 950, inOutCubic]),
       tau,
     );
   return 950 + 5 * (tau - 169.2);

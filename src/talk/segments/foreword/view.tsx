@@ -81,6 +81,7 @@ function Composer() {
   const border = useRef<HTMLDivElement>(null);
   const fill = useRef<HTMLDivElement>(null);
   const zones = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
   const caret = useRef<HTMLDivElement>(null);
   useFrame((frame: Frame) => {
     const { tau } = frame;
@@ -89,6 +90,7 @@ function Composer() {
     put(border.current, "clip-path", rectClip(r, 3));
     put(fill.current, "clip-path", rectClip(r));
     put(zones.current, "clip-path", rectClip(r));
+    put(content.current, "clip-path", rectClip(r));
     put(zones.current, "opacity", num(1 - prog(tau, F.morph.start + 0.1, F.morph.start + 0.7), 3));
     const lit = prog(tau, 32.4, 33.2);
     put(border.current, "background", lit > 0.5 ? "var(--clay-hi)" : "var(--muted)");
@@ -108,56 +110,58 @@ function Composer() {
           background: "linear-gradient(90deg, var(--clay-wash-55) 0 62.5%, var(--clay) 62.5%)",
         }}
       />
-      <Mover
-        place={(tau: number) => ({
-          y: COMPOSER.y + composerDy(tau),
-          x: COMPOSER.x,
-          o: 1 - prog(tau, F.toPrompt.start, F.toPrompt.start + 0.25),
-        })}
-        style={{ width: COMPOSER.w, height: COMPOSER.h, overflow: "hidden" }}
-      >
-        <div ref={caret} className="fw-caret" style={{ left: 40, top: 34, height: 52 }} />
-        <Typed
-          text={placeholder}
-          at={F.placeholderAt}
-          cps={32}
-          className="fw-placeholder type-body"
-          style={{ left: 54, top: 30 }}
-        />
+      <div ref={content} className="so-fill">
         <Mover
           place={(tau: number) => ({
-            x: -380 * (1 - outExpo(prog(tau, F.chipsAt, F.chipsAt + 0.7))),
-            y: 104,
-            hidden: tau < F.chipsAt,
+            y: COMPOSER.y + composerDy(tau),
+            x: COMPOSER.x,
+            o: 1 - prog(tau, F.toPrompt.start, F.toPrompt.start + 0.25),
           })}
+          style={{ width: COMPOSER.w, height: COMPOSER.h, overflow: "hidden" }}
         >
-          <span className="fw-chip type-label" style={{ left: 600, whiteSpace: "nowrap" }}>
-            {model}
-          </span>
-          <span className="fw-chip type-label" style={{ left: 840, whiteSpace: "nowrap" }}>
-            {effort}
-          </span>
+          <div ref={caret} className="fw-caret" style={{ left: 40, top: 34, height: 52 }} />
+          <Typed
+            text={placeholder}
+            at={F.placeholderAt}
+            cps={32}
+            className="fw-placeholder type-body"
+            style={{ left: 54, top: 30 }}
+          />
+          <Mover
+            place={(tau: number) => ({
+              x: -380 * (1 - outExpo(prog(tau, F.chipsAt, F.chipsAt + 0.7))),
+              y: 104,
+              hidden: tau < F.chipsAt,
+            })}
+          >
+            <span className="fw-chip type-label" style={{ left: 600, whiteSpace: "nowrap" }}>
+              {model}
+            </span>
+            <span className="fw-chip type-label" style={{ left: 840, whiteSpace: "nowrap" }}>
+              {effort}
+            </span>
+          </Mover>
+          <Mover
+            place={(tau: number) => {
+              const s = springFrom(tau, F.chipsAt + 0.3, SPRINGS.SNAP);
+              return { x: 1000 + 32 * (1 - s), y: 96 + 32 * (1 - s), s, hidden: s <= 0 };
+            }}
+          >
+            <div className="fw-send">
+              <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden>
+                <path
+                  d="M15 25V6M6 14l9-9 9 9"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          </Mover>
         </Mover>
-        <Mover
-          place={(tau: number) => {
-            const s = springFrom(tau, F.chipsAt + 0.3, SPRINGS.SNAP);
-            return { x: 1000 + 32 * (1 - s), y: 96 + 32 * (1 - s), s, hidden: s <= 0 };
-          }}
-        >
-          <div className="fw-send">
-            <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden>
-              <path
-                d="M15 25V6M6 14l9-9 9 9"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </Mover>
-      </Mover>
+      </div>
     </Win>
   );
 }

@@ -6,6 +6,9 @@
 
 .fin-kicker {
   --ink: var(--clay);
+
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .fin-weekly .dk-weekly__head {

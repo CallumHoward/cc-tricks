@@ -23,6 +23,8 @@ import { arcPoint, dialAngle, inCubic } from "./tracks";
 const script = scriptFor("t3-then");
 const [FOOT = "", L1 = "", L2 = "", L3 = ""] = script.lines;
 const SETTLE = T3.lastGen.at - 0.8;
+/** Settles so the SLAM's first contact lands on the 137.3 slam cue. */
+const STAMP_SETTLE = 137.51;
 const EXIT = T3.lastGen.holdEnd;
 
 /** Dial needle position in seats (0 = low … 4 = max): lands on medium, then creeps toward high. */
@@ -202,7 +204,11 @@ export function DialPlate() {
         >
           {FOOT}
         </Wiped>
-        <Stamp text={script.stamps[0] ?? ""} settleBy={SETTLE} style={{ left: 700, top: 856 }} />
+        <Stamp
+          text={script.stamps[0] ?? ""}
+          settleBy={STAMP_SETTLE}
+          style={{ left: 700, top: 856 }}
+        />
       </Layer>
       {EFFORTS.map((effort, i) => (
         <DialGlyph key={effort} i={i} />

@@ -10,9 +10,11 @@ import {
   flightStart,
   OUT,
   PLATE,
+  plateFed,
   plateRules,
   QR,
   RECAP,
+  SCROLLBACK,
   thesisLines,
   tileAt,
 } from "./tracks";
@@ -21,6 +23,9 @@ const { size: n, modules } = qrModules("http://localhost:3000/shownotes");
 const held = modules.slice(-10);
 const px = QR.size / n;
 const settle = OUT.qrAt - 0.8;
+// The reference column as rendered (px)
+const REFS_LEFT = 820;
+const REFS_BOTTOM = 725;
 
 describe("outro tracks", () => {
   it("should land every tile exactly on its held-back module by the settle time", () => {
@@ -80,5 +85,37 @@ describe("outro tracks", () => {
     expect(RECAP).toHaveLength(11);
     expect(RECAP[0]).toEqual({ pastVerb: "Churned", duration: "1m 30s" });
     expect(RECAP.at(-1)).toEqual({ pastVerb: "Cogitated", duration: "1m 15s" });
+  });
+
+  it("should scroll back from the newest completion line to tip 1", () => {
+    expect(SCROLLBACK[0]).toEqual(RECAP.at(-1));
+    expect(SCROLLBACK.at(-1)).toEqual(RECAP[0]);
+  });
+
+  it("should feed no ivory before the QR prints and the whole plate once it has", () => {
+    expect(plateFed(OUT.qrFrom - 0.01, n)).toBe(0);
+    expect(plateFed(OUT.qrFrom, n)).toBeGreaterThan(0);
+    expect(plateFed(OUT.qrTo, n)).toBe(QR.size);
+  });
+
+  it("should feed the plate under every held-back module before its tile inks", () => {
+    for (let i = 0; i < 10; i++) {
+      const m = held[9 - i] as { x: number; y: number };
+      const inks = flightStart(i) + 0.62 * OUT.flyDur;
+      expect(plateFed(inks, n)).toBeGreaterThanOrEqual((m.y + 1) * px);
+    }
+  });
+
+  it("should keep flying tiles below the reference column", () => {
+    const tops = Array.from({ length: 10 }, (_, i) =>
+      Array.from({ length: 21 }, (_, k) =>
+        tileAt(i, flightStart(i) + (k / 20) * OUT.flyDur, held, n),
+      ),
+    )
+      .flat()
+      .filter((t) => t.x > REFS_LEFT - t.size / 2)
+      .map((t) => t.y - t.size / 2);
+    expect(tops.length).toBeGreaterThan(0);
+    expect(Math.min(...tops)).toBeGreaterThan(REFS_BOTTOM);
   });
 });

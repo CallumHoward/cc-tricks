@@ -23,13 +23,13 @@ import {
 } from "#/talk/segments/tip-06-cli-agents/boundary";
 import { placeAt, type PlaceKey } from "#/talk/segments/tip-06-cli-agents/timing";
 
-import { BLOCK, ccTower, cursorTower, flapCounter, flapRows, TIP8 } from "./timing";
+import { BASE, BLOCK, ccTower, cursorTower, flapCounter, flapRows, TIP8 } from "./timing";
 
 const D = TIP8;
 const cache = scriptFor("t8-cache");
 const x18 = scriptFor("t8-18x");
 const TABLE = cache.tables[0] ?? { head: [], rows: [] };
-export const BOARD_ROWS = TABLE.rows.map(([l = "", r = ""]) => flapRows(l, r, 13));
+export const BOARD_ROWS = TABLE.rows.map(([l = "", r = ""]) => flapRows(l, r, 24));
 
 /** The `0` of the spinner's `↓ 0 tokens` (measured from a still). */
 const ZERO = { x: 594, y: 486, size: 28 };
@@ -41,13 +41,13 @@ const DIVE = {
   end: D.dive.end,
 };
 
-const COL_X = [300, 1020] as const;
-const FLAP_ROW_Y = [372, 510, 648] as const;
+const COL_X = [200, 980] as const;
+const FLAP_ROW_Y = [372, 466, 560] as const;
 const FLOOR = 860;
-const TOWER_X = [1230, 1410] as const;
-const TOWER_W = 160;
+const TOWER_X = [1272, 1432] as const;
+const TOWER_W = 138;
 
-/** The tower's label block: the H says "CC", and "Claude Code" does not fit a 160 px tower. */
+/** The tower's label block: the H says "CC", and "Claude Code" does not fit a 138 px tower. */
 const CC_LABEL = "CC";
 const base = (tau: number) => prog(tau, D.towers.start - 0.1, D.towers.start + 0.2, outExpo);
 
@@ -134,11 +134,13 @@ function Board() {
             fx={(frame) => ({
               transform: `rotateX(${(boardFold(frame.tau, r + 1) * 90).toFixed(1)}deg)`,
             })}
+            className="t8-flap"
             style={{
               left: COL_X[c],
               top: FLAP_ROW_Y[r],
               transformOrigin: "50% 0",
               perspective: 800,
+              ["--cols" as string]: Math.max(...lines.map((line) => Array.from(line).length)),
             }}
           >
             <SplitFlap
@@ -150,9 +152,17 @@ function Board() {
           </Fx>
         )),
       )}
+      <style>{FLAP_CSS}</style>
     </>
   );
 }
+
+/** Tighter cells than the kit's default so each phrase reads as words, not spaced letters. */
+const FLAP_CSS = `
+.t8-flap .km-flap-board{grid-template-columns:repeat(var(--cols),0.72em)!important;gap:6px 3px}
+.t8-flap .km-flap-top,.t8-flap .km-flap-leaf[data-half="top"]{background:var(--hairline)}
+.t8-flap .km-flap-bot,.t8-flap .km-flap-leaf[data-half="bottom"]{background:var(--panel)}
+`;
 
 function Tower({
   x,
@@ -175,7 +185,7 @@ function Tower({
         fx={fx}
         style={{
           left: x,
-          top: FLOOR - 2400,
+          top: FLOOR - BASE - 2400,
           width: TOWER_W,
           height: 2400,
           background: `repeating-linear-gradient(to top, ${tone} 0 ${BLOCK - 6}px, transparent ${BLOCK - 6}px ${BLOCK}px)`,
@@ -187,9 +197,9 @@ function Tower({
         className="type-label"
         style={{
           left: x,
-          top: FLOOR - BLOCK + 6,
+          top: FLOOR - BASE + 6,
           width: TOWER_W,
-          height: BLOCK - 6,
+          height: BASE - 6,
           display: "grid",
           placeItems: "center",
           background: "var(--bg-deep)",
@@ -216,27 +226,17 @@ function Towers() {
       <Fx
         fx={floor}
         style={{
-          left: 1180,
+          left: 1232,
           top: FLOOR,
-          width: 440,
+          width: 380,
           height: 3,
           background: "var(--soft)",
           transformOrigin: "0 50%",
           transform: "scaleX(0)",
         }}
       />
-      <Tower
-        x={TOWER_X[0]}
-        height={(tau) => cursorTower(tau) + BLOCK * base(tau)}
-        label={cursorLabel}
-        tone="var(--muted)"
-      />
-      <Tower
-        x={TOWER_X[1]}
-        height={(tau) => ccTower(tau) + BLOCK * base(tau)}
-        label={CC_LABEL}
-        tone="var(--clay)"
-      />
+      <Tower x={TOWER_X[0]} height={cursorTower} label={cursorLabel} tone="var(--muted)" />
+      <Tower x={TOWER_X[1]} height={(tau) => ccTower(tau)} label={CC_LABEL} tone="var(--clay)" />
     </>
   );
 }
@@ -261,10 +261,12 @@ function Plate() {
               style={{ left: 200, top: 230, transformOrigin: "0 50%" }}
             >
               <div
-                className="tui tui-line type-code tui-dim"
+                className="tui tui-line type-body tui-text"
                 style={{ transform: "translateY(-50%)" }}
               >
-                <Chevron />
+                <span className="tui-clay">
+                  <Chevron />
+                </span>
                 <span>{` ${cache.headline ?? ""}`}</span>
               </div>
             </Fx>
@@ -339,7 +341,7 @@ function Coin() {
     };
   };
   return (
-    <Fx fx={fx} style={{ left: 942, top: 680, width: 40, height: 40, visibility: "hidden" }}>
+    <Fx fx={fx} style={{ left: 942, top: 742, width: 40, height: 40, visibility: "hidden" }}>
       <svg viewBox="0 0 100 100" width={40} height={40} aria-hidden>
         <circle cx={50} cy={50} r={48} fill="var(--clay)" />
         <path

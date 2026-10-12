@@ -1,6 +1,6 @@
 import { clamp, inOutCubic, outCubic, outExpo, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
-import type { Key } from "#/engine/motion/track";
+import { sampleKeys, type Key } from "#/engine/motion/track";
 
 /** Absolute τ for tip 10 (window [231.4, 248.9); stops at 236 and 244.5). */
 export const T10 = Object.freeze({
@@ -25,6 +25,8 @@ export const T10 = Object.freeze({
   resetsCopySettle: 234.7,
   bankedAt: 234.3,
   instantAt: 234.6,
+  instantLand: 235.15,
+  pileHopDur: 0.5,
   stampSettle: 235.15,
   botHopAt: 234.2,
   pointAt: 234.95,
@@ -82,19 +84,31 @@ export function mixRect(from: Rect, to: Rect, u: number): Rect {
   };
 }
 
-/**
- * Ticket slide out of the panel (px from rest). `instant` is 10 px short at the stop and creeps
- * home.
- */
-export function bankedX(tau: number): number {
-  return -620 * (1 - prog(tau, T10.bankedAt, T10.bankedAt + 0.7, outCubic));
+/** Banked ticket: slides out of the panel and LANDs (with overshoot) by 235.0. */
+const BANKED_KEYS: readonly Key[] = [
+  { at: T10.bankedAt, value: -620 },
+  { at: T10.bankedAt + 0.7, value: 0, ease: SPRINGS.LAND },
+];
+
+/** Instant ticket: LANDs 10 px short by 235.15 (settled before at − 0.8), then creeps home. */
+const INSTANT_KEYS: readonly Key[] = [
+  { at: T10.instantAt, value: -620 },
+  { at: T10.instantLand, value: -10, ease: SPRINGS.LAND },
+  { at: T10.resetsAt, value: -10 },
+  { at: T10.resetsHoldEnd, value: 0 },
+];
+
+export const bankedX = (tau: number): number => sampleKeys(BANKED_KEYS, tau);
+export const instantX = (tau: number): number => sampleKeys(INSTANT_KEYS, tau);
+
+/** Settings panel hold creep: drifts 8 px left across the resets hold. */
+export function panelDrift(tau: number): number {
+  return -8 * prog(tau, T10.resetsAt, T10.resetsHoldEnd);
 }
 
-export function instantX(tau: number): number {
-  if (tau <= T10.resetsAt) {
-    return -620 + 610 * prog(tau, T10.instantAt, T10.resetsAt, outCubic);
-  }
-  return -10 * (1 - prog(tau, T10.resetsAt, T10.resetsHoldEnd));
+/** The pile hops from home onto the Settings panel's lid as the panel opens (0 → 1). */
+export function pileHop(tau: number): number {
+  return prog(tau, T10.diveAt, T10.diveAt + T10.pileHopDur, inOutCubic);
 }
 
 /** Ticket i of the offers board runs in along its rail and LANDs 0.3 τ-s after the previous one. */
@@ -142,9 +156,10 @@ export function pileCount(tau: number): number {
   return chipFlight(tau) >= 1 ? 10 : 9;
 }
 
-export type TicketCopy = { headline: string; line: string; meta?: string; stamp?: string };
+export type TicketRow = { text: string; tone: "line" | "label" | "foot" };
+export type TicketCopy = { headline: string; rows: readonly TicketRow[]; stamp?: string };
 
-/** One ticket per script card: header, its first line, one meta line (footnote, else label), stamp. */
+/** One ticket per script card: header, every line, label and footnote in order, and its stamp. */
 export function ticketCopy(card: {
   headline: string;
   lines: readonly string[];
@@ -152,10 +167,15 @@ export function ticketCopy(card: {
   footnotes: readonly string[];
   stamps: readonly string[];
 }): TicketCopy {
+  const rows = (texts: readonly string[], tone: TicketRow["tone"]) =>
+    texts.map((text) => ({ text, tone }));
   return {
     headline: card.headline,
-    line: card.lines[0] ?? "",
-    meta: card.footnotes[0] ?? card.labels[0],
+    rows: [
+      ...rows(card.lines, "line"),
+      ...rows(card.labels, "label"),
+      ...rows(card.footnotes, "foot"),
+    ],
     stamp: card.stamps[0],
   };
 }

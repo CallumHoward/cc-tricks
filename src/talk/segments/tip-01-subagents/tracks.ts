@@ -1,5 +1,5 @@
 import { clamp, inOutExpo, outCubic, outExpo, prog } from "#/engine/motion/ease";
-import { keys, type Key } from "#/engine/motion/track";
+import { keys, sampleKeys } from "#/engine/motion/track";
 import type { StyleValues } from "#/engine/stage/applier";
 import { HOME } from "#/talk/kit/tui";
 import { BOT_HOME } from "#/talk/segments/shared/home";
@@ -113,16 +113,27 @@ export function starScale(tau: number): number {
   return small + (1 - small) * grow - (1 - small) * sink;
 }
 
-/** Subagent counters: roll up, then creep ≤ 1 last digit per τ-s through the hold. */
-export function subagentTokens(i: number): readonly Key[] {
+/** Hold ticks: each subagent counter steps its last digit up at these τ, avoiding the stills. */
+export const TICKS = Object.freeze({ at: [52.8, 53.8] as const, snap: 0.1 });
+
+/**
+ * Subagent counters: roll up and detent on a whole last digit by 51.2, then tick one digit at a
+ * time through the hold, resting on whole digits between the 0.1 τ-s snaps.
+ */
+export function subagentTokens(i: number): (tau: number) => number {
   const a = SUBAGENTS[i] ?? SUBAGENTS[0];
-  return keys(
-    [spokeLand(i), 0],
-    [51.2, a.tokens - a.lag - 70, outCubic],
-    [AT.agents, a.tokens - a.lag],
-    [HOLD_END.agents, a.tokens],
-  );
+  const base = a.tokens - 100 * TICKS.at.length;
+  const roll = keys([spokeLand(i), 0], [51.2, base, outCubic]);
+  return (tau) => {
+    if (tau < 51.2) return sampleKeys(roll, tau);
+    const steps = TICKS.at.reduce((n, t) => n + prog(tau, t, t + TICKS.snap, outCubic), 0);
+    return base + 100 * steps;
+  };
 }
+
+/** The "See:" label types, then the YAML card types its first line. */
+export const LABEL_AT = 50.3;
+export const YAML_AT = 55.45;
 
 export const MAIN_TOKENS = keys([49.0, 0], [50.6, 97_300, outCubic]);
 export const SPINNER_TOKENS = keys([48.6, 0], [50.9, 97_300, outCubic]);
@@ -134,7 +145,7 @@ export const SPINNER_VERB = [
 
 /** Rows fold into the agent card: each squashes onto the main row, staggered. */
 export function rowFold(i: number, tau: number): StyleValues {
-  const start = 54.5 + i * 0.04;
+  const start = HOLD_END.agents + i * 0.04;
   const k = prog(tau, start, start + 0.32, inOutExpo);
   const y = (ROW.mainTop - (i < 0 ? ROW.mainTop : rowTop(i))) * k;
   return { y, scaleY: 1 - 0.85 * k, opacity: 1 - k };
@@ -142,7 +153,7 @@ export function rowFold(i: number, tau: number): StyleValues {
 
 /** Spinner line folds with the rows; it does not return. */
 export function spinnerFold(tau: number): StyleValues {
-  const u = prog(tau, 54.5, 54.85, inOutExpo);
+  const u = prog(tau, HOLD_END.agents, HOLD_END.agents + 0.35, inOutExpo);
   return { y: 42 * u, scaleY: 1 - 0.85 * u, opacity: 1 - u };
 }
 
@@ -174,7 +185,7 @@ export function cardFrame(tau: number): StyleValues {
 /** Chip slots: `haiku` on line 3 col 7, `low` on line 4 col 8 (with 0.4ch padding each side). */
 export const CHIPS = [
   { text: "haiku", line: 3, col: 7, from: { x: 1500, y: 640 }, launch: 55.95, land: 56.6 },
-  { text: "low", line: 4, col: 8, from: { x: 1640, y: 360 }, launch: 56.2, land: 57.5 },
+  { text: "low", line: 4, col: 8, from: { x: 1640, y: 360 }, launch: 56.2, land: 56.95 },
 ] as const;
 
 /** `effort: low` drifts its last 6 px in the hold; `haiku` is pasted by the bot before. */

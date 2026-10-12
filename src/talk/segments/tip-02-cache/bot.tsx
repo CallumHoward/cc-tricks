@@ -18,9 +18,9 @@ export const SPOTS = Object.freeze({
   monolith: { x: MONOLITH.x, y: MONOLITH.y - MONOLITH.h / 2 },
   shelf: { x: 1520, y: 870 },
   hit: { x: PRICE_X[3], y: PRICE_BASE - COIN },
-  strip: { x: 1170, y: 480 },
+  strip: { x: 1090, y: 520 },
   clock: { x: 1480, y: 470 },
-  road: { x: 640, y: 958 },
+  road: { x: 1190, y: 958 },
 });
 
 type Spot = { x: number; y: number };

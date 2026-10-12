@@ -18,7 +18,9 @@ import {
   diveAt,
   instantX,
   mixRect,
+  panelDrift,
   pileCount,
+  pileHop,
   resetsEchoScale,
   resetsScrollY,
   splitLead,
@@ -43,6 +45,10 @@ const PANEL: Rect = { x: 200, y: 360, w: 940, h: 520 };
 const TICKET = { x: 1190, w: 550, h: 220, stub: 100 };
 
 const BOT_SPOT = { left: 1470, top: 390 - 180 };
+/** The pile hops onto the panel's lid, clear of the tickets and the bot (bottom-centre anchor). */
+const PILE_SPOT = { x: 1060, y: PANEL.y - 2 };
+/** COMMUNITY TERMS lands across the instant ticket's lower edge, under both labels. */
+const STAMP_AT = { left: 1395, top: 868 };
 
 const RESETS_BOT_ACTS: readonly Act[] = [
   { kind: "look", at: T10.diveAt, dur: 1, x: -0.8, y: 0.6 },
@@ -101,6 +107,7 @@ function UsagePanel() {
       write={(el, frame) => {
         const u = diveAt(frame.tau);
         put(el, "visibility", u > 0 ? "visible" : "hidden");
+        put(el, "transform", `translate3d(${num(panelDrift(frame.tau), 2)}px, 0, 0)`);
         if (u >= 1) {
           put(el, "clip-path", "none");
           return;
@@ -136,18 +143,18 @@ function UsagePanel() {
           {"Settings › Usage"}
         </Layer>
       </div>
-      <UsageBar label="Current session" fill={0.62} top={92} />
-      <UsageBar label="Current week" fill={0.88} top={180} />
+      <UsageBar label="Current session" fill={0.62} top={86} />
+      <UsageBar label="Current week" fill={0.88} top={164} />
       <RuleRise
         text={L1}
         settleBy={T10.resetsCopySettle}
         className="type-body"
         rule={false}
-        style={{ position: "absolute", left: 40, top: 272 }}
+        style={{ position: "absolute", left: 40, top: 240 }}
       />
       <Layer
         className="t10-reset-row"
-        style={{ position: "absolute", left: 40, top: 348, width: PANEL.w - 80 }}
+        style={{ position: "absolute", left: 40, top: 310, width: PANEL.w - 80 }}
         write={(el, frame) => {
           const u = prog(frame.tau, T10.rowAt, T10.rowAt + T10.rowDur);
           const cells = Math.round(u * 48) / 48;
@@ -290,7 +297,17 @@ export function ResetsPlate() {
           elapsed={keys([T10.spinnerAt, 0], [T10.resetsHoldEnd, 40])}
         />
       </Layer>
-      <Pile count={pileCount} x={HOME.pileX} y={HOME.pileY} />
+      <Layer
+        style={{ ...FILL, zIndex: 2, pointerEvents: "none" }}
+        write={(el, frame) => {
+          const u = pileHop(frame.tau);
+          const dx = (PILE_SPOT.x - HOME.pileX) * u;
+          const dy = (PILE_SPOT.y - HOME.pileY) * u - 70 * Math.sin(Math.PI * u);
+          put(el, "transform", `translate3d(${num(dx, 2)}px, ${num(dy, 2)}px, 0)`);
+        }}
+      >
+        <Pile count={pileCount} x={HOME.pileX} y={HOME.pileY} />
+      </Layer>
       <div
         style={{
           position: "absolute",
@@ -311,7 +328,7 @@ export function ResetsPlate() {
         text={STAMP}
         settleBy={T10.stampSettle}
         rotate={-8}
-        style={{ left: 1470, top: 626, zIndex: 2 }}
+        style={{ ...STAMP_AT, zIndex: 2 }}
       />
       <Layer
         style={{

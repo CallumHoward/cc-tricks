@@ -5,6 +5,7 @@ import { scriptFor } from "#/talk/script";
 import {
   batonProgress,
   documentedKiro,
+  dropPoint,
   exitTimes,
   placeAt,
   tip6StackDy,
@@ -70,5 +71,13 @@ describe("tip 6 timing", () => {
     ];
     expect(placeAt(track, 0)).toEqual({ x: 0, y: 0, scale: 1 });
     expect(placeAt(track, 3)).toEqual({ x: 100, y: -50, scale: 0.5 });
+  });
+
+  it("should never lift a dropped baton above its launch point", () => {
+    const a = { x: 1470, y: 300 };
+    const b = { x: 500, y: 462 };
+    const ys = Array.from({ length: 21 }, (_, k) => dropPoint(a, b, k / 20).y);
+    for (const [k, y] of ys.entries()) expect(y).toBeGreaterThanOrEqual(ys[k - 1] ?? a.y);
+    expect(dropPoint(a, b, 1)).toEqual(b);
   });
 });

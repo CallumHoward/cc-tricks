@@ -116,12 +116,16 @@ function riseAt(
   return starts.map((s, i) => 1 - springFrom(tau, s, spring) + clamp(sink * 1.3 - i * 0.04) * 1.2);
 }
 
-/** Display copy rising word by word from behind its line's mask, settled by `settleBy`. */
+/** Back-solve launches so the last word settles by `settleBy`, or launch the first at `startAt`. */
+type RiseTiming = { settleBy: number; startAt?: never } | { startAt: number; settleBy?: never };
+
+/** Display copy rising word by word from behind its line's mask. */
 export function Rise({
   text,
   emphasis,
   lead,
   settleBy,
+  startAt,
   stagger = 0.08,
   exit,
   spring = SPRINGS.LAND,
@@ -131,16 +135,18 @@ export function Rise({
   text: string;
   emphasis?: readonly string[];
   lead?: RiseWord;
-  settleBy: number;
   stagger?: number;
   exit?: number;
   spring?: SpringCfg;
   className?: string;
   style?: CSSProperties;
-}) {
+} & RiseTiming) {
   const lines = riseLines(text, emphasis, lead);
   const count = lines.reduce((a, l) => a + l.length, 0);
-  const starts = staggerStarts(count, settleBy, stagger, spring);
+  const starts =
+    startAt === undefined
+      ? staggerStarts(count, settleBy, stagger, spring)
+      : Array.from({ length: count }, (_, i) => startAt + i * stagger);
   const els = useRef<(HTMLSpanElement | null)[]>([]);
   useFrame((frame: Frame) => {
     const lifts = riseAt(frame.tau, starts, spring, exit);

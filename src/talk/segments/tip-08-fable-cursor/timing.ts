@@ -18,17 +18,19 @@ export const TIP8 = {
   exit: 221.5,
 } as const;
 
-export const BLOCK = 44;
+/** Height of one tower block; the label base under each tower is `BASE` tall. */
+export const BLOCK = 36;
+export const BASE = 44;
 
-/** Height of the Cursor tower: three blocks, done early. */
+/** Height of the Cursor tower: one block, done early. */
 export function cursorTower(tau: number): number {
-  return 3 * BLOCK * outCubic(prog(tau, TIP8.towers.start, TIP8.towers.cursorEnd));
+  return BLOCK * outCubic(prog(tau, TIP8.towers.start, TIP8.towers.cursorEnd));
 }
 
-/** Height of the CC tower: ~18× the Cursor tower's target, then it keeps climbing ≤ 40 px/τ-s. */
-export function ccTower(tau: number, creep = 36): number {
+/** Height of the CC tower: 18× the Cursor tower, then it keeps climbing ≤ 30 px/τ-s. */
+export function ccTower(tau: number, creep = 30): number {
   const { start, ccSettle } = TIP8.towers;
-  const burst = 17 * BLOCK * outCubic(prog(tau, start + 0.1, ccSettle));
+  const burst = 18 * BLOCK * outCubic(prog(tau, start + 0.1, ccSettle));
   return burst + Math.max(0, tau - ccSettle) * creep;
 }
 

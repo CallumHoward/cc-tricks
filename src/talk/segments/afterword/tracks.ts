@@ -1,6 +1,7 @@
 import { clamp, inOutCubic, inQuad, outCubic, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
 import { keys, type Key } from "#/engine/motion/track";
+import { shotTrack, type Cam } from "#/talk/kit/motion";
 import type { Act } from "#/talk/mascot/actions";
 
 /** Afterword story times (absolute τ); window [267.4, 280.9), stops at 272 and 277. */
@@ -32,7 +33,8 @@ export const AFT = Object.freeze({
   wantedAt: 277,
   yank: 279.5,
   yankDur: 0.45,
-  whipOut: 279.95,
+  whipOut: 280.35,
+  whipOutDur: 0.55,
   end: 280.9,
 });
 
@@ -75,8 +77,8 @@ export const BOT_X = keys(
 /** Horizontal squash of the bot: a sliver in the 5% gap, full width again once the bars drain. */
 export const BOT_WIDTH = keys(
   [AFT.sliverFrom, 1],
-  [AFT.sliverTo, 0.2, outCubic],
-  [AFT.widenFrom, 0.2],
+  [AFT.sliverTo, 0.15, outCubic],
+  [AFT.widenFrom, 0.15],
   [AFT.widenTo, 1, SPRINGS.LAND],
 );
 
@@ -109,6 +111,33 @@ export const POSTER_ROTATE = keys(
 /** Poster lift during the exit yank (px, negative is up). */
 export const posterLift = (tau: number): number =>
   -1300 * prog(tau, AFT.yank, AFT.yank + AFT.yankDur, inQuad);
+
+const PUSH = shotTrack([
+  { at: AFT.captionAt, x: 960, y: 540, zoom: 1 },
+  { at: AFT.limitsAt - 0.8, x: 850, y: 532, zoom: 1.14, ease: inOutCubic },
+  { at: AFT.cut, zoom: 1.17 },
+]);
+
+const REST: Cam = { x: 960, y: 540, zoom: 1, roll: 0, tilt: 0 };
+
+/**
+ * Pushes in on the gauges and the sliver (kicker and caption stay out of the corner boxes), creeps
+ * through the hold, and cuts back with the poster.
+ */
+export const limitsCamera = (tau: number): Cam => (tau < AFT.cut ? PUSH(tau) : REST);
+
+/** Splits `text` into lines of `counts[i]` words each; the remainder makes the last line. */
+export function wordLines(text: string, counts: readonly number[]): string {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let i = 0;
+  for (const count of counts) {
+    lines.push(words.slice(i, i + count).join(" "));
+    i += count;
+  }
+  if (i < words.length) lines.push(words.slice(i).join(" "));
+  return lines.join("\n");
+}
 
 /** Whole caption words visible while it types (word-wise, quantized to 60 Hz). */
 export function captionWords(tau: number, total: number): number {

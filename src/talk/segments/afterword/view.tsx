@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { sampleKeys } from "#/engine/motion/track";
 import type { Frame } from "#/engine/types";
 import { WeeklyBars } from "#/talk/kit/data/weekly-bars";
-import { RuleRise } from "#/talk/kit/motion";
+import { RuleRise, World } from "#/talk/kit/motion";
 import { GLYPH_PATHS, HOME, punch, ScrollbackWhip, SpinnerLine } from "#/talk/kit/tui";
 import { setStyle, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import { drawMascot } from "#/talk/mascot/draw";
@@ -21,16 +21,20 @@ import {
   BOT_WIDTH,
   BOT_X,
   captionWords,
+  limitsCamera,
   POSTER,
   POSTER_ROTATE,
   posterCurl,
   posterLift,
   WEEKLY,
+  wordLines,
 } from "./tracks";
 
 const limits = scriptFor("aft-limits");
 const wanted = scriptFor("aft-wanted");
 const CAPTION = (limits.lines[0] ?? "").split(" ");
+const WANTED_H = wordLines(wanted.headline ?? "", [4, 3]);
+const WANTED_L1 = wordLines(wanted.lines[0] ?? "", [6]);
 const SILHOUETTE = drawMascot(restPose(), 0, { boil: 0, silhouette: "#141413" });
 const ALWAYS = { from: 0, to: 1e9 };
 
@@ -65,7 +69,8 @@ function Terminal() {
 
 function Caption() {
   const ref = useFrameRef<HTMLParagraphElement>((root: HTMLParagraphElement, frame: Frame) => {
-    const n = captionWords(frame.tau, CAPTION.length);
+    // The poster replaces the caption outright: no fragments peeking out round its edges
+    const n = frame.tau < AFT.cut ? captionWords(frame.tau, CAPTION.length) : 0;
     const words = root.children;
     for (let i = 0; i < words.length; i++)
       setStyle(words[i], "visibility", i < n ? "visible" : "hidden");
@@ -110,7 +115,7 @@ function Pin() {
   const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
     const u = Math.min(1, Math.max(0, (frame.tau - AFT.pinAt) / (AFT.pinLand - AFT.pinAt)));
     const scale = frame.tau < AFT.pinAt ? 0 : 1 + 1.6 * (1 - u) ** 3;
-    const glint = 6 * Math.sin(frame.w * 1.3);
+    const glint = Math.sin(frame.w * 1.3);
     setStyle(root, "transform", `scale(${scale.toFixed(4)}) rotate(${glint.toFixed(2)}deg)`);
   });
   return (
@@ -161,15 +166,11 @@ function Poster() {
           <MascotSvg drawing={SILHOUETTE} title="the bot, last seen" />
         </div>
         <div className="fin-poster-h">
-          <RuleRise
-            text={"On the 5.5 models,\nI'm nowhere near\nmy quota."}
-            settleBy={AFT.posterTextBy - 0.3}
-            rule={false}
-          />
+          <RuleRise text={WANTED_H} settleBy={AFT.posterTextBy - 0.3} rule={false} />
         </div>
         <RuleRise
           className="type-body fin-poster-l1"
-          text={"Still hitting yours with these tips?\nTeach me how."}
+          text={WANTED_L1}
           settleBy={AFT.posterTextBy}
           rule={false}
         />
@@ -184,21 +185,23 @@ function Poster() {
 function LimitsPlate() {
   return (
     <>
-      <div className="fin-abs fin-kicker" style={{ left: BARS.left, top: 236 }}>
-        <RuleRise
-          text={limits.kicker ?? "Afterword"}
-          settleBy={AFT.kickerBy}
-          className="type-label"
+      <World camera={limitsCamera} smear={false}>
+        <div className="fin-abs fin-kicker" style={{ left: BARS.left, top: 236 }}>
+          <RuleRise
+            text={limits.kicker ?? "Afterword"}
+            settleBy={AFT.kickerBy}
+            className="type-label"
+          />
+        </div>
+        <WeeklyBars
+          className="fin-weekly"
+          bars={WEEKLY}
+          width={BARS.width}
+          style={{ position: "absolute", left: BARS.left, top: BARS.top }}
         />
-      </div>
-      <WeeklyBars
-        className="fin-weekly"
-        bars={WEEKLY}
-        width={BARS.width}
-        style={{ position: "absolute", left: BARS.left, top: BARS.top }}
-      />
-      <Caption />
-      <SqueezedBot />
+        <Caption />
+        <SqueezedBot />
+      </World>
       <Poster />
     </>
   );
@@ -222,7 +225,7 @@ export default function AfterwordSegment() {
       <ScrollbackWhip at={AFT.whipIn} dur={AFT.whipDur} distance={-1080}>
         <Terminal />
         <Screen y={1080}>
-          <ScrollbackWhip at={AFT.whipOut} dur={0.55} distance={1080}>
+          <ScrollbackWhip at={AFT.whipOut} dur={AFT.whipOutDur} distance={1080}>
             <LimitsPlate />
             <Screen y={-1080}>
               <HomeRest pile={10} {...ALWAYS} />

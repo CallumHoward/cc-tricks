@@ -1,9 +1,14 @@
 .t5-card {
   display: grid;
-  gap: 4px;
-  padding: 16px 28px;
+  align-content: center;
+  gap: 6px;
+  padding: 16px 28px 18px;
   box-sizing: border-box;
   transform-origin: 50% 50%;
+}
+
+.t5-card > div {
+  white-space: nowrap;
 }
 
 .t5-card__row {

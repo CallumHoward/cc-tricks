@@ -63,7 +63,7 @@ function Echo({ text, at }: { text: string; at: number }) {
   });
   return (
     <div
-      className="tui type-code"
+      className="tui type-body"
       style={{
         position: "absolute",
         left: HOME.textX,
@@ -73,8 +73,10 @@ function Echo({ text, at }: { text: string; at: number }) {
       }}
       data-tui-replica
     >
-      <div ref={ref} className="tui-line tui-dim">
-        <Chevron />
+      <div ref={ref} className="tui-line tui-text">
+        <span className="tui-clay">
+          <Chevron />
+        </span>
         <span>{` ${text}`}</span>
       </div>
     </div>

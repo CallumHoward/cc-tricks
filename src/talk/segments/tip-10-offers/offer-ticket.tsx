@@ -19,6 +19,7 @@ export function OfferTicket({
   punchAt,
   tear,
   stub,
+  padding = "34px 28px",
   children,
   style,
 }: {
@@ -28,6 +29,7 @@ export function OfferTicket({
   punchAt?: number;
   tear?: (tau: number) => number;
   stub?: ReactNode;
+  padding?: string;
   children: ReactNode;
   style?: CSSProperties;
 }) {
@@ -79,7 +81,7 @@ export function OfferTicket({
         className="km-ticket-part km-ticket-body"
         style={{ maskImage: notch(perf), maskComposite: "intersect" }}
       >
-        <div className="km-ticket-content" style={{ width: perf, padding: "34px 28px" }}>
+        <div className="km-ticket-content" style={{ width: perf, padding }}>
           {children}
         </div>
         <div className="km-ticket-perf" style={{ left: perf }} />

@@ -1,4 +1,4 @@
-import { outCubic, prog } from "#/engine/motion/ease";
+import { inOutCubic, outCubic, prog } from "#/engine/motion/ease";
 import type { StyleValues } from "#/engine/stage/applier";
 import { useTrack } from "#/engine/stage/react";
 import { GLYPH_PATHS } from "#/talk/kit/tui";
@@ -9,6 +9,8 @@ import { arcPoint, inCubic } from "#/talk/segments/tip-03-effort/tracks";
 import { HORIZON, SUN_SIZE, sunAt, sunMinute, T5 } from "./timing";
 
 const SET_AT = T5.chain.holdEnd;
+/** Once the pins are in, the sun shrinks so it clears the Haiku tiles and the reset list. */
+const SHRINK_AT = T5.chain.pinsAt + 0.8;
 
 /** The ✳: leaves the spinner, rises as the sun, sweeps the day, then sets into the ✻. */
 export function sunPose(tau: number): StyleValues {
@@ -16,7 +18,8 @@ export function sunPose(tau: number): StyleValues {
   const u = prog(tau, T5.leave, T5.leave + 1.15, outCubic);
   const set = prog(tau, SET_AT, SET_AT + 0.3, inCubic);
   const p = set > 0 ? arcPoint(rest, SPIN_AT, set, -60) : arcPoint(SPIN_AT, rest, u, 260);
-  const size = set > 0 ? SUN_SIZE + (36 - SUN_SIZE) * set : 36 + (SUN_SIZE - 36) * u;
+  const full = SUN_SIZE * (1 - 0.25 * prog(tau, SHRINK_AT, SHRINK_AT + 0.8, inOutCubic));
+  const size = set > 0 ? full + (36 - full) * set : 36 + (full - 36) * u;
   return { x: p.x - 50, y: p.y - 50, scale: size / 100, rotate: (1 - u) * -200 + set * 120 };
 }
 

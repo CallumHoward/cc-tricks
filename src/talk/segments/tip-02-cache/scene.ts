@@ -90,6 +90,9 @@ export function rowCol(i: number): { row: number; col: number } {
 
 // ── views ────────────────────────────────────────────────────────────────────────────────────
 
+/** Road centre in the switch shot; the camera pivots on it so the road clears the copy. */
+export const ROAD_X = 1450;
+
 type ViewKey = { at: number; v: View };
 const VIEWS: readonly ViewKey[] = [
   { at: 71.5, v: { ax: 0, ay: 0, px: 800, py: 734, zoom: 1 } },
@@ -103,8 +106,8 @@ const VIEWS: readonly ViewKey[] = [
   { at: 115.5, v: { ax: 0, ay: 0, px: 960, py: 700, zoom: 1 } },
   { at: 115.6, v: { ax: 0.34, ay: -0.2, px: 800, py: 640, zoom: 1 } },
   { at: 123.5, v: { ax: 0.34, ay: -0.18, px: 800, py: 640, zoom: 1 } },
-  { at: 124.3, v: { ax: -1.05, ay: 0.22, px: 900, py: 930, zoom: 1 } },
-  { at: 132.5, v: { ax: -1.04, ay: 0.24, px: 900, py: 930, zoom: 1 } },
+  { at: 124.3, v: { ax: -1.05, ay: 0.22, px: ROAD_X, py: 930, zoom: 1 } },
+  { at: 132.5, v: { ax: -1.04, ay: 0.24, px: ROAD_X, py: 930, zoom: 1 } },
 ];
 
 /** Scene rotation at τ (eased between keyed shots; holds only creep). */
@@ -411,7 +414,6 @@ function idleBlock(i: number, tau: number): Block {
 
 // ── t2-switch ────────────────────────────────────────────────────────────────────────────────
 
-export const ROAD_X = 900;
 export const ROAD_NEAR = 930;
 export const ROAD_ROW = 96;
 const PREFIX_ROWS = 7;
@@ -466,7 +468,7 @@ function switchBlock(i: number, tau: number): Block {
   return hidden(x, ROAD_NEAR);
 }
 
-export const SKIP = Object.freeze({ x: 1500, y: 360, w: 300, h: 170 });
+export const SKIP = Object.freeze({ x: 2000, y: 360, w: 300, h: 170 });
 
 /** Ghost lane: a copy takes the `/model` fork, the shelf tips, slabs fall into the skip. */
 function ghostBlock(g: number, tau: number): Block {

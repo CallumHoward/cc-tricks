@@ -8,7 +8,7 @@ import type { Frame } from "#/engine/types";
 import { BAR_POSES, BoneSwap, ContextBar, type Zone } from "#/talk/kit/motion";
 import { num, put } from "#/talk/kit/motion/dom";
 import { springFrom } from "#/talk/kit/motion/schedule";
-import { Counter, GLYPH_PATHS, HOME, PromptBox } from "#/talk/kit/tui";
+import { Counter, GLYPH_PATHS, HOME, PromptBox, punch } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
 import { scriptFor } from "#/talk/script";
 import { BOT_HOME } from "#/talk/segments/shared/home";
@@ -208,14 +208,32 @@ function roadBotPlace(tau: number) {
   const walk = 1 - prog(tau, T.walkStart, T.walkEnd, inOutQuad);
   const dolly = inQuad(prog(tau, T.titleHoldEnd, T.dollyEnd - 0.3));
   const feetY = HORIZON_Y + 30;
-  const s = 1 + dolly * 2;
+  const s = 1 + dolly * 5;
   return {
     x: SUN.x - (ROAD_BOT.width / 2) * s + walk * 230,
-    y: feetY - ROAD_BOT.height * 0.9 * s + dolly * 500,
+    y: feetY - ROAD_BOT.height * 0.9 * s + dolly * 1100,
     s,
-    o: 1 - dolly,
     hidden: tau < T.walkStart - 0.1 || tau > T.dollyEnd,
   };
+}
+
+/** The hero "10": lands as "00" on the slam with a forward-only punch, then rolls up. */
+function HeroTen() {
+  const ref = useRef<HTMLSpanElement>(null);
+  useFrame((frame: Frame) => {
+    const k = punch(frame.tau, frame.v, T.slam);
+    put(ref.current, "transform", `scale(${num(1 + 0.08 * k, 4)})`);
+  });
+  return (
+    <span ref={ref} className="so-hero-ten">
+      <Counter
+        value={keys([T.slam, 0], [T.odometerEnd, 10, inOutQuad])}
+        format="int"
+        minDigits={2}
+        slots={2}
+      />
+    </span>
+  );
 }
 
 function TitleType() {
@@ -229,20 +247,8 @@ function TitleType() {
       <Rise
         className="type-hero"
         text={"tips for\nsaving tokens"}
-        lead={{
-          id: "ten",
-          node: (
-            <span style={{ position: "relative", top: "0.14em" }}>
-              <Counter
-                value={keys([9.0, 0], [9.9, 10, inOutQuad])}
-                format="int"
-                minDigits={2}
-                slots={2}
-              />
-            </span>
-          ),
-        }}
-        settleBy={T.titleSettle}
+        lead={{ id: "ten", node: <HeroTen /> }}
+        startAt={T.titleRise}
         stagger={0.12}
         style={{ position: "absolute", left: 160, top: HORIZON_Y - 452 }}
       />

@@ -9,6 +9,7 @@ import { Bot, Chip, Fx, px, Rule, SegmentRoot, TipFrame, Typed, type StyleMap } 
 import {
   arcPoint,
   batonProgress,
+  dropPoint,
   documentedKiro,
   tip6StackDy,
   TIP6,
@@ -21,6 +22,8 @@ const SPLIT_Y = 400;
 const ROW_Y = [462, 568, 674] as const;
 const HANDS: Point = { x: 1470, y: 300 };
 const BATON_SLOT: Point = { x: 218, y: 600 };
+/** Where each pane's baton would land, just past its chip; it creeps toward it through the hold. */
+const BATON_END = [420, 330, 300] as const;
 
 const kiro = scriptFor("t6-kiro");
 const others = scriptFor("t6-others");
@@ -47,20 +50,20 @@ function BatonSvg({ size = 44 }: { size?: number }) {
 function Baton({
   from,
   to,
-  lift: arcLift,
+  path,
   progress,
   show,
   hide,
 }: {
   from: Point;
   to: Point;
-  lift: number;
+  path: (a: Point, b: Point, u: number) => Point;
   progress: (tau: number) => number;
   show: number;
   hide: number;
 }) {
   const fx = (frame: Frame): StyleMap => {
-    const p = arcPoint(from, to, arcLift, progress(frame.tau));
+    const p = path(from, to, progress(frame.tau));
     const spin = (frame.tau - show) * 540;
     return {
       visibility: frame.tau >= show && frame.tau < hide ? "visible" : "hidden",
@@ -239,7 +242,7 @@ export function CliAgentsPlate() {
       <Baton
         from={HANDS}
         to={BATON_SLOT}
-        lift={140}
+        path={(a, b, u) => arcPoint(a, b, 140, u)}
         progress={(tau) => prog(tau, D.baton.launch, D.baton.land, inOutCubic)}
         show={D.baton.launch}
         hide={D.baton.land}
@@ -248,9 +251,9 @@ export function CliAgentsPlate() {
         <Baton
           key={y}
           from={HANDS}
-          to={{ x: 236, y }}
-          lift={200 - i * 30}
-          progress={(tau) => batonProgress(tau, 186.3 + i * 0.2, D.l1, 0.62 - i * 0.14, 0.03)}
+          to={{ x: BATON_END[i] ?? 0, y }}
+          path={dropPoint}
+          progress={(tau) => batonProgress(tau, 186.3 + i * 0.2, D.l1, 0.9, 0.015)}
           show={186.3 + i * 0.2}
           hide={D.exit + 0.15}
         />

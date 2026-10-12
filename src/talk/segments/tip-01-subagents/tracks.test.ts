@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { sampleKeys } from "#/engine/motion/track";
 import { BOT_HOME } from "#/talk/segments/shared/home";
 
 import {
@@ -16,6 +15,7 @@ import {
   spokeLand,
   SUBAGENTS,
   subagentTokens,
+  TICKS,
   WIN,
 } from "./tracks";
 
@@ -35,12 +35,22 @@ describe("tip 1 tracks", () => {
     });
   });
 
-  it("should creep each subagent counter by at most one last digit per story second in the hold", () => {
+  it("should rest every subagent counter on a whole last digit from settle through the hold", () => {
     SUBAGENTS.forEach((a, i) => {
-      const track = subagentTokens(i);
-      const rise = sampleKeys(track, HOLD_END.agents) - sampleKeys(track, AT.agents);
+      const value = subagentTokens(i);
+      for (const tau of [AT.agents - 0.8, AT.agents, 53.3, 54.2, HOLD_END.agents]) {
+        expect(value(tau) % 100).toBe(0);
+      }
+      expect(value(HOLD_END.agents)).toBe(a.tokens);
+    });
+  });
+
+  it("should tick each subagent counter at most one last digit per story second in the hold", () => {
+    SUBAGENTS.forEach((_, i) => {
+      const value = subagentTokens(i);
+      const rise = value(HOLD_END.agents) - value(AT.agents);
       expect(rise / 100 / (HOLD_END.agents - AT.agents)).toBeLessThanOrEqual(1);
-      expect(sampleKeys(track, HOLD_END.agents)).toBe(a.tokens);
+      expect(TICKS.at.every((t) => t > AT.agents && t + TICKS.snap < HOLD_END.agents)).toBe(true);
     });
   });
 

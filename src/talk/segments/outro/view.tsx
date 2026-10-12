@@ -32,8 +32,9 @@ import {
   elapsedSeconds,
   OUT,
   plateRules,
+  plateFed,
   QR,
-  RECAP,
+  SCROLLBACK,
   SHORT_ZONES,
   thesisLines,
   tileAt,
@@ -77,7 +78,7 @@ function Recap() {
     <ScrollbackWhip at={OUT.whip} dur={OUT.whipDur} distance={1080}>
       <HomeRest pile={10} {...ALWAYS} />
       <Screen y={-1080}>
-        <ScrollbackRecap lines={RECAP} at={OUT.recapAt} dur={OUT.recapDur} x={200} y={540} />
+        <ScrollbackRecap lines={SCROLLBACK} at={OUT.recapAt} dur={OUT.recapDur} x={200} y={540} />
       </Screen>
     </ScrollbackWhip>
   );
@@ -216,7 +217,7 @@ function References({ host }: { host: string }) {
             <div key={ref.href} className="fin-ref">
               <AgentRow name={title} enterAt={at} style={{ width: 920 }} />
               {source ? (
-                <Typed text={` ${source}`} at={at + 0.25} className="type-label fin-ref-source">
+                <Typed text={source} at={at + 0.25} className="type-label fin-ref-source">
                   <span className="tui-hook" />
                 </Typed>
               ) : null}
@@ -263,20 +264,13 @@ function Tiles({ value }: { value: string }) {
   );
 }
 
-/** The QR's ivory plate opens between the splitting rules, then prints row by row. */
+/** The QR's ivory plate feeds out row by row with the print, like terminal output. */
 function QrPlate({ value }: { value: string }) {
+  const { size: n } = qrModules(value);
   const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
-    const shown = frame.tau >= OUT.collapseTo;
-    setStyle(root, "visibility", shown ? "visible" : "hidden");
-    if (!shown) return;
-    const { top, bottom } = plateRules(frame.tau, barWidthAt(OUT.collapseTo));
-    const t = Math.max(0, top.y - QR.top);
-    const b = Math.max(0, QR.top + QR.size - bottom.y);
-    setStyle(
-      root,
-      "clip-path",
-      t + b >= QR.size ? "inset(50% 0 50% 0)" : `inset(${t.toFixed(1)}px 0 ${b.toFixed(1)}px 0)`,
-    );
+    const fed = plateFed(frame.tau, n);
+    setStyle(root, "visibility", fed > 0 ? "visible" : "hidden");
+    if (fed > 0) setStyle(root, "clip-path", `inset(0 0 ${(QR.size - fed).toFixed(1)}px 0)`);
   });
   return (
     <div ref={ref} className="fin-abs" style={{ left: QR.left, top: QR.top, visibility: "hidden" }}>

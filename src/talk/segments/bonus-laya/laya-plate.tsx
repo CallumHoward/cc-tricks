@@ -47,7 +47,7 @@ function Predict() {
           )}
         </div>
       </Layer>
-      <Wiped at={SETTLE - 0.5} className="seg-abs" style={{ left: 1040, top: 470 }}>
+      <Wiped at={SETTLE - 0.5} className="seg-abs" style={{ left: 940, top: 470 }}>
         <div className="wg-row">
           <span className="type-label seg-soft">Billing or technical?</span>
           {GUESSES.map((g) => (

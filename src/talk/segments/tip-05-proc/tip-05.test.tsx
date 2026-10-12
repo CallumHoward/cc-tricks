@@ -4,8 +4,8 @@ import { describe, expect, it } from "vitest";
 import { scriptFor } from "#/talk/script";
 import { renderAt } from "#/talk/segments/tip-03-effort/render-at";
 
-import { cardCopy } from "./routines-plate";
-import { minuteToX, RULER_BOX, sunMinute, T5 } from "./timing";
+import { CARD, cardCopy } from "./routines-plate";
+import { HORIZON, minuteToX, RULER_BOX, sunMinute, T5 } from "./timing";
 import Tip05ProcSegment from "./view";
 
 describe("tip 5 proc", () => {
@@ -23,6 +23,10 @@ describe("tip 5 proc", () => {
   it("should map the ruler's ends inside its box", () => {
     expect(minuteToX(5 * 60)).toBe(RULER_BOX.x + 60);
     expect(minuteToX(21 * 60)).toBe(RULER_BOX.x + RULER_BOX.w - 60);
+  });
+
+  it("should keep the stacked routine cards above the horizon", () => {
+    expect(CARD.y + 3 * CARD.h + 2 * CARD.gap).toBeLessThan(HORIZON);
   });
 
   it("should take each card's copy from the script triples", () => {

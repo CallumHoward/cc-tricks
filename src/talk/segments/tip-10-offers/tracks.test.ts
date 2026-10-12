@@ -4,7 +4,9 @@ import { sampleKeys } from "#/engine/motion/track";
 import { SCRIPT } from "#/talk/script";
 
 import {
+  bankedX,
   instantX,
+  panelDrift,
   pileCount,
   railDrift,
   T10,
@@ -57,6 +59,34 @@ describe("tip 10 tracks", () => {
       "CLOSED",
       undefined,
     ]);
-    expect(tickets[3]?.meta).toBe("Ends Friday 16 Oct, 5:59 PM AEDT");
+  });
+
+  it("should keep every line, label and footnote of each card in order", () => {
+    const tickets = SCRIPT["t10-offers"].cards.map(ticketCopy);
+    expect(tickets[1]?.rows.map((r) => r.text)).toEqual(SCRIPT["t10-offers"].cards[1]?.lines);
+    expect(tickets[3]?.rows).toEqual([
+      { text: "Artifact work uses 50% less of your 5-hour limit.", tone: "line" },
+      { text: "Claude and Cowork · not Claude Code · not weekly", tone: "label" },
+      { text: "Ends Friday 16 Oct, 5:59 PM AEDT", tone: "foot" },
+    ]);
+  });
+
+  it("should settle both reset tickets within 10 px by the readable deadline", () => {
+    const deadline = T10.resetsAt - 0.8;
+    expect(bankedX(deadline)).toBeCloseTo(0, 3);
+    expect(Math.abs(instantX(deadline) + 10)).toBeLessThan(0.01);
+  });
+
+  it("should overshoot the reset tickets as they land", () => {
+    let peak = Number.NEGATIVE_INFINITY;
+    for (let tau = T10.bankedAt; tau < T10.bankedAt + 0.7; tau += 0.005) {
+      peak = Math.max(peak, bankedX(tau));
+    }
+    expect(peak).toBeGreaterThan(1);
+  });
+
+  it("should only drift the Settings panel 8 px through the hold", () => {
+    expect(panelDrift(T10.resetsAt)).toBeCloseTo(0, 5);
+    expect(panelDrift(T10.resetsHoldEnd)).toBeCloseTo(-8, 5);
   });
 });

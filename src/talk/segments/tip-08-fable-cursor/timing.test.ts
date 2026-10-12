@@ -19,7 +19,7 @@ describe("tip 8 timing", () => {
     const speed = (ccTower(at + hold) - ccTower(at)) / hold;
     expect(speed).toBeGreaterThan(0);
     expect(speed).toBeLessThanOrEqual(40);
-    expect(ccTower(at) / cursorTower(at)).toBeGreaterThan(5);
+    expect(ccTower(at - 0.8) / cursorTower(at - 0.8)).toBeCloseTo(18, 0);
   });
 
   it("should turn the decorative counter at most one flap per second in the hold", () => {

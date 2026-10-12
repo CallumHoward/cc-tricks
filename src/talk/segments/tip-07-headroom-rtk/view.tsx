@@ -392,7 +392,7 @@ function Dashboard() {
       style={{
         left: 200,
         top: 716,
-        width: 1300,
+        width: 1040,
         height: 168,
         borderRadius: 12,
         border: "2px solid var(--hairline)",
@@ -474,7 +474,7 @@ function HeadroomPlate() {
         text={headroom.stamps[0] ?? ""}
         settleBy={D.stamp}
         rotate={-8}
-        style={{ left: 1500, top: 800 }}
+        style={{ left: 1540, top: 790 }}
       />
     </Fx>
   );

@@ -27,11 +27,14 @@ import {
   dockY,
   EXIT,
   HAMMER,
+  hammerShadow,
+  hammerTilt,
   headForm,
   headTop,
   PLAN_ROWS,
   planFold,
   plateFold,
+  PLUS_AT,
   shardAt,
   SHARDS,
   streakLength,
@@ -47,6 +50,7 @@ import {
 const S = scriptFor("t4-superpowers");
 const [HAMMER_LABEL = "superpowers", WALNUT_LABEL = "fix the typo in README"] = S.ui;
 const settle = AT - 0.8;
+const HEADLINE = (S.headline ?? "").replace(" for tasks", "\nfor tasks");
 
 const ACTS: readonly Act[] = [
   { kind: "hop", at: BOT_HOPS.out.at, height: 30, air: BOT_HOPS.out.air },
@@ -180,7 +184,7 @@ function Dispatches() {
   });
   return <span ref={ref} style={{ fontVariantNumeric: "tabular-nums" }} />;
 }
-const plusTrack = (tau: number) => ({ scale: prog(tau, 154.3, 154.42) });
+const plusTrack = (tau: number) => ({ scale: prog(tau, PLUS_AT, PLUS_AT + 0.12) });
 
 function Plan() {
   return (
@@ -216,6 +220,7 @@ function Plan() {
 const hammerTrack = (tau: number) => ({
   y: headTop(tau),
   scale: tau < 155.0 ? 0 : 1,
+  rotate: hammerTilt(tau),
 });
 const headTrack = (tau: number) => {
   const k = headForm(tau);
@@ -230,7 +235,16 @@ const streakTrack = (tau: number) => {
 function Hammer() {
   const left = HAMMER.cx - HAMMER.headW / 2;
   return (
-    <Drive fn={hammerTrack} style={{ left: 0, top: 0, width: 1920, height: 0 }}>
+    <Drive
+      fn={hammerTrack}
+      style={{
+        left: 0,
+        top: 0,
+        width: 1920,
+        height: 0,
+        transformOrigin: `${HAMMER.cx}px ${HAMMER.headH / 2}px`,
+      }}
+    >
       <Drive
         fn={handleTrack}
         style={{
@@ -239,7 +253,7 @@ function Hammer() {
           width: HAMMER.handleW,
           height: HAMMER.handleH + 10,
           borderRadius: 10,
-          background: "linear-gradient(90deg, var(--soft), var(--bone) 45%, var(--muted))",
+          background: "var(--soft)",
           transformOrigin: "50% 100%",
         }}
       />
@@ -271,9 +285,8 @@ function Hammer() {
           width: HAMMER.headW,
           height: HAMMER.headH,
           borderRadius: 18,
-          background:
-            "linear-gradient(to bottom, var(--clay-hi), var(--clay) 40%, var(--clay-deep))",
-          boxShadow: "inset 0 -10px 0 rgb(0 0 0 / 18%), 0 18px 40px rgb(0 0 0 / 40%)",
+          background: "var(--clay)",
+          boxShadow: "inset 0 -10px 0 rgb(0 0 0 / 18%)",
           display: "grid",
           placeItems: "center",
           color: "var(--on-clay)",
@@ -336,13 +349,30 @@ const flashTrack = (tau: number, frame: Frame) => {
   return { scale: 0.4 + 1.6 * prog(tau, CRACK, CRACK + 0.35), opacity: p };
 };
 
+/** Contact shadow under the head: widens and darkens as the gap closes. */
+const groundShadowTrack = (tau: number) => {
+  const k = hammerShadow(tau);
+  return { scaleX: 0.45 + 0.55 * k, opacity: 0.15 + 0.6 * k };
+};
+
 function Walnut() {
   return (
     <>
+      <Drive
+        fn={groundShadowTrack}
+        style={{
+          left: HAMMER.cx - HAMMER.headW / 2,
+          top: WALNUT.ground - 14,
+          width: HAMMER.headW,
+          height: 28,
+          borderRadius: "50%",
+          background: "radial-gradient(closest-side, rgb(0 0 0 / 55%), transparent)",
+        }}
+      />
       <div
         style={{
-          ...abs(WALNUT.cx - 220, WALNUT.ground),
-          width: 440,
+          ...abs(WALNUT.cx - 200, WALNUT.ground),
+          width: 400,
           height: 2,
           background:
             "linear-gradient(90deg, transparent, var(--hairline) 20%, var(--hairline) 80%, transparent)",
@@ -408,31 +438,27 @@ export default function Tip04SuperpowersSegment() {
         <Drive fn={shakeTrack} style={{ inset: 0 }}>
           <Plan />
           <Gate from={154.85} to={EXIT.foldEnd}>
-            <RuleRise
-              text={"4. Only use superpowers\nfor tasks that\nneed it."}
-              settleBy={settle}
-              style={abs(200, 196)}
-            />
+            <RuleRise text={HEADLINE} settleBy={settle} style={abs(200, 236)} />
             <RuleRise
               text={S.lines[0] ?? ""}
               settleBy={settle}
               className="type-body text-soft"
               rule={false}
-              style={abs(200, 636)}
+              style={abs(200, 556)}
             />
             <RuleRise
               text={S.lines[1] ?? ""}
               settleBy={settle}
               className="type-body text-clay"
               rule={false}
-              style={abs(200, 700)}
+              style={abs(200, 620)}
             />
             <TypedMono
               text={S.footnotes[0] ?? ""}
               at={155.0}
               cps={100}
               className="type-label text-muted"
-              style={{ left: 200, top: 772 }}
+              style={{ left: 200, top: 692 }}
             />
             <Drive fn={walnutEnter} style={{ inset: 0 }}>
               <Walnut />

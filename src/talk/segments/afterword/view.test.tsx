@@ -50,5 +50,6 @@ describe("AfterwordSegment", () => {
     expect(screen.getByTestId("sightings-poster")).toBeVisible();
     expect(screen.getByText("SIGHTINGS WANTED")).toBeVisible();
     expect(screen.getByText("quota.")).toBeVisible();
+    expect(screen.getByText("Opus")).not.toBeVisible();
   });
 });

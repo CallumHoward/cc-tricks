@@ -23,7 +23,7 @@ import { SystemOnePlate } from "./system-one";
 import { cursorAt, TB, TB_TOKENS } from "./timing";
 
 const BOOK_TOP: Pt = { x: 960, y: 470 };
-const BAR_END: Pt = { x: 1690, y: 760 };
+const BAR_END: Pt = { x: 1690, y: 690 };
 const STRIP: Pt = { x: 700, y: 540 };
 
 const stripX = (tau: number) =>

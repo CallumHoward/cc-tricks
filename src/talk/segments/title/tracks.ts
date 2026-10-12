@@ -17,7 +17,10 @@ export const T = Object.freeze({
   roadEnd: 6.6,
   walkStart: 6.0,
   walkEnd: 8.4,
-  titleSettle: 11.2,
+  /** The "00" lands on the slam cue, then the odometer rolls it to 10 */
+  slam: 9.15,
+  titleRise: 9.03,
+  odometerEnd: 9.9,
   bylineAt: 10.4,
   titleAt: 12,
   titleHoldEnd: 14,

@@ -65,6 +65,15 @@ export function arcPoint(a: Point, b: Point, lift: number, u: number): Point {
   };
 }
 
+/** A quadratic path from `a` that drops straight down to `b`'s height, then runs across to `b`. */
+export function dropPoint(a: Point, b: Point, u: number): Point {
+  const v = 1 - u;
+  return {
+    x: v * v * a.x + 2 * v * u * a.x + u * u * b.x,
+    y: v * v * a.y + 2 * v * u * b.y + u * u * b.y,
+  };
+}
+
 /**
  * Baton progress along its arc: a fast throw to `mid` by `settle`, then a slow creep (`creep` of
  * the arc per τ-s) so the hold still breathes.

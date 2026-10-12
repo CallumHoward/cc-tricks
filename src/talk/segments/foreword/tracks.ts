@@ -7,9 +7,9 @@ import { HOME } from "#/talk/kit/tui";
 export const F = Object.freeze({
   start: 23.4,
   handover: 23.5,
-  morph: { start: 23.6, end: 24.9 },
-  placeholderAt: 24.7,
-  chipsAt: 24.8,
+  morph: { start: 23.5, end: 24.5 },
+  placeholderAt: 24.0,
+  chipsAt: 24.15,
   headSettle: 26.5,
   lineAt: 26.0,
   cloneAt: 26.8,
@@ -149,7 +149,10 @@ type Anchor = { cx: number; feet: number; s: number };
 const at = (cx: number, feet: number, s = 1): Anchor => ({ cx, feet, s });
 
 /** Hops between anchors (act `at`; airborne from at + 0.16 to at + 0.58). */
-export const HOPS = [23.75, 34.5, 40.6, 42.0, 46.05] as const;
+export const HOPS = [23.75, 34.12, 40.6, 42.0, 46.05] as const;
+
+/** A hop's feet touch down this long after its act starts. */
+export const HOP_LANDS = 0.58;
 
 function anchor(i: number, tau: number): Anchor {
   switch (i) {
@@ -171,10 +174,10 @@ function anchor(i: number, tau: number): Anchor {
 /** The bot's feet (world px) and scale at τ; a pure function of τ. */
 export function botAt(tau: number): Anchor {
   let i = 0;
-  while (i < HOPS.length && tau >= (HOPS[i] as number) + 0.58) i++;
+  while (i < HOPS.length && tau >= (HOPS[i] as number) + HOP_LANDS) i++;
   if (i >= HOPS.length) return anchor(5, tau);
   const hop = HOPS[i] as number;
-  const u = inOutQuad(prog(tau, hop + 0.16, hop + 0.58));
+  const u = inOutQuad(prog(tau, hop + 0.16, hop + HOP_LANDS));
   const a = anchor(i, tau);
   if (u <= 0) return a;
   const b = anchor(i + 1, tau);

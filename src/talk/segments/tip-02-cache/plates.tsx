@@ -5,7 +5,6 @@ import { ClayField, RuleRise } from "#/talk/kit/motion";
 import { AgentRow, ReadToolRow, SpinnerLine, StaticGlyph } from "#/talk/kit/tui";
 import { setStyle, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import { scriptFor } from "#/talk/script";
-import { IdleTtl } from "#/talk/widgets/idle-ttl";
 import { PriceOfATurn } from "#/talk/widgets/price-of-a-turn";
 
 import { Anchor, During, Rise, Typed } from "./parts";
@@ -26,6 +25,7 @@ import {
   PRICE_X,
   propsAt,
   ROW_PITCH,
+  SKIP,
   STAIR_X0,
   STAIR_Y0,
 } from "./scene";
@@ -305,8 +305,8 @@ export function PricePlate() {
 
 // ── t2-ttl ───────────────────────────────────────────────────────────────────────────────────
 
-const STRIP_X = 900;
-const STRIP_Y = 480;
+const STRIP_X = 820;
+const STRIP_Y = 520;
 
 /** The cold subagent's DOM token strip: frost crawls across it (closed-form on τ). */
 function FrostStrip() {
@@ -346,8 +346,8 @@ export function TtlPlate() {
         exit={out}
         style={{ position: "absolute", left: LEFT, top: 72 }}
       />
-      <div style={{ position: "absolute", left: 1060, top: 196 }} className="t2-rings">
-        <RingTimer label="1h" start={T.rings} burn={{ start: T.rings, end: 400 }} size={130} />
+      <div style={{ position: "absolute", left: 1200, top: 236 }} className="t2-rings">
+        <RingTimer label="1h" start={T.rings} burn={{ start: T.rings, end: 400 }} size={120} />
         {[0, 1, 2, 3, 4].map((i) => (
           <RingTimer
             key={`r${i + 1}`}
@@ -356,7 +356,7 @@ export function TtlPlate() {
             burn={i === 0 ? { start: T.subRow, end: T.freeze } : undefined}
             left={i === 0 ? undefined : 1}
             tone="cached"
-            size={92}
+            size={84}
           />
         ))}
       </div>
@@ -364,7 +364,7 @@ export function TtlPlate() {
         name="cbdev tests (7m)"
         enterAt={T.subRow}
         className="type-code"
-        style={{ position: "absolute", left: LEFT, top: 440, width: 1000 }}
+        style={{ position: "absolute", left: LEFT, top: 480, width: 1000 }}
       />
       <FrostStrip />
       <ReadToolRow
@@ -372,57 +372,43 @@ export function TtlPlate() {
         arg={codeA?.label ?? ""}
         at={T.fix}
         className="type-code"
-        style={{ position: "absolute", left: LEFT, top: 556 }}
+        style={{ position: "absolute", left: LEFT, top: 596 }}
       />
       <Typed
         text={codeA?.code ?? ""}
         at={T.fix + 0.15}
         cps={110}
         className="type-code t2-code"
-        style={{ left: 260, top: 624 }}
+        style={{ left: 260, top: 664 }}
       />
       <Typed
         text={codeA?.caption ?? ""}
         at={T.fix + 0.4}
         cps={110}
         className="type-label text-muted"
-        style={{ left: 260, top: 676 }}
+        style={{ left: 260, top: 716 }}
       />
       <Typed
         text={codeB?.code ?? ""}
         at={T.fix + 0.5}
         cps={110}
         className="type-code t2-code"
-        style={{ left: 260, top: 740 }}
+        style={{ left: 260, top: 780 }}
       />
       <Typed
         text={codeB?.caption ?? ""}
         at={T.fix + 0.85}
         cps={110}
         className="type-label text-muted"
-        style={{ left: 260, top: 792 }}
+        style={{ left: 260, top: 832 }}
       />
       <Typed
         text={s.footnotes[1] ?? ""}
         at={T.fix + 1.0}
         cps={110}
         className="type-label text-clay"
-        style={{ left: 360, top: 850 }}
+        style={{ left: 260, top: 890 }}
       />
-      <div
-        className="t2-w2"
-        style={{
-          position: "absolute",
-          left: 1300,
-          top: 400,
-          transform: "scale(0.7)",
-          transformOrigin: "0 0",
-        }}
-      >
-        <Rise at={T.fix + 0.6} style={{ position: "relative" }}>
-          <IdleTtl />
-        </Rise>
-      </div>
     </During>
   );
 }
@@ -527,7 +513,10 @@ export function IdlePlate() {
         exit={out}
         style={{ position: "absolute", left: LEFT, top: 92 }}
       />
-      <Rise at={118.0} out={out} className="type-body text-soft" style={{ left: LEFT, top: 246 }}>
+      <Rise at={T.idleCopy} out={out} className="type-body" style={{ left: LEFT, top: 246 }}>
+        {s.lines[0]}
+      </Rise>
+      <Rise at={118.0} out={out} className="type-body text-soft" style={{ left: LEFT, top: 306 }}>
         {s.lines[1]}
       </Rise>
       <div style={{ position: "absolute", left: 1210, top: 410 }}>
@@ -564,7 +553,7 @@ export function IdlePlate() {
 export function SwitchPlate() {
   const s = scriptFor("t2-switch");
   return (
-    <During from={123.5} to={T.fold}>
+    <During from={123.5} to={T.foldEnd}>
       <RuleRise
         text={"Switch effort levels,\nnot models."}
         settleBy={128.7}
@@ -586,8 +575,8 @@ export function SwitchPlate() {
         className="type-label"
         style={{ position: "absolute", left: LEFT, top: 540 }}
       />
-      <Anchor x={1500} y={360} z={0} dx={-60} dy={46}>
-        <Rise at={125.0} className="type-label text-muted">
+      <Anchor x={SKIP.x} y={SKIP.y} z={0} dx={-60} dy={46}>
+        <Rise at={125.0} out={T.fold - 0.2} className="type-label text-soft">
           /model
         </Rise>
       </Anchor>

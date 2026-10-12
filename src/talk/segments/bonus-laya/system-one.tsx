@@ -66,7 +66,7 @@ function Chips() {
     <div
       ref={ref}
       className="seg-abs b1-chips"
-      style={{ left: LEFT.x, top: LEFT.y + 64, width: 560 }}
+      style={{ left: LEFT.x, top: LEFT.y + 64, width: 540 }}
       aria-hidden
     >
       {Array.from({ length: CHIPS }, (_, k) => (
@@ -121,7 +121,7 @@ function Book() {
     <>
       <div
         className="seg-abs"
-        style={{ left: 790, top: 470, width: 340, height: 390, overflow: "hidden" }}
+        style={{ left: 740, top: 470, width: 420, height: 390, overflow: "hidden" }}
       >
         <div ref={rise} className="b1-book">
           <span className="type-body seg-text">{BOOK}</span>
@@ -133,9 +133,9 @@ function Book() {
         ref={rule}
         className="seg-abs"
         style={{
-          left: 760,
+          left: 730,
           top: 858,
-          width: 400,
+          width: 460,
           height: 4,
           background: "var(--clay)",
           transformOrigin: "50% 50%",
@@ -178,7 +178,7 @@ export function SystemOnePlate() {
           <Typed
             text={SLOW}
             at={251.6}
-            cps={22}
+            cps={30}
             className="type-label seg-soft seg-abs"
             style={{ left: LEFT.x, top: 800 }}
           />

@@ -13,10 +13,10 @@ import { arcPoint, pointAlong, type Pt } from "./tracks";
 const DIAL_BOT: Pt = { x: 1668, y: 846 };
 const START: Pt = FRONTIER[0] ?? DIAL_BOT;
 
-/** Where the bot's feet are on the frontier (arc length) at τ, creeping ≤ 14 px/τ-s in the hold. */
+/** Where the bot's feet are on the frontier (arc length) at τ, creeping 4 px/τ-s in the hold. */
 export function frontierArc(tau: number): number {
   if (tau <= T3.aa.at) return BOT_ARC_AT * outCubic(prog(tau, 144.0, T3.aa.at));
-  return BOT_ARC_AT + 14 * (Math.min(tau, T3.aa.holdEnd) - T3.aa.at);
+  return BOT_ARC_AT + 4 * (Math.min(tau, T3.aa.holdEnd) - T3.aa.at);
 }
 
 /** The bot's feet and scale over the whole segment (pure in τ). */
@@ -45,12 +45,12 @@ const ACTS: readonly Act[] = [
   { kind: "carry", at: T3.aa.holdEnd + 0.5, dur: 0.4 },
 ];
 
-/** Hold creep: push 1.00 → 1.02 in t3-then's hold, then drift left in t3-aa's. */
+/** Hold creep: push 1.00 → 1.02 in each hold. */
 export function creepAt(tau: number): StyleValues {
   const then =
     clamp((tau - T3.lastGen.at) / 2.5) * (1 - prog(tau, T3.lastGen.holdEnd, 142, outCubic));
   const aa = clamp((tau - T3.aa.at) / 3.5);
-  return { scale: 1 + 0.02 * then + 0.012 * aa, x: -15 * aa * 3.5 };
+  return { scale: 1 + 0.02 * then + 0.012 * aa };
 }
 
 const fold = (tau: number) => foldAt(tau, T3.aa.holdEnd);

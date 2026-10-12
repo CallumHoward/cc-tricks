@@ -14,7 +14,7 @@ const script = scriptFor("t5-routines");
 const SETTLE = T5.routines.at - 0.8;
 const EXIT = T5.routines.holdEnd;
 
-export const CARD = Object.freeze({ x: 1040, y: 200, w: 680, h: 140, gap: 12 });
+export const CARD = Object.freeze({ x: 1000, y: 200, w: 720, h: 160, gap: 12 });
 
 /** Card `i`'s three UI strings (prompt, name, schedule) from the script's `ui` triples. */
 export function cardCopy(i: number) {
@@ -76,14 +76,14 @@ export function RoutinesPlate() {
             at={164.0}
             dur={0.55}
             className="type-body seg-text seg-abs"
-            style={{ left: 160, top: 470, width: 760 }}
+            style={{ left: 160, top: 504, width: 780 }}
           >
             {script.lines[0]}
           </Wiped>
           <Wiped
             at={164.2}
             className="type-label seg-muted seg-abs"
-            style={{ left: 420, top: 800 }}
+            style={{ left: 400, top: 868 }}
           >
             {script.footnotes[0]}
           </Wiped>

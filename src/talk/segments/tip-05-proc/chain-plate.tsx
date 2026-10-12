@@ -80,7 +80,7 @@ function Chain() {
             <Typed
               key={w.ping}
               text={chainLabel(w)}
-              at={C.bandsAt + 1.1 + i * 0.3}
+              at={C.bandsAt + 0.7 + i * 0.2}
               cps={50}
               className="type-label seg-text seg-abs"
               style={{ left: 1180, top: 250 + i * 46 }}
@@ -95,7 +95,7 @@ function Chain() {
             </div>
           ),
         )}
-        <Wiped at={SETTLE - 0.9} className="seg-abs" style={{ left: 420, top: 796 }}>
+        <Wiped at={SETTLE - 0.9} className="seg-abs" style={{ left: 420, top: 876 }}>
           <div className="wg-row">
             <button
               type="button"
@@ -137,7 +137,7 @@ export function ChainPlate() {
           at={172.3}
           dur={0.55}
           className="type-body seg-text seg-abs"
-          style={{ left: 160, top: 470, width: 860 }}
+          style={{ left: 160, top: 504, width: 900 }}
         >
           {script.footnotes[0]}
         </Wiped>

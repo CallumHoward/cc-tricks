@@ -9,10 +9,10 @@ import type { Act } from "#/talk/mascot/actions";
 /** Outro story times (absolute τ); window [280.9, 299.5), stops at 285.5 and 293.5. */
 export const OUT = Object.freeze({
   start: 280.9,
-  whip: 280.95,
-  whipDur: 0.5,
-  recapAt: 281.45,
-  recapDur: 1.8,
+  whip: 280.9,
+  whipDur: 0.45,
+  recapAt: 281.3,
+  recapDur: 2.1,
   wipeFrom: 283.1,
   wipeTo: 283.9,
   swap: 283.5,
@@ -29,7 +29,7 @@ export const OUT = Object.freeze({
   pileFrom: 289.2,
   pileTo: 290.3,
   qrFrom: 290.6,
-  qrTo: 292,
+  qrTo: 291.4,
   flyFirst: 291,
   flyDur: 0.6,
   flyStagger: 0.1,
@@ -54,6 +54,9 @@ export const RECAP = [
   { pastVerb: "Worked", duration: "1m 15s" },
   { pastVerb: "Cogitated", duration: "1m 15s" },
 ] as const;
+
+/** The recap as the scrollback holds it: newest just above the prompt, tip 1 at the top. */
+export const SCROLLBACK = [...RECAP].reverse();
 
 /** The short, clean context bar (bone plate): x, bottom edge, scale. */
 export const BAR = Object.freeze({ x: 200, y: 800, width: 1520, capacity: 100, height: 72 });
@@ -84,6 +87,12 @@ export const CRANE: readonly Shot[] = [
   { at: OUT.collapseFrom, zoom: 1.02 },
   { at: OUT.rulesTo, zoom: 1, ease: inOutCubic },
 ];
+
+/**
+ * Peak height (px) of a tile's hop; tiles drop to skim the bottom rule under the references, then
+ * rise.
+ */
+const TILE_HOP = 30;
 
 /** The QR plate: the prompt box's two rules, kept inside the safe band (corners stay empty). */
 export const PLATE = Object.freeze({ left: 160, width: 1600, top: 300, bottom: 876 });
@@ -169,14 +178,21 @@ export function tileAt(i: number, tau: number, held: readonly Module[], n: numbe
   const u = prog(tau, start, start + OUT.flyDur);
   const e = inOutCubic(u);
   const to = { x: QR.left + (target.x + 0.5) * px, y: QR.top + (target.y + 0.5) * px };
+  const skim = lerp(from.y, PLATE.bottom - PILE.size * 0.7, prog(u, 0, 0.3, outCubic));
   return {
     x: lerp(from.x, to.x, e),
-    y: lerp(from.y, to.y, e) - Math.sin(Math.PI * u) * 240,
+    y: lerp(skim, to.y, prog(u, 0.35, 1, inOutCubic)) - Math.sin(Math.PI * u) * TILE_HOP,
     rotate: lerp(from.rotate, 360, e),
     size: lerp(PILE.size, px * 1.02, e),
     ink: prog(u, 0.62, 1, outCubic),
     visible: true,
   };
+}
+
+/** Ivory fed out under the QR (px): nothing until it prints, then one row ahead of the print head. */
+export function plateFed(tau: number, n: number): number {
+  if (tau < OUT.qrFrom) return 0;
+  return Math.min(QR.size, (prog(tau, OUT.qrFrom, OUT.qrTo) * n + 1) * (QR.size / n));
 }
 
 /** Estimated wall clock at the end of the talk (§8: 18:48), used until the stage has run that long. */

@@ -23,22 +23,38 @@ const SCRIPT = scriptFor("t10-offers");
 const HEADLINE = SCRIPT.headline ?? "";
 const CARDS = SCRIPT.cards.map(ticketCopy);
 
-/** Board geometry: four 760×300 tickets at 0.78 on two rails, clear of the corner boxes. */
+/**
+ * Board geometry: two rails of two tickets at 0.84 (mono ≥ 25 px). The right column is wider so
+ * every script line fits one row; the bottom rail ends above the lower corner boxes.
+ */
 const BOARD = Object.freeze({
-  scale: 0.78,
-  left: 352,
-  gap: 30,
-  railTops: [400, 660] as const,
-  ticket: { w: 760, h: 300, stub: 120 },
+  scale: 0.84,
+  left: 226,
+  gap: 28,
+  railTops: [380, 635] as const,
+  colW: [643, 1071] as const,
+  ticket: { h: 280, stub: 100 },
 });
-const COL_W = BOARD.ticket.w * BOARD.scale;
 const ROW_H = BOARD.ticket.h * BOARD.scale;
-const colX = (col: number) => BOARD.left + col * (COL_W + BOARD.gap);
+const colW = (col: number) => BOARD.colW[col % 2] ?? 0;
+const colX = (col: number) => BOARD.left + (col % 2) * (colW(0) * BOARD.scale + BOARD.gap);
+/** The headline sits above the board, left-aligned to it and clear of the top corner box. */
+const HEAD = { top: 196, scale: 0.62 };
+/** Stamp centres as fractions of their ticket's rendered box. */
+const STAMP_AT: Readonly<Record<number, { x: number; y: number }>> = {
+  1: { x: 0.71, y: 0.9 },
+  2: { x: 0.64, y: 0.86 },
+};
 
 const PEEK_ACTS: readonly Act[] = [
   { kind: "surprised", at: T10.peekAt + 0.3, dur: 0.3 },
   { kind: "look", at: T10.peekAt + 0.2, dur: Number.POSITIVE_INFINITY, x: -1, y: 0.9 },
 ];
+
+/** A two-sentence row wraps between its sentences rather than mid-phrase. */
+const sentenceBreaks = (text: string) => text.replace(/\. (?=\S)/g, ".\n");
+
+const ROW_COLOR = { line: "var(--ink-soft)", label: "var(--ink-soft)", foot: "var(--ink-muted)" };
 
 function TicketBody({ copy, closed }: { copy: TicketCopy; closed: boolean }) {
   return (
@@ -49,20 +65,19 @@ function TicketBody({ copy, closed }: { copy: TicketCopy; closed: boolean }) {
       >
         {copy.headline}
       </div>
-      <div
-        className="type-label"
-        style={{ color: "var(--ink-soft)", marginTop: 16, whiteSpace: "normal" }}
-      >
-        {copy.line}
-      </div>
-      {copy.meta ? (
+      {copy.rows.map((row, i) => (
         <div
+          key={row.text}
           className="type-label"
-          style={{ color: "var(--ink-muted)", marginTop: 10, whiteSpace: "normal" }}
+          style={{
+            color: ROW_COLOR[row.tone],
+            marginTop: i === 0 ? 16 : 6,
+            whiteSpace: "pre-line",
+          }}
         >
-          {copy.meta}
+          {sentenceBreaks(row.text)}
         </div>
-      ) : null}
+      ))}
     </>
   );
 }
@@ -92,7 +107,7 @@ function BoardTicket({ index }: { index: number }) {
   const run = ticketRunKeys(index);
   return (
     <Layer
-      style={{ position: "absolute", left: colX(index % 2), top: 0, transformOrigin: "0 0" }}
+      style={{ position: "absolute", left: colX(index), top: 0, transformOrigin: "0 0" }}
       write={(el, frame) =>
         put(
           el,
@@ -102,8 +117,9 @@ function BoardTicket({ index }: { index: number }) {
       }
     >
       <OfferTicket
-        width={BOARD.ticket.w}
+        width={colW(index)}
         height={BOARD.ticket.h}
+        padding="26px 28px"
         stubWidth={BOARD.ticket.stub}
         tear={closed ? tearProgress : undefined}
         punchAt={index === 3 ? T10.punchAt : undefined}
@@ -156,9 +172,12 @@ function Rail({ row, rate }: { row: 0 | 1; rate: number }) {
             key={index}
             text={CARDS[index]?.stamp ?? ""}
             settleBy={index === 1 ? T10.notCcSettle : T10.closedSettle}
-            rotate={index === 1 ? -9 : 8}
+            rotate={index === 1 ? -6 : 8}
             seed={index + 2}
-            style={{ left: colX(col) + COL_W * 0.6, top: ROW_H * 0.74 }}
+            style={{
+              left: colX(col) + colW(col) * BOARD.scale * (STAMP_AT[index]?.x ?? 0.6),
+              top: ROW_H * (STAMP_AT[index]?.y ?? 0.74),
+            }}
           />
         ))}
       </Layer>
@@ -174,14 +193,14 @@ export function OffersBoard() {
         style={{
           position: "absolute",
           left: 1250,
-          top: 150,
+          top: BOARD.railTops[0] - 250,
           width: 260,
-          height: BOARD.railTops[0] - 150,
+          height: 250,
           overflow: "hidden",
         }}
       >
         <Layer
-          style={{ position: "absolute", left: 10, top: 120, width: 240, height: 200 }}
+          style={{ position: "absolute", left: 10, top: 70, width: 240, height: 200 }}
           write={(el, frame) =>
             put(el, "transform", `translate3d(0, ${num(peekY(frame.tau), 2)}px, 0)`)
           }
@@ -195,8 +214,8 @@ export function OffersBoard() {
         style={{
           position: "absolute",
           left: BOARD.left,
-          top: 160,
-          transform: `scale(${BOARD.scale})`,
+          top: HEAD.top,
+          transform: `scale(${HEAD.scale})`,
           transformOrigin: "0 0",
         }}
       >

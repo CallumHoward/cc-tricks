@@ -5,7 +5,7 @@ import type { Clock } from "#/engine/clock/clock";
 import { StageProvider } from "#/engine/stage/react";
 import { createStage } from "#/engine/stage/stage";
 
-import { KV, PRICE, STATELESS, SWITCH } from "./timing";
+import { IDLE, KV, PRICE, STATELESS, SWITCH } from "./timing";
 import Tip02CacheSegment from "./view";
 
 vi.mock("#/engine/gl/three-layer", () => ({ useThreeLayer: () => {} }));
@@ -56,6 +56,13 @@ describe("tip 2 segment", () => {
   it("should show the cache write label at the price stop", () => {
     renderAt(PRICE.at);
     expect(screen.getByText("Cache hit, per million tokens")).toBeVisible();
+  });
+
+  it("should show why a late check-in costs a re-read at the idle stop", () => {
+    renderAt(IDLE.at);
+    expect(
+      screen.getByText("A check-in after the cache expires re-reads the whole context, uncached."),
+    ).toBeVisible();
   });
 
   it("should show the effort line at the switch stop", () => {

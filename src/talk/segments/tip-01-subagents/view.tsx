@@ -39,6 +39,7 @@ import {
   dockY,
   EXIT,
   HOLD_END,
+  LABEL_AT,
   MAIN_TOKENS,
   PANEL,
   plateFold,
@@ -58,6 +59,7 @@ import {
   TURN,
   whipUp,
   WIN,
+  YAML_AT,
 } from "./tracks";
 
 const S1 = scriptFor("t1-agents");
@@ -215,7 +217,7 @@ function AgentsPlate() {
       <Gate from={0} to={HOLD_END.agents + 0.05}>
         <TypedMono
           text={S1.labels[0] ?? ""}
-          at={50.3}
+          at={LABEL_AT}
           className="type-label text-muted"
           style={{ left: 200, top: 846 }}
         />
@@ -301,7 +303,7 @@ function ModelPlate() {
           transformOrigin: `50% ${lineOrigin}px`,
         }}
       >
-        <CodeBlock lines={YAML} label={S2.code[0]?.label} at={55.45} stagger={0.08} />
+        <CodeBlock lines={YAML} label={S2.code[0]?.label} at={YAML_AT} stagger={0.08} />
       </Drive>
       <Gate from={0} to={CARD_CLOSE.start + 0.05}>
         {S2.labels.map((label, i) => (
