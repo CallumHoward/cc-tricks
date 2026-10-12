@@ -1,80 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { TRICKS } from "#/components/tricks";
-
-import slidesCss from "../slides.css?url";
+import { content } from "#/talk/content";
 
 export const Route = createFileRoute("/shownotes")({
-  head: () => ({
-    meta: [{ title: "Claude Code tricks — shownotes" }],
-    links: [
-      { rel: "stylesheet", href: slidesCss },
-      { rel: "icon", href: "/cc-asterisk.svg", type: "image/svg+xml" },
-    ],
-  }),
+  head: () => ({ meta: [{ title: `Show notes · ${content.title}` }] }),
   component: Shownotes,
 });
 
 function Shownotes() {
   return (
-    <div className="cc-theme shownotes-root">
-      <main className="shownotes-main">
-        <header className="shownotes-header">
-          <h1 className="shownotes-heading">
-            <span className="slides-asterisk">✳</span> Claude Code tricks
-          </h1>
-          <p className="shownotes-byline">
-            Callum Howard · Frontend Software Engineer @ Checkbox ·{" "}
-            <a className="slides-link" href="https://callumhoward.com">
-              callumhoward.com
-            </a>
-          </p>
-        </header>
-
-        <ol className="shownotes-list">
-          {TRICKS.map((trick) => (
-            <li key={trick.n} className="shownotes-item">
-              <h2 className="shownotes-cmd">
-                <span className="slides-num">{trick.n}.</span>{" "}
-                <span className="slides-prompt-caret">❯</span> {trick.input}
-              </h2>
-              {trick.summary && <p className="shownotes-summary">{trick.summary}</p>}
-              {trick.points.length > 0 && (
-                <ul className="shownotes-points">
-                  {trick.points.map((point, i) => (
-                    // eslint-disable-next-line react/no-array-index-key -- static content
-                    <li key={i} className="slides-point">
-                      <span className="slides-point-dot" aria-hidden>
-                        ⏺
-                      </span>
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {trick.docs && (
-                <p className="shownotes-docs">
-                  <span className="slides-dim">docs: </span>
-                  {trick.docs.map((doc, i) => (
-                    <span key={doc.href}>
-                      {i > 0 && <span className="slides-dim"> · </span>}
-                      <a className="slides-link" href={doc.href}>
-                        {doc.label}
-                      </a>
-                    </span>
-                  ))}
-                </p>
-              )}
-            </li>
+    <main className="w-full max-w-3xl px-4 pb-16">
+      <h1 className="mb-2 text-4xl font-semibold">{content.title}</h1>
+      {content.subtitle ? (
+        <p className="mb-8 text-lg text-muted-foreground">
+          {content.subtitle} · {content.speaker}
+        </p>
+      ) : null}
+      {content.shownotes.map((section) => (
+        <section key={section.id} id={section.id} className="mb-10">
+          <h2 className="mb-3 text-2xl font-semibold">{section.heading}</h2>
+          {section.body.map((paragraph) => (
+            <p key={paragraph} className="mb-3 leading-relaxed">
+              {paragraph}
+            </p>
           ))}
-        </ol>
-
-        <footer className="shownotes-footer">
-          <a className="slides-link" href="/slides">
-            back to the slides
-          </a>
-        </footer>
-      </main>
-    </div>
+          {section.code?.map((snippet) => (
+            <figure key={snippet.text} className="mb-4">
+              {snippet.label ? (
+                <figcaption className="mb-1 font-mono text-sm text-muted-foreground">
+                  {snippet.label}
+                </figcaption>
+              ) : null}
+              <pre className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-sm">
+                <code>{snippet.text}</code>
+              </pre>
+            </figure>
+          ))}
+          {section.links && section.links.length > 0 ? (
+            <ul className="list-disc pl-6">
+              {section.links.map((link) => (
+                <li key={link.href}>
+                  <a className="underline underline-offset-4" href={link.href}>
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </section>
+      ))}
+    </main>
   );
 }

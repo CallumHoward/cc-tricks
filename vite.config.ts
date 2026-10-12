@@ -52,7 +52,20 @@ export default defineConfig(({ mode }) => {
         // diff-coverage gate rather than being silently absent from the report.
         all: true,
         include: ["src/**/*.{ts,tsx}"],
-        exclude: ["src/**/*.test.{ts,tsx}", "src/routeTree.gen.ts"],
+        exclude: [
+          "src/**/*.test.{ts,tsx}",
+          "src/routeTree.gen.ts",
+          // GPU-only: WebGL post chain and GLSL, verified by Playwright stills (jsdom has no WebGL).
+          "src/engine/gl/{post,glsl}.ts",
+          // GPU-only: three.js renderer host, its React provider and the demo scene.
+          "src/engine/gl/{three-host,demo-layer}.ts",
+          "src/engine/gl/{three-layer,demo}.tsx",
+          // WebGPU-only: lazy shaders layer and its compositions (no WebGPU in jsdom).
+          "src/engine/gl/shaders-layer.tsx",
+          "src/engine/gl/beds.ts",
+          // Thin DOM adapter over the tested overlay-state; needs a 2D canvas jsdom lacks.
+          "src/engine/gl/overlay.tsx",
+        ],
       },
     },
   };

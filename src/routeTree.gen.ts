@@ -9,18 +9,27 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SlidesRouteImport } from './routes/slides'
 import { Route as ShownotesRouteImport } from './routes/shownotes'
+import { Route as PresenterRouteImport } from './routes/presenter'
+import { Route as CharacterRouteImport } from './routes/character'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DevKitTuiRouteImport } from './routes/dev.kit-tui'
+import { Route as DevKitMotionRouteImport } from './routes/dev.kit-motion'
+import { Route as DevKitDataRouteImport } from './routes/dev.kit-data'
 
-const SlidesRoute = SlidesRouteImport.update({
-  id: '/slides',
-  path: '/slides',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ShownotesRoute = ShownotesRouteImport.update({
   id: '/shownotes',
   path: '/shownotes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PresenterRoute = PresenterRouteImport.update({
+  id: '/presenter',
+  path: '/presenter',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CharacterRoute = CharacterRouteImport.update({
+  id: '/character',
+  path: '/character',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -28,51 +37,111 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevKitTuiRoute = DevKitTuiRouteImport.update({
+  id: '/dev/kit-tui',
+  path: '/dev/kit-tui',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevKitMotionRoute = DevKitMotionRouteImport.update({
+  id: '/dev/kit-motion',
+  path: '/dev/kit-motion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevKitDataRoute = DevKitDataRouteImport.update({
+  id: '/dev/kit-data',
+  path: '/dev/kit-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/character': typeof CharacterRoute
+  '/presenter': typeof PresenterRoute
   '/shownotes': typeof ShownotesRoute
-  '/slides': typeof SlidesRoute
+  '/dev/kit-data': typeof DevKitDataRoute
+  '/dev/kit-motion': typeof DevKitMotionRoute
+  '/dev/kit-tui': typeof DevKitTuiRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/character': typeof CharacterRoute
+  '/presenter': typeof PresenterRoute
   '/shownotes': typeof ShownotesRoute
-  '/slides': typeof SlidesRoute
+  '/dev/kit-data': typeof DevKitDataRoute
+  '/dev/kit-motion': typeof DevKitMotionRoute
+  '/dev/kit-tui': typeof DevKitTuiRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/character': typeof CharacterRoute
+  '/presenter': typeof PresenterRoute
   '/shownotes': typeof ShownotesRoute
-  '/slides': typeof SlidesRoute
+  '/dev/kit-data': typeof DevKitDataRoute
+  '/dev/kit-motion': typeof DevKitMotionRoute
+  '/dev/kit-tui': typeof DevKitTuiRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/shownotes' | '/slides'
+  fullPaths:
+    | '/'
+    | '/character'
+    | '/presenter'
+    | '/shownotes'
+    | '/dev/kit-data'
+    | '/dev/kit-motion'
+    | '/dev/kit-tui'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/shownotes' | '/slides'
-  id: '__root__' | '/' | '/shownotes' | '/slides'
+  to:
+    | '/'
+    | '/character'
+    | '/presenter'
+    | '/shownotes'
+    | '/dev/kit-data'
+    | '/dev/kit-motion'
+    | '/dev/kit-tui'
+  id:
+    | '__root__'
+    | '/'
+    | '/character'
+    | '/presenter'
+    | '/shownotes'
+    | '/dev/kit-data'
+    | '/dev/kit-motion'
+    | '/dev/kit-tui'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CharacterRoute: typeof CharacterRoute
+  PresenterRoute: typeof PresenterRoute
   ShownotesRoute: typeof ShownotesRoute
-  SlidesRoute: typeof SlidesRoute
+  DevKitDataRoute: typeof DevKitDataRoute
+  DevKitMotionRoute: typeof DevKitMotionRoute
+  DevKitTuiRoute: typeof DevKitTuiRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/slides': {
-      id: '/slides'
-      path: '/slides'
-      fullPath: '/slides'
-      preLoaderRoute: typeof SlidesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/shownotes': {
       id: '/shownotes'
       path: '/shownotes'
       fullPath: '/shownotes'
       preLoaderRoute: typeof ShownotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/presenter': {
+      id: '/presenter'
+      path: '/presenter'
+      fullPath: '/presenter'
+      preLoaderRoute: typeof PresenterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/character': {
+      id: '/character'
+      path: '/character'
+      fullPath: '/character'
+      preLoaderRoute: typeof CharacterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -82,13 +151,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/kit-tui': {
+      id: '/dev/kit-tui'
+      path: '/dev/kit-tui'
+      fullPath: '/dev/kit-tui'
+      preLoaderRoute: typeof DevKitTuiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/kit-motion': {
+      id: '/dev/kit-motion'
+      path: '/dev/kit-motion'
+      fullPath: '/dev/kit-motion'
+      preLoaderRoute: typeof DevKitMotionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/kit-data': {
+      id: '/dev/kit-data'
+      path: '/dev/kit-data'
+      fullPath: '/dev/kit-data'
+      preLoaderRoute: typeof DevKitDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CharacterRoute: CharacterRoute,
+  PresenterRoute: PresenterRoute,
   ShownotesRoute: ShownotesRoute,
-  SlidesRoute: SlidesRoute,
+  DevKitDataRoute: DevKitDataRoute,
+  DevKitMotionRoute: DevKitMotionRoute,
+  DevKitTuiRoute: DevKitTuiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

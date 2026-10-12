@@ -1,0 +1,224 @@
+/* Data viz kit. τ-driven: no transitions or keyframes here; every moving value is written per frame. */
+
+.dk-root {
+  position: relative;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.dk-svg {
+  display: block;
+  overflow: visible;
+}
+
+.dk-svg text {
+  fill: currentcolor;
+}
+
+.dk-axis {
+  stroke: var(--hairline);
+  stroke-width: 2;
+}
+
+.dk-grid {
+  stroke: var(--hairline);
+  stroke-width: 1;
+  stroke-dasharray: 2 10;
+}
+
+.dk-tick {
+  color: var(--muted);
+}
+
+.dk-soft {
+  color: var(--soft);
+}
+
+.dk-muted {
+  color: var(--muted);
+}
+
+.dk-clay {
+  color: var(--clay);
+}
+
+.dk-hi {
+  color: var(--clay-hi);
+}
+
+/* Price columns */
+.dk-cols {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--dk-gap, 40px);
+  height: 100%;
+}
+
+.dk-col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: stretch;
+  height: 100%;
+  min-width: 0;
+  padding-top: 56px;
+}
+
+.dk-col__value {
+  position: absolute;
+  left: 0;
+  z-index: 1;
+  padding-bottom: 14px;
+  color: var(--text);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dk-col__well {
+  position: relative;
+  flex: 1 1 auto;
+}
+
+.dk-col__bar {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
+  border-radius: 6px 6px 0 0;
+  background: var(--clay);
+}
+
+.dk-col__bar[data-tone="cached"] {
+  background: var(--clay-wash-55);
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--clay) 40%, transparent);
+}
+
+.dk-col__bar[data-tone="base"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--soft);
+}
+
+.dk-col__bar[data-tone="cold"] {
+  background: var(--clay-wash-20);
+}
+
+.dk-col__base {
+  height: 2px;
+  background: var(--soft);
+}
+
+.dk-col__label {
+  overflow: hidden;
+  padding-top: 14px;
+  color: var(--soft);
+  white-space: nowrap;
+}
+
+.dk-col__label > span {
+  display: block;
+}
+
+/* Probability and weekly bars */
+.dk-rows {
+  display: grid;
+  gap: 34px;
+}
+
+.dk-row {
+  display: grid;
+  grid-template-columns: var(--dk-label-w, 520px) 1fr var(--dk-value-w, 170px);
+  gap: 28px;
+  align-items: center;
+}
+
+.dk-row__label {
+  overflow: hidden;
+  color: var(--soft);
+  white-space: nowrap;
+}
+
+.dk-row__label b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.dk-track {
+  position: relative;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--panel);
+}
+
+.dk-track__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  border-radius: 14px;
+  background: var(--clay);
+}
+
+.dk-track__fill[data-tone="cached"] {
+  background: var(--clay-wash-55);
+}
+
+.dk-row__value {
+  color: var(--text);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.dk-weekly {
+  display: grid;
+  gap: 44px;
+}
+
+.dk-weekly__head {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  color: var(--soft);
+}
+
+.dk-weekly__head b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.dk-weekly .dk-track {
+  height: 40px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--muted) 28%, var(--bg));
+}
+
+.dk-weekly .dk-track__fill {
+  border-radius: 8px 0 0 8px;
+}
+
+.dk-weekly__cap {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: 0;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--clay-hi);
+}
+
+.dk-weekly__foot {
+  padding-top: 14px;
+  color: var(--muted);
+}
+
+/* QR */
+.dk-qr {
+  border-radius: 28px;
+  background: var(--bone);
+}
+
+.dk-qr rect {
+  fill: var(--void);
+}
+
+.dk-qr rect[data-head] {
+  fill: var(--clay);
+}

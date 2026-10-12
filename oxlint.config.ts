@@ -29,7 +29,14 @@ export default defineConfig({
   env: {
     builtin: true,
   },
-  ignorePatterns: [".output", "dist", ".agents/**", "src/routeTree.gen.ts", "vitest-setup.ts"],
+  ignorePatterns: [
+    ".output",
+    "dist",
+    ".agents/**",
+    ".claude/**",
+    "src/routeTree.gen.ts",
+    "vitest-setup.ts",
+  ],
   rules: {
     "unicorn/filename-case": ["error", { case: "kebabCase" }],
     "unicorn/no-null": "off",
@@ -126,7 +133,7 @@ export default defineConfig({
   },
   overrides: [
     {
-      files: ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "!e2e/**"],
+      files: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.{ts,tsx}"],
       rules: {
         "vitest/require-top-level-describe": "error",
         "vitest/consistent-test-it": ["error", { fn: "it", withinDescribe: "it" }],
@@ -153,6 +160,12 @@ export default defineConfig({
         "testing-library/prefer-screen-queries": "error",
         "testing-library/prefer-user-event": "error",
         "testing-library/render-result-naming-convention": "error",
+      },
+    },
+    {
+      files: ["src/remotion/**/*.{ts,tsx}"],
+      rules: {
+        "react/only-export-components": "off",
       },
     },
     {

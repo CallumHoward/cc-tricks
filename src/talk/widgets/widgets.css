@@ -1,0 +1,214 @@
+/* Wall-clock widgets: interactive, live during holds. Text ≥ 28 px, hit targets ≥ 64 px. */
+
+.wg {
+  display: grid;
+  gap: 32px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.wg-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.wg-chip,
+.wg-button {
+  min-width: 64px;
+  min-height: 64px;
+  padding: 0 28px;
+  border: 2px solid var(--hairline);
+  border-radius: 32px;
+  background: var(--bg-deep);
+  color: var(--soft);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    color 160ms ease-out,
+    transform 120ms ease-out;
+}
+
+.wg-chip:hover,
+.wg-button:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+.wg-chip:active,
+.wg-button:active {
+  transform: scale(0.97);
+}
+
+.wg-chip[aria-pressed="true"],
+.wg-chip[aria-checked="true"] {
+  border-color: var(--clay);
+  background: var(--clay);
+  color: var(--on-clay);
+}
+
+.wg-button--primary {
+  border-color: var(--clay);
+  background: var(--clay);
+  color: var(--on-clay);
+}
+
+.wg-button--primary:hover {
+  border-color: var(--clay-hi);
+  background: var(--clay-hi);
+  color: var(--on-clay);
+}
+
+.wg :focus-visible {
+  outline: 3px solid var(--clay-hi);
+  outline-offset: 4px;
+}
+
+.wg-slider {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 28px;
+  align-items: center;
+  color: var(--soft);
+}
+
+.wg-slider output {
+  min-width: 7ch;
+  color: var(--text);
+  text-align: right;
+}
+
+.wg-range {
+  width: 100%;
+  height: 64px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  appearance: none;
+}
+
+.wg-range::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--clay) var(--fill, 0%),
+    var(--hairline) var(--fill, 0%)
+  );
+}
+
+.wg-range::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--hairline);
+}
+
+.wg-range::-moz-range-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--clay);
+}
+
+.wg-range::-webkit-slider-thumb {
+  width: 44px;
+  height: 44px;
+  margin-top: -18px;
+  border: 10px solid var(--bg);
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--text);
+  appearance: none;
+}
+
+.wg-range::-moz-range-thumb {
+  width: 44px;
+  height: 44px;
+  border: 10px solid var(--bg);
+  border-radius: 50%;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--text);
+}
+
+.wg-readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 40px;
+  align-items: baseline;
+  color: var(--soft);
+}
+
+.wg-readout b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.wg-readout .wg-hot {
+  color: var(--clay-hi);
+}
+
+.wg-card {
+  display: grid;
+  gap: 10px;
+  padding: 28px 32px;
+  border-radius: 20px;
+  background: var(--panel);
+}
+
+.wg-ladder {
+  display: grid;
+  gap: 14px;
+}
+
+.wg-rung {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 24px;
+  align-items: center;
+  min-height: 88px;
+  padding: 12px 28px;
+  border: 2px solid var(--hairline);
+  border-radius: 18px;
+  background: var(--bg-deep);
+  color: var(--soft);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease-out,
+    background-color 160ms ease-out;
+}
+
+.wg-rung[aria-pressed="true"] {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+.wg-rung[data-winner] {
+  border-color: var(--clay);
+  background: var(--clay-wash-12);
+}
+
+.wg-rung__rank {
+  color: var(--muted);
+}
+
+.wg-rung__code {
+  white-space: pre;
+}
+
+.wg-rung__tag {
+  color: var(--clay-hi);
+}
+
+.wg-answer {
+  min-height: 1.2em;
+  color: var(--clay-hi);
+}
+
+.wg-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}

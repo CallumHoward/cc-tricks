@@ -1,5 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": ["src/remotion/index.ts", "remotion.config.ts", "scripts/*.ts"],
   "ignoreDependencies": ["babel-plugin-react-compiler"],
   "dynamicallyLoaded": ["vitest-setup.ts"]
 }

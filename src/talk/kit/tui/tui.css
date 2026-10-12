@@ -1,0 +1,314 @@
+/* TUI replicas. Motion is written per frame from τ/w; no transitions or animations here. */
+
+.tui {
+  color: var(--soft);
+  white-space: pre;
+  font-kerning: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.tui-line {
+  display: flex;
+  align-items: center;
+  height: 1.2em;
+}
+
+.tui-cell {
+  display: inline-block;
+  flex: none;
+  width: 1ch;
+  height: 1.2em;
+  overflow: visible;
+}
+
+.tui-cell--wide {
+  width: 2ch;
+  height: 1.25em;
+  margin: 0 -0.1em;
+  box-sizing: content-box;
+  padding: 0 0.1em;
+}
+
+.tui-dim {
+  color: var(--tui-dim);
+}
+
+.tui-clay {
+  color: var(--clay);
+}
+
+.tui-text {
+  color: var(--text);
+}
+
+.tui-strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.tui-verb {
+  color: var(--clay);
+  background-image: linear-gradient(
+    90deg,
+    var(--clay) 0%,
+    var(--clay) 38%,
+    var(--clay-hi) 50%,
+    var(--clay) 62%,
+    var(--clay) 100%
+  );
+  background-size: 300% 100%;
+  background-position-x: calc(var(--shimmer, 0) * 100%);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Counter drums */
+.tui-counter {
+  display: inline-flex;
+  align-items: flex-start;
+  height: 1.2em;
+  line-height: 1.2em;
+  vertical-align: bottom;
+}
+
+.tui-drum {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 1ch;
+  height: 1.2em;
+  overflow: hidden;
+}
+
+.tui-drum-col {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(calc(var(--pos, 0) * -1.2em));
+}
+
+.tui-drum-col > span {
+  display: block;
+  height: 1.2em;
+  text-align: center;
+}
+
+.tui-drum-col--ghost {
+  opacity: calc(var(--blur, 0) * 0.22);
+}
+
+.tui-drum-col--ghost-a {
+  transform: translateY(calc((var(--pos, 0) - var(--blur, 0) * 0.35) * -1.2em));
+}
+
+.tui-drum-col--ghost-b {
+  transform: translateY(calc((var(--pos, 0) + var(--blur, 0) * 0.35) * -1.2em));
+}
+
+/* Prompt box: two rules, not a frame */
+.tui-prompt {
+  position: relative;
+}
+
+.tui-prompt-rule {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--tui-rule);
+  transform-origin: 50% 50%;
+}
+
+.tui-prompt-rule--top {
+  top: 0;
+}
+
+.tui-prompt-rule--bottom {
+  bottom: 0;
+}
+
+.tui-prompt-clip {
+  position: absolute;
+  inset: 2px 0;
+  overflow: hidden;
+}
+
+.tui-prompt-row {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 40px;
+  color: var(--text);
+}
+
+.tui-prompt-row .tui-chevron {
+  margin-right: 1ch;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.tui-caret {
+  display: inline-block;
+  flex: none;
+  width: 1ch;
+  height: 1.15em;
+  background: var(--text);
+}
+
+.tui-return {
+  display: inline-flex;
+  margin-left: 0.6ch;
+  color: var(--clay);
+  transform-origin: 50% 60%;
+}
+
+/* Agent rows */
+.tui-agent {
+  position: relative;
+  overflow: hidden;
+  height: 1.3em;
+}
+
+.tui-agent-inner {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 1.3em;
+}
+
+.tui-agent-name {
+  flex: none;
+  min-width: 18ch;
+}
+
+.tui-agent-action {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tui-agent-stats {
+  display: inline-flex;
+  flex: none;
+  margin-left: 2ch;
+}
+
+/* Tool rows; ⎿ is drawn with borders */
+.tui-tool-out {
+  display: flex;
+  align-items: flex-start;
+}
+
+.tui-tool-line {
+  overflow: hidden;
+  height: 1.35em;
+}
+
+.tui-tool-line > span {
+  display: block;
+}
+
+.tui-tool-indent {
+  display: inline-block;
+  flex: none;
+  width: 4ch;
+}
+
+.tui-hook {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  width: 1ch;
+  height: 0.62em;
+  margin: 0.08em 2ch 0 1ch;
+  border-bottom: 2px solid var(--tui-dim);
+  border-left: 2px solid var(--tui-dim);
+}
+
+.tui-diff--add {
+  color: var(--tui-green);
+  background: color-mix(in srgb, var(--tui-green) 14%, transparent);
+}
+
+.tui-diff--del {
+  color: var(--muted);
+  background: var(--clay-wash-12);
+}
+
+/* Code block */
+.tui-code {
+  color: var(--text);
+}
+
+.tui-code-label {
+  margin-bottom: 18px;
+  color: var(--muted);
+}
+
+.tui-code-panel {
+  position: relative;
+  padding: 28px 40px;
+  border-radius: 14px;
+  background: var(--bg-deep);
+}
+
+.tui-code-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.tui-code-line > span {
+  position: relative;
+  display: block;
+}
+
+.tui-code-mark {
+  position: absolute;
+  inset: 0 -16px;
+  border-radius: 6px;
+  background: var(--clay-wash-35);
+  transform-origin: 0 50%;
+}
+
+/* Pocketed token tiles */
+.tui-pile {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.tui-tile {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 22%;
+  background: var(--clay);
+  color: var(--clay-deep);
+  box-shadow:
+    inset 0 -3px 0 rgb(0 0 0 / 18%),
+    inset 0 2px 0 rgb(255 255 255 / 16%);
+}
+
+.tui-tile svg {
+  width: 72%;
+  height: 72%;
+}
+
+/* Scrollback whip */
+.tui-whip {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.tui-whip-filter {
+  position: absolute;
+  width: 0;
+  height: 0;
+}

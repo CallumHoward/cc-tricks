@@ -1,0 +1,59 @@
+/* Talk palette and type tokens (1080p logical px). Segments use only these classes for type. */
+
+:root {
+  --void: #141413;
+  --bg-deep: #1f1e1d;
+  --bg: #262624;
+  --panel: #32312d;
+  --hairline: #3e3d38;
+  --muted: #918f86;
+  --soft: #c9c7bc;
+  --text: #faf9f5;
+  --bone: #faf9f5;
+  --clay: #d97757;
+  --clay-hi: #eb9f7f;
+  --clay-deep: #c6613f;
+  --clay-wash-12: #3b302a;
+  --clay-wash-20: #4a362e;
+  --clay-wash-35: #654236;
+  --clay-wash-55: #885340;
+  --on-clay: #141413;
+  --tui-dim: #999;
+  --tui-rule: #888;
+  --tui-green: #4eba65;
+  --font-display: "Newsreader Variable", georgia, serif;
+  --font-mono: "JetBrains Mono Variable", "CC Mono", ui-monospace, monospace;
+}
+
+.type-hero {
+  font: 400 200px/1 var(--font-display);
+  font-variation-settings: "opsz" 72;
+  letter-spacing: -0.02em;
+}
+
+.type-hero--xl {
+  font-size: 260px;
+}
+
+.type-headline {
+  font: 400 120px/1.05 var(--font-display);
+  font-variation-settings: "opsz" 72;
+  letter-spacing: -0.02em;
+}
+
+.type-headline--xl {
+  font-size: 140px;
+}
+
+.type-body {
+  font: 400 44px/1.25 var(--font-display);
+  font-variation-settings: "opsz" 24;
+}
+
+.type-label {
+  font: 500 30px/1.2 var(--font-mono);
+}
+
+.type-code {
+  font: 400 34px/1.35 var(--font-mono);
+}

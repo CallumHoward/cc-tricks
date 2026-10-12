@@ -1,9 +1,20 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
+
+const StageRoot = lazy(() => import("#/talk/stage-root"));
 
 export const Route = createFileRoute("/")({
-  component: App,
+  component: Talk,
 });
 
-function App() {
-  return <main>Hello world</main>;
+function Talk() {
+  return (
+    <div className="talk-page" data-page="talk">
+      <ClientOnly fallback={<div className="stage-letterbox" />}>
+        <Suspense fallback={<div className="stage-letterbox" />}>
+          <StageRoot />
+        </Suspense>
+      </ClientOnly>
+    </div>
+  );
 }
