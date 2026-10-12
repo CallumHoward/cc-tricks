@@ -1,17 +1,14 @@
 import { useState } from "react";
 
-import { useStage } from "#/engine/stage/react";
 import { LAYA_BARS, LAYA_INPUT } from "#/talk/data/laya";
 import { ProbBars } from "#/talk/kit/data/prob-bars";
 
+import { type Guess, GuessChips } from "./guess-chips";
 import { WidgetShell } from "./widget-shell";
-
-const GUESSES = ["billing", "technical"] as const;
 
 /** W6: the room guesses the department, then Laya's typed probabilities spring in. */
 export function PredictReveal({ width = 1300 }: { width?: number }) {
-  const stage = useStage();
-  const [guess, setGuess] = useState<{ pick: string; at: number } | null>(null);
+  const [guess, setGuess] = useState<Guess | null>(null);
 
   return (
     <WidgetShell label="Predict, then reveal">
@@ -20,17 +17,7 @@ export function PredictReveal({ width = 1300 }: { width?: number }) {
         <span className="type-label" style={{ color: "var(--soft)" }}>
           Billing or technical?
         </span>
-        {GUESSES.map((g) => (
-          <button
-            key={g}
-            type="button"
-            className="wg-chip type-label"
-            aria-pressed={guess?.pick === g}
-            onClick={() => setGuess({ pick: g, at: stage.frame().w })}
-          >
-            {g}
-          </button>
-        ))}
+        <GuessChips guess={guess} onGuess={setGuess} />
         {guess ? (
           <button type="button" className="wg-button type-label" onClick={() => setGuess(null)}>
             Ask again

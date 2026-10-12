@@ -21,7 +21,7 @@ export const charLength = (text: string): number => Array.from(text).length;
 export const sliceChars = (text: string, n: number): string =>
   Array.from(text).slice(0, n).join("");
 
-export const SPINNER_FRAMES: readonly SpinnerGlyph[] = [
+const SPINNER_FRAMES: readonly SpinnerGlyph[] = [
   "·",
   "✢",
   "✳",
@@ -55,8 +55,6 @@ export const PAST_VERBS = [
   "Sautéed",
   "Worked",
 ] as const;
-
-export type PastVerb = (typeof PAST_VERBS)[number];
 
 export const REWIND_VERB = "Moonwalking";
 

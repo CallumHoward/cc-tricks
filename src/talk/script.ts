@@ -999,8 +999,6 @@ export const SCRIPT = {
   }),
 } satisfies Record<string, StopScript>;
 
-export type ScriptId = keyof typeof SCRIPT;
-
 export function scriptFor(id: string): StopScript {
   const script = (SCRIPT as Record<string, StopScript | undefined>)[id];
   if (!script) throw new Error(`No script for stop "${id}"`);

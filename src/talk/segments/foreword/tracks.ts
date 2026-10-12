@@ -87,7 +87,7 @@ const ORIGIN = {
   x: COMPOSER.x - CROWD.ourCol * CROWD.cellW,
   y: COMPOSER.y - CROWD.ourRow * CROWD.cellH,
 };
-export const CROWD_CENTER = {
+const CROWD_CENTER = {
   x: ORIGIN.x + (CROWD.cols * CROWD.cellW) / 2 - (CROWD.cellW - COMPOSER.w) / 2,
   y: ORIGIN.y + (CROWD.rows * CROWD.cellH) / 2 - (CROWD.cellH - COMPOSER.h) / 2,
 };

@@ -67,7 +67,7 @@ const SIDES: readonly LabelSide[] = [
   "below-left",
 ];
 
-export function labelRect(
+function labelRect(
   ax: number,
   ay: number,
   w: number,
@@ -120,33 +120,33 @@ export function placeLabels(
 ): (Rect | null)[] {
   const placed: Rect[] = [];
   const leads: Segment[] = [];
+  const isClear = ({ r, lead }: { r: Rect; lead: Segment }) =>
+    contains(bounds, r) &&
+    !placed.some((p) => overlaps(p, r, pad)) &&
+    !markers.some((m) => overlaps(m, r, pad / 2)) &&
+    !placed.some((p) => segmentHitsRect(lead, p)) &&
+    !leads.some((s) => segmentHitsRect(s, r));
   return labels.map((l) => {
     const sides = l.prefer ? [l.prefer, ...SIDES.filter((s) => s !== l.prefer)] : SIDES;
-    for (const reach of [1, 2.5, 4.5]) {
-      for (const side of sides) {
+    const candidates = [1, 2.5, 4.5].flatMap((reach) =>
+      sides.map((side) => {
         const r = labelRect(l.x, l.y, l.w, l.h, side, (l.gap ?? gap) * reach);
-        const inside =
-          r.x >= bounds.x &&
-          r.y >= bounds.y &&
-          r.x + r.w <= bounds.x + bounds.w &&
-          r.y + r.h <= bounds.y + bounds.h;
-        if (!inside) continue;
-        if (placed.some((p) => overlaps(p, r, pad)) || markers.some((m) => overlaps(m, r, pad / 2)))
-          continue;
-        const lead = { x1: l.x, y1: l.y, ...edgeXY(nearestEdge(r, l.x, l.y)) };
-        if (
-          placed.some((p) => segmentHitsRect(lead, p)) ||
-          leads.some((s) => segmentHitsRect(s, r))
-        )
-          continue;
-        placed.push(r);
-        leads.push(lead);
-        return r;
-      }
-    }
-    return null;
+        return { r, lead: { x1: l.x, y1: l.y, ...edgeXY(nearestEdge(r, l.x, l.y)) } };
+      }),
+    );
+    const hit = candidates.find(isClear);
+    if (!hit) return null;
+    placed.push(hit.r);
+    leads.push(hit.lead);
+    return hit.r;
   });
 }
+
+const contains = (outer: Rect, r: Rect) =>
+  r.x >= outer.x &&
+  r.y >= outer.y &&
+  r.x + r.w <= outer.x + outer.w &&
+  r.y + r.h <= outer.y + outer.h;
 
 type Segment = { x1: number; y1: number; x2: number; y2: number };
 
@@ -219,7 +219,7 @@ export function qrRevealCount(
 }
 
 /** Closed-form ±amp quiver on an uncertain value (deterministic in t). */
-export const quiver = (t: number, amp: number, seed = 0) => noise1(t * 1.3 + seed * 17.1) * amp;
+const quiver = (t: number, amp: number, seed = 0) => noise1(t * 1.3 + seed * 17.1) * amp;
 
 export function fmtUSD(x: number): string {
   if (x >= 100) return `$${Math.round(x)}`;

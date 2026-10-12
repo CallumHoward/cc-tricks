@@ -1,7 +1,8 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { renderAt } from "./render-at";
+import { renderAt } from "#/engine/stage/render-at";
+
 import { T9 } from "./tracks";
 import Tip09SuggestionsSegment from "./view";
 

@@ -28,9 +28,9 @@ export type PromptBoxProps = {
   style?: CSSProperties;
 };
 
-export const LIFT_DUR = 0.32;
+const LIFT_DUR = 0.32;
 /** ⏎ pops before the line scrolls away */
-export const LIFT_DELAY = 0.12;
+const LIFT_DELAY = 0.12;
 
 /** τ at which the prompt's typing and ⏎ scroll have landed. */
 export function promptLanding({
@@ -41,6 +41,47 @@ export function promptLanding({
 }: PromptBoxProps): number {
   const typed = typeEnd(typeAt, charLength(text), cps);
   return submitAt === undefined ? typed : Math.max(typed, submitAt + LIFT_DELAY + LIFT_DUR);
+}
+
+type TextProps = Pick<PromptBoxProps, "typeAt" | "cps" | "ghost" | "ghostAt" | "acceptAt">;
+
+/** The ghost suggestion's state at τ: hidden, showing, or accepted into the prompt. */
+function ghostPhase(tau: number, p: TextProps): "hidden" | "showing" | "accepted" {
+  if (p.ghost === undefined) return "hidden";
+  if (p.acceptAt !== undefined && tau >= p.acceptAt) return "accepted";
+  return p.ghostAt !== undefined && tau >= p.ghostAt ? "showing" : "hidden";
+}
+
+/** What the prompt row reads at τ: typed text (or the accepted ghost) and the ghost's tail. */
+function promptText(tau: number, text: string, len: number, p: TextProps) {
+  const typeAt = p.typeAt ?? 0;
+  const n = typedChars(tau, typeAt, p.cps ?? 30, len);
+  const phase = ghostPhase(tau, p);
+  const ghost = p.ghost ?? "";
+  const typed = phase === "accepted" ? ghost : sliceChars(text, n);
+  const ghostTail = phase === "showing" ? Array.from(ghost).slice(charLength(typed)).join("") : "";
+  return { typed, ghostTail, typing: tau >= typeAt && n > 0 && n < len };
+}
+
+/** 0 → 1 as the submitted line scrolls up and a fresh prompt row slides in. */
+const submitLift = (tau: number, submitAt: number | undefined): number =>
+  submitAt === undefined
+    ? 0
+    : outExpo(prog(tau, submitAt + LIFT_DELAY, submitAt + LIFT_DELAY + LIFT_DUR));
+
+const visibility = (on: boolean) => (on ? "visible" : "hidden");
+
+function writeRows(rowA: Element | undefined, rowB: Element | undefined, lift: number, h: number) {
+  setStyle(rowA, "transform", `translate3d(0, ${(-lift * h).toFixed(2)}px, 0)`);
+  setStyle(rowB, "transform", `translate3d(0, ${((1 - lift) * h).toFixed(2)}px, 0)`);
+}
+
+/** The ⏎ punch: both rules swell and the return glyph pops. */
+function writePunch(rules: Element[], ret: Element | undefined, p: number) {
+  const scale = `scale(${(1 + 0.06 * p).toFixed(4)}, ${(1 + 1.5 * p).toFixed(4)})`;
+  for (const rule of rules) setStyle(rule, "transform", scale);
+  setStyle(ret, "visibility", visibility(p > 0));
+  setStyle(ret, "transform", `scale(${(0.6 + 0.8 * p).toFixed(3)})`);
 }
 
 /** Claude Code's prompt: two rules (not a frame), `❯`, a block caret on wall time. */
@@ -65,32 +106,22 @@ export function PromptBox({
     const [, typedEl, caretA, ghostEl, ret] = rowA?.children ?? [];
     const caretB = rowB?.children[1];
 
-    const accepted = ghost !== undefined && acceptAt !== undefined && tau >= acceptAt;
-    const n = typedChars(tau, typeAt, cps, len);
-    const typed = accepted ? ghost : sliceChars(text, n);
-    const showGhost = ghost !== undefined && !accepted && ghostAt !== undefined && tau >= ghostAt;
-    setText(typedEl, typed);
-    setText(ghostEl, showGhost ? Array.from(ghost).slice(charLength(typed)).join("") : "");
+    const line = promptText(tau, text, len, { typeAt, cps, ghost, ghostAt, acceptAt });
+    setText(typedEl, line.typed);
+    setText(ghostEl, line.ghostTail);
 
     const submitted = submitAt !== undefined && tau >= submitAt;
-    const lift =
-      submitAt === undefined
-        ? 0
-        : outExpo(prog(tau, submitAt + LIFT_DELAY, submitAt + LIFT_DELAY + LIFT_DUR));
-    setStyle(rowA, "transform", `translate3d(0, ${(-lift * height).toFixed(2)}px, 0)`);
-    setStyle(rowB, "transform", `translate3d(0, ${((1 - lift) * height).toFixed(2)}px, 0)`);
-    setStyle(rowB, "visibility", submitted ? "visible" : "hidden");
-
-    const typing = tau >= typeAt && n > 0 && n < len;
-    setStyle(caretA, "visibility", !submitted && caretOn(w, typing) ? "visible" : "hidden");
-    setStyle(caretB, "visibility", submitted && caretOn(w, false) ? "visible" : "hidden");
+    writeRows(rowA, rowB, submitLift(tau, submitAt), height);
+    setStyle(rowB, "visibility", visibility(submitted));
+    setStyle(caretA, "visibility", visibility(!submitted && caretOn(w, line.typing)));
+    setStyle(caretB, "visibility", visibility(submitted && caretOn(w, false)));
 
     const p = submitAt === undefined ? 0 : punch(tau, v, submitAt);
-    const rules = `scale(${(1 + 0.06 * p).toFixed(4)}, ${(1 + 1.5 * p).toFixed(4)})`;
-    setStyle(top, "transform", rules);
-    setStyle(bottom, "transform", rules);
-    setStyle(ret, "visibility", p > 0 ? "visible" : "hidden");
-    setStyle(ret, "transform", `scale(${(0.6 + 0.8 * p).toFixed(3)})`);
+    writePunch(
+      [top, bottom].filter((el) => el !== undefined),
+      ret,
+      p,
+    );
   });
   return (
     <div

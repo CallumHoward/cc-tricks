@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { renderAt } from "#/talk/segments/tip-09-suggestions/render-at";
+import { renderAt } from "#/engine/stage/render-at";
 
 import { T10 } from "./tracks";
 import Tip10OffersSegment from "./view";

@@ -24,7 +24,7 @@ import { exitTimes, typedAt } from "./timing";
 export type StyleMap = Record<string, string>;
 
 /** Ref callback writing `fx(frame)` as inline styles now and on every tick. */
-export function useFx<T extends HTMLElement>(fx: (frame: Frame) => StyleMap) {
+function useFx<T extends HTMLElement>(fx: (frame: Frame) => StyleMap) {
   return useFrameRef<T>((el: T, frame: Frame) => {
     const next = fx(frame);
     for (const prop in next) {

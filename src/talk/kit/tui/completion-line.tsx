@@ -5,8 +5,8 @@ import type { CSSProperties } from "react";
 import type { Frame } from "#/engine/types";
 
 import { StaticGlyph } from "./icons";
-import { charLength, completionText, typedChars } from "./tui-math";
-import { setStyle, typeClip, useFrameRef } from "./use-frame-ref";
+import { charLength, completionText } from "./tui-math";
+import { setTypedLine, useFrameRef } from "./use-frame-ref";
 
 export type CompletionLineProps = {
   /**
@@ -42,8 +42,7 @@ export function CompletionLine({
   const total = 3 + charLength(text);
   const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
     if (at === undefined) return;
-    const typed = typedChars(frame.tau, at, cps, total);
-    setStyle(root, "clip-path", typed === 0 ? "inset(0 100% 0 0)" : typeClip(typed, total));
+    setTypedLine(root, frame.tau, at, cps, total);
   });
   return (
     <div ref={ref} className={`tui tui-line ${className ?? ""}`} style={style} data-tui-replica>

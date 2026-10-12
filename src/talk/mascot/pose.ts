@@ -56,7 +56,7 @@ export type Pose = {
   fx: Fx;
 };
 
-export const REST_EYE: Eye = Object.freeze({ open: 1, happy: 0, slant: 0, size: 1, glyph: "eye" });
+const REST_EYE: Eye = Object.freeze({ open: 1, happy: 0, slant: 0, size: 1, glyph: "eye" });
 const REST_ARM: Arm = Object.freeze({ rot: 22, len: 1, fwd: 0 });
 
 export function restPose(): Pose {
@@ -85,18 +85,6 @@ export function restPose(): Pose {
     prop: "none",
     propReach: 0,
     fx: { sweat: 0, zzz: 0, alert: 0, question: 0, sparkle: 0 },
-  };
-}
-
-export function clonePose(p: Pose): Pose {
-  return {
-    ...p,
-    eyeL: { ...p.eyeL },
-    eyeR: { ...p.eyeR },
-    armL: { ...p.armL },
-    armR: { ...p.armR },
-    legs: [{ ...p.legs[0] }, { ...p.legs[1] }, { ...p.legs[2] }, { ...p.legs[3] }],
-    fx: { ...p.fx },
   };
 }
 

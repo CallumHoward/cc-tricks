@@ -1,6 +1,7 @@
 import { clamp, inOutExpo, inQuad, outCubic, outExpo, prog } from "#/engine/motion/ease";
 import type { StyleValues } from "#/engine/stage/applier";
 import { BOT_HOME } from "#/talk/segments/shared/home";
+import { foldFlat, hopArc, hopFlight, whipScroll } from "#/talk/segments/shared/tip-turn";
 
 /** Visible window of this segment (registry: start + tail → next start + tail). */
 export const WIN = Object.freeze({ start: 151.9, end: 160.9 });
@@ -29,7 +30,7 @@ export const EXIT = Object.freeze({
   home: 160.84,
 });
 
-export const DOCK_DROP = 640;
+const DOCK_DROP = 640;
 
 export function dockY(tau: number): number {
   const down = prog(tau, 152.95, 153.45, inOutExpo);
@@ -58,7 +59,7 @@ export const PLUS_AT = 154.3;
 export const SPROUT = Object.freeze({ start: 153.6, stagger: 0.05, dur: 0.3 });
 
 /** The three ✳ of row i (implementer, reviewer, reviewer), at rest beside the row. */
-export function triadHome(row: number, j: number): { x: number; y: number } {
+function triadHome(row: number, j: number): { x: number; y: number } {
   const r = PLAN_ROWS[row] as PlanRow;
   return { x: r.x + 290 + j * 44, y: r.y };
 }
@@ -74,7 +75,7 @@ export const HAMMER = Object.freeze({
 export const WALNUT = Object.freeze({ cx: 1600, w: 136, h: 100, ground: 800 });
 export const WALNUT_TOP = WALNUT.ground - WALNUT.h;
 /** Head top when hoisted, before the release: above and right of the headline. */
-export const HOIST_TOP = 90;
+const HOIST_TOP = 90;
 const HOISTED_GAP = WALNUT_TOP - (HOIST_TOP + HAMMER.headH);
 
 export const CONVERGE = Object.freeze({ start: 154.7, end: 155.2 });
@@ -201,7 +202,7 @@ export function shardAt(i: number, tau: number): StyleValues {
 
 // Bot ------------------------------------------------------------------------------------------
 
-export const BOT_SPOT = Object.freeze({
+const BOT_SPOT = Object.freeze({
   x: 1680 - BOT_HOME.left,
   y: WALNUT.ground - 180 - BOT_HOME.top,
 });
@@ -211,20 +212,10 @@ export const BOT_HOPS = Object.freeze({
 });
 
 export function botOffset(tau: number): { x: number; y: number } {
-  const fly = (h: { at: number; air: number }) => prog(tau, h.at + 0.16, h.at + 0.16 + h.air);
-  const a = fly(BOT_HOPS.out);
-  const b = fly(BOT_HOPS.home);
-  const arc = (
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-    u: number,
-    h: number,
-  ) => ({
-    x: from.x + (to.x - from.x) * u,
-    y: from.y + (to.y - from.y) * u - Math.sin(u * Math.PI) * h,
-  });
-  if (b > 0) return arc(BOT_SPOT, { x: 0, y: 0 }, b, 160);
-  return arc({ x: 0, y: 0 }, BOT_SPOT, a, 120);
+  const a = hopFlight(tau, BOT_HOPS.out);
+  const b = hopFlight(tau, BOT_HOPS.home);
+  if (b > 0) return hopArc(BOT_SPOT, { x: 0, y: 0 }, b, 160);
+  return hopArc({ x: 0, y: 0 }, BOT_SPOT, a, 120);
 }
 
 // Exit -----------------------------------------------------------------------------------------
@@ -235,13 +226,7 @@ export function propFold(tau: number): StyleValues {
   return { y: 40 * u, scaleY: 1 - u, opacity: u >= 1 ? 0 : 1 };
 }
 
-export function plateFold(tau: number): StyleValues {
-  const u = prog(tau, EXIT.fold, EXIT.foldEnd, inOutExpo);
-  return { scaleY: 1 - u, opacity: u >= 1 ? 0 : 1 };
-}
+/** Everything on the plate folds into the completion line at the spinner row. */
+export const plateFold = (tau: number): StyleValues => foldFlat(tau, EXIT.fold, EXIT.foldEnd);
 
-export function whipUp(tau: number): StyleValues {
-  const u = prog(tau, EXIT.whipAt, EXIT.whipEnd, inOutExpo);
-  const mid = Math.sin(u * Math.PI);
-  return { y: -620 * u, scaleY: 1 + 1.4 * mid, blur: 6 * mid, opacity: u >= 1 ? 0 : 1 };
-}
+export const whipUp = (tau: number): StyleValues => whipScroll(tau, EXIT.whipAt, EXIT.whipEnd);

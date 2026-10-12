@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { chainLabel, chainWindows, hhmm, ROUTINES, WINDOW_HOURS } from "#/talk/data/routines";
-import { DayRuler } from "#/talk/kit/data/day-ruler";
+import { DayRuler, movePin } from "#/talk/kit/data/day-ruler";
 
 import { WidgetShell } from "./widget-shell";
 
@@ -35,9 +35,7 @@ export function PingChain({ start, width = 1500 }: { start: number; width?: numb
         start={start}
         pins={shown}
         width={width}
-        onPinChange={
-          on ? (i, m) => setPins((prev) => prev.map((p, k) => (k === i ? m : p))) : undefined
-        }
+        onPinChange={on ? movePin(setPins) : undefined}
       />
       <div className="wg-readout type-label" aria-live="polite">
         {windows.map((w) => (

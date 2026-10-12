@@ -1,7 +1,7 @@
 import type { Eye, Fx, Mouth, Pose } from "./pose";
 import { mixEye } from "./pose";
 
-export type Expression = {
+type Expression = {
   eyeL: Partial<Eye>;
   eyeR?: Partial<Eye>;
   look?: readonly [number, number];
@@ -15,7 +15,7 @@ export type Expression = {
 
 const open = { open: 1, happy: 0, slant: 0, size: 1, glyph: "eye" } as const;
 
-export const EXPRESSIONS = Object.freeze({
+const EXPRESSIONS = Object.freeze({
   neutral: { eyeL: open },
   happy: { eyeL: { ...open, happy: 1 }, mouth: "smile", blush: 0.6 },
   joy: {

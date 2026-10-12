@@ -4,7 +4,7 @@ import { outExpo, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
 import { sampleKeys } from "#/engine/motion/track";
 import type { Frame } from "#/engine/types";
-import { ContextBar, RuleRise } from "#/talk/kit/motion";
+import { RuleRise } from "#/talk/kit/motion";
 import { springFrom } from "#/talk/kit/motion/schedule";
 import {
   AgentRow,
@@ -12,18 +12,16 @@ import {
   CompletionLine,
   GLYPH_PATHS,
   HOME,
-  Pile,
-  pocketKeys,
-  PromptBox,
   SpinnerLine,
 } from "#/talk/kit/tui";
 import { setStyle, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { scriptFor } from "#/talk/script";
-import { BOT_HOME, HOME_ZONES, HomeRest } from "#/talk/segments/shared/home";
+import { Drive, Gate, TypedMono, TypedText } from "#/talk/segments/shared/gated-parts";
+import { BOT_HOME, HomeRest } from "#/talk/segments/shared/home";
+import { TipDock } from "#/talk/segments/shared/tip-turn";
 
-import { Drive, Gate, TypedMono, TypedText } from "./parts";
 import {
   ADV,
   AT,
@@ -89,29 +87,6 @@ const ACTS: readonly Act[] = [
 ];
 
 const abs = (left: number, top: number) => ({ position: "absolute" as const, left, top });
-
-// Dock ------------------------------------------------------------------------------------------
-
-const dockTrack = (tau: number) => ({ y: dockY(tau) });
-
-/** Prompt box, context bar and pile: the home shot's furniture, dropped away during the plates. */
-function Dock() {
-  return (
-    <Gate from={TURN.typeAt} to={EXIT.home}>
-      <Drive fn={dockTrack} style={{ inset: 0 }}>
-        <PromptBox
-          style={abs(HOME.left, HOME.promptTop)}
-          text={TURN.prompt}
-          typeAt={TURN.typeAt}
-          cps={TURN.cps}
-          submitAt={TURN.submitAt}
-        />
-        <ContextBar zones={HOME_ZONES} />
-        <Pile count={pocketKeys(EXIT.pocketAt, 1, 0.4)} x={HOME.pileX} y={HOME.pileY} />
-      </Drive>
-    </Gate>
-  );
-}
 
 // Bot -------------------------------------------------------------------------------------------
 
@@ -602,7 +577,12 @@ export default function Tip01SubagentsSegment() {
       <Gate from={WIN.start} to={TURN.typeAt}>
         <HomeRest pile={0} from={WIN.start} to={TURN.typeAt} bot={false} />
       </Gate>
-      <Dock />
+      <TipDock
+        turn={TURN}
+        until={EXIT.home}
+        dockY={dockY}
+        pile={{ at: EXIT.pocketAt, n: 1, dur: 0.4 }}
+      />
       <Drive fn={foldTrack} style={{ inset: 0, transformOrigin: `50% ${HOME.spinnerY}px` }}>
         <AgentsPlate />
         <ModelPlate />

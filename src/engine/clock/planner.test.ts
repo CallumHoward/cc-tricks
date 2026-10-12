@@ -55,6 +55,13 @@ describe("planner", () => {
     }
     return worst;
   }
+  /** A replan starts exactly where the playhead is: no jump in τ or velocity. */
+  function expectSeamless(p: Plan, t: number, here: { tau: number; v: number }) {
+    expect(discontinuity(p)).toBeLessThan(1e-7);
+    const start = evaluate(p, t);
+    expect(Math.abs(start.tau - here.tau)).toBeLessThan(1e-9);
+    expect(Math.abs(start.v - here.v)).toBeLessThan(1e-9);
+  }
 
   function heldStop(stops: readonly PlanStop[], tau: number) {
     return stops.find((s) => tau >= s.at && tau <= holdEnd(s));
@@ -168,10 +175,7 @@ describe("planner", () => {
         const delta = Math.floor(rnd() * 5) - 2 || 1;
         idx = Math.min(STOPS.length - 1, Math.max(0, idx + delta));
         current = plan(here, t, stop(idx), from, Math.abs(delta));
-        expect(discontinuity(current)).toBeLessThan(1e-7);
-        const start = evaluate(current, t);
-        expect(Math.abs(start.tau - here.tau)).toBeLessThan(1e-9);
-        expect(Math.abs(start.v - here.v)).toBeLessThan(1e-9);
+        expectSeamless(current, t, here);
         const late = evaluate(current, t + 500);
         expect(late.tau).toBeLessThanOrEqual(holdEnd(stop(idx)) + 1e-9);
         expect(late.tau).toBeGreaterThanOrEqual(stop(idx).at - 0.01);
@@ -236,10 +240,7 @@ describe("planner", () => {
           const to = stops[idx];
           p = plan(here, t, to, heldStop(stops, here.tau), hopsBetween(stops, here.tau, to));
 
-          expect(discontinuity(p)).toBeLessThan(1e-7);
-          const start = evaluate(p, t);
-          expect(Math.abs(start.tau - here.tau)).toBeLessThan(1e-9);
-          expect(Math.abs(start.v - here.v)).toBeLessThan(1e-9);
+          expectSeamless(p, t, here);
 
           const end = last(p);
           expect(Number.isFinite(end.t0)).toBe(true);

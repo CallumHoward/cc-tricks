@@ -1,5 +1,4 @@
 import type { CueAt } from "#/talk/cues";
-import { stampImpact } from "#/talk/segments/tip-06-cli-agents/cue-timing";
 import { exitTimes } from "#/talk/segments/tip-06-cli-agents/timing";
 
 import { TIP8 } from "./timing";
@@ -15,7 +14,7 @@ export const CUES: readonly CueAt[] = [
   ...D.rows.map((tau): CueAt => ({ tau, cue: "tick" })),
   { tau: D.board.foldStart, cue: "riser" },
   { tau: D.towers.start + 1, cue: "riser" },
-  { tau: stampImpact(D.stamp), cue: "slam" },
+  { tau: D.stampHit, cue: "slam" },
   { tau: exit.pocketAt, cue: "pop" },
   { tau: exit.whipAt, cue: "whoosh" },
 ];

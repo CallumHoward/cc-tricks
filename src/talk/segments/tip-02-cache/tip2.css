@@ -170,3 +170,10 @@
   gap: 4px 48px;
   max-width: 860px;
 }
+
+/* The payoff ratio is the number the room should read */
+.t2-w1 .wg-hot {
+  display: inline-block;
+  transform: scale(1.5);
+  transform-origin: 0 35%;
+}

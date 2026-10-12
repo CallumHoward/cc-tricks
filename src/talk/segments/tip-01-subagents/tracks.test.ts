@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { BOT_HOME } from "#/talk/segments/shared/home";
+import { homeDrift } from "#/talk/segments/shared/test-utils";
 
 import {
   ADV,
@@ -28,11 +29,7 @@ import {
 
 describe("tip 1 tracks", () => {
   it("should rest on the home shot at both window edges", () => {
-    for (const tau of [WIN.start, WIN.end - 0.01]) {
-      expect(dockY(tau)).toBeCloseTo(0, 3);
-      expect(botOffset(tau).x).toBeCloseTo(0, 3);
-      expect(botOffset(tau).y).toBeCloseTo(0, 3);
-    }
+    expect(homeDrift(WIN, dockY, botOffset)).toBeCloseTo(0, 3);
   });
 
   it("should land every spoke on its row's bullet before the stop settles", () => {

@@ -20,7 +20,7 @@ export function frontierArc(tau: number): number {
 }
 
 /** The bot's feet and scale over the whole segment (pure in τ). */
-export const botPath: BotPath = (tau) => {
+const botPath: BotPath = (tau) => {
   if (tau < 135.7) return { ...BOT_FEET, scale: 1 };
   if (tau < 141.3) {
     const u = prog(tau, 135.7, 136.3, outCubic);
@@ -46,7 +46,7 @@ const ACTS: readonly Act[] = [
 ];
 
 /** Hold creep: push 1.00 → 1.02 in each hold. */
-export function creepAt(tau: number): StyleValues {
+function creepAt(tau: number): StyleValues {
   const then =
     clamp((tau - T3.lastGen.at) / 2.5) * (1 - prog(tau, T3.lastGen.holdEnd, 142, outCubic));
   const aa = clamp((tau - T3.aa.at) / 3.5);

@@ -1,8 +1,8 @@
 import { modelPricing, pricesFor, type ModelId } from "#/talk/data/pricing";
 
 /** Slider 0–1000 ↔ context tokens on a log scale from 10k to 1M. */
-export const CONTEXT_MIN = 10_000;
-export const CONTEXT_MAX = 1_000_000;
+const CONTEXT_MIN = 10_000;
+const CONTEXT_MAX = 1_000_000;
 
 export function sliderToTokens(s: number): number {
   const u = Math.min(1000, Math.max(0, s)) / 1000;
@@ -25,7 +25,7 @@ export function turnPrices(id: ModelId, tokens: number): TurnPrice {
 }
 
 export type Ttl = "5m" | "1h";
-export const TTL_MINUTES: Record<Ttl, number> = { "5m": 5, "1h": 60 };
+const TTL_MINUTES: Record<Ttl, number> = { "5m": 5, "1h": 60 };
 
 export type Rung = { id: "setting" | "pin" | "env"; code: string; value: Ttl; note: string };
 

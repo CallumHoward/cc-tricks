@@ -23,7 +23,7 @@ export function cardCopy(i: number) {
 }
 
 /** Card `i`: lands from the right, then folds into the pin it becomes. */
-export function cardAt(i: number, tau: number) {
+function cardAt(i: number, tau: number) {
   const k = springFrom(tau, 163.3 + i * 0.2 - 0.25, SPRINGS.LAND);
   const center: Pt = { x: CARD.x + CARD.w / 2, y: CARD.y + i * (CARD.h + CARD.gap) + CARD.h / 2 };
   const routine = ROUTINES[i];

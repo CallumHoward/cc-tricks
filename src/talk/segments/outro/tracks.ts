@@ -104,7 +104,7 @@ export const CRANE: readonly Shot[] = [
 const TILE_HOP = 90;
 
 /** Flight fractions where a tile snaps from pile size to its module, and where it inks over. */
-export const SHRINK_FROM = 0.82;
+const SHRINK_FROM = 0.82;
 export const INK_FROM = 0.9;
 
 /** The QR plate: the prompt box's two rules, kept inside the safe band (corners stay empty). */
@@ -149,8 +149,8 @@ export const BOT_ACTS: readonly Act[] = [
 ];
 
 /** The bot empties its pockets onto the rule just right of the QR, so the tiles' flight is short. */
-export const PILE = Object.freeze({ x: 990, y: PLATE.bottom, size: 34 });
-export const PILE_COUNT = keys([OUT.pileFrom, 0], [OUT.pileTo, 10]);
+const PILE = Object.freeze({ x: 990, y: PLATE.bottom, size: 34 });
+const PILE_COUNT = keys([OUT.pileFrom, 0], [OUT.pileTo, 10]);
 
 export type Module = { x: number; y: number };
 
@@ -172,7 +172,7 @@ export const flightStart = (i: number): number => OUT.flyFirst + (9 - i) * OUT.f
 export const landing = (i: number): number => flightStart(i) + OUT.flyDur;
 
 /** Module each tile fills: the first pocketed takes the very last held-back module. */
-export const tileTarget = (i: number, held: readonly Module[]): Module | undefined =>
+const tileTarget = (i: number, held: readonly Module[]): Module | undefined =>
   held[held.length - 1 - i];
 
 /**

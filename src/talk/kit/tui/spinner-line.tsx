@@ -12,11 +12,10 @@ import {
   resolveCount,
   spinnerGlyph,
   spinnerVerb,
-  typedChars,
   type CountSource,
   type VerbSource,
 } from "./tui-math";
-import { setStyle, setText, typeClip, useFrameRef } from "./use-frame-ref";
+import { setStyle, setText, setTypedLine, useFrameRef } from "./use-frame-ref";
 
 /** The live ✳ glyph: an SVG path cycling on wall time (never a font glyph, so it can be dived into). */
 export function SpinnerGlyph({ rate = 1, className }: { rate?: number; className?: string }) {
@@ -71,8 +70,7 @@ export function SpinnerLine({
     setStyle(verbEl, "--shimmer", (1 - ((frame.w * 0.45) % 1.6)).toFixed(3));
     setText(root.querySelector(".tui-elapsed"), formatElapsed(elapsedAt(frame.tau)));
     const total = 3 + charLength(word) + 1 + (bare ? 0 : STATS_CHARS);
-    const typed = typedChars(frame.tau, at, cps, total);
-    setStyle(root, "clip-path", typed === 0 ? "inset(0 100% 0 0)" : typeClip(typed, total));
+    setTypedLine(root, frame.tau, at, cps, total);
   });
   return (
     <div ref={ref} className={`tui tui-line ${className ?? ""}`} style={style} data-tui-replica>

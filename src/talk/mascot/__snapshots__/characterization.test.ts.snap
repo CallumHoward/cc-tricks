@@ -1,0 +1,330 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`mascot characterization > should draw a mascot turned to -30 degrees exactly as pinned > drawing digests 1`] = `
+[
+  "1286deabf904ee7f",
+  "4d1fc647124b647a",
+  "b2e98ce2a74f6499",
+  "e4e3647179792fc0",
+]
+`;
+
+exports[`mascot characterization > should draw a mascot turned to -90 degrees exactly as pinned > drawing digests 1`] = `
+[
+  "09d3b95fb6a5a488",
+  "e61333b98d787728",
+  "8fdb1f37c8bb8d1c",
+  "9dfb3a77ae99a7b1",
+]
+`;
+
+exports[`mascot characterization > should draw a mascot turned to -170 degrees exactly as pinned > drawing digests 1`] = `
+[
+  "66beb2575f802b00",
+  "e8cc14feef66f834",
+  "807db131392d5bb8",
+  "ce5535221d3d621d",
+]
+`;
+
+exports[`mascot characterization > should draw a mascot turned to 0 degrees exactly as pinned > drawing digests 1`] = `
+[
+  "b1caba585a7d094c",
+  "dbffea34fc274dc5",
+  "6c7c657dd5f58c91",
+  "9c60b86971a1042d",
+]
+`;
+
+exports[`mascot characterization > should draw a mascot turned to 45 degrees exactly as pinned > drawing digests 1`] = `
+[
+  "b9642ae51fbccfe8",
+  "da2c2ea8449d36f7",
+  "d68623eed69f785a",
+  "27a8147d5bbae056",
+]
+`;
+
+exports[`mascot characterization > should draw a mascot turned to 120 degrees exactly as pinned > drawing digests 1`] = `
+[
+  "996eb95b9bebce34",
+  "9a66bf18d771ae3c",
+  "b7bd4972ea82afc1",
+  "d4824bcd45feb029",
+]
+`;
+
+exports[`mascot characterization > should draw a mascot turned to 180 degrees exactly as pinned > drawing digests 1`] = `
+[
+  "ca080242f715c875",
+  "f4eb154e81269469",
+  "510c703d488b30f5",
+  "9bdbd5015d511e52",
+]
+`;
+
+exports[`mascot characterization > should pose and draw carry exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "b2d8648e2223e935",
+  "fb814e9806ea8680",
+  "bc8fade625fbea98",
+  "832d62f745c8cf4d",
+  "34729d76265e120f",
+  "7873dabdab6f6ba0",
+  "9aa844dbf1285cc4",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw celebrate exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "28b9d580d4eacaf3",
+  "5b3e5abdb7ffeadb",
+  "59fcdc688835608f",
+  "b8193de28b9374b9",
+  "e5458a8f4c523f30",
+  "b59a8ee70773edda",
+  "6d3785934279d5d2",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw face exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "4d6fbd2ab6666f41",
+  "f892467282f11200",
+  "fe30f0ac215c17ff",
+  "dfee3fe1c50ccda8",
+  "ddecc3ee73e1b2e5",
+  "9e57c157ef52d725",
+  "ed541bd6e995de6f",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw hop exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "fbb18a2ee754f148",
+  "1f1fc37b3381d6cf",
+  "a40a779890b96032",
+  "830885cc55731342",
+  "4e3ea03a05948b1f",
+  "2445fdb4e5cd4478",
+  "ed541bd6e995de6f",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw look exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "ba4a15f5932e23e2",
+  "2dd07a58ae26282d",
+  "365f37d9fd85f0d6",
+  "23d817359a90b7e5",
+  "6f4eff78dc8bb2fe",
+  "56597a53af4e8e4a",
+  "eb57a1d046c8230e",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw point exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "97a93934e7669640",
+  "0b41aee90128b6e9",
+  "1d465283b868d213",
+  "8afc6a81b15fcc98",
+  "f9d2bbde7b9c840d",
+  "6faea7e516e8f92c",
+  "f6e970cbf118e094",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw point exactly as pinned across its envelope > pose and drawing digests 2`] = `
+[
+  "fbd52d337c124b40",
+  "de2e067b2884e9ce",
+  "62d0c6219e1f7243",
+  "b2ef6ec057dc7de7",
+  "4e4a145464e89f3a",
+  "b22e6a44fdca545e",
+  "87dbc9832507d3fd",
+  "633b7f7f940e7555",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw push exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "9ca3897e5edd7690",
+  "7bfc351a7615217b",
+  "909b1d605eb59b75",
+  "b0c86528b20e5d7e",
+  "e401314737f186f2",
+  "06fdfebc7149d3b3",
+  "6f375ec906c101c7",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw push exactly as pinned across its envelope > pose and drawing digests 2`] = `
+[
+  "fbd52d337c124b40",
+  "b72978c455c325da",
+  "e11ac413abf8a02f",
+  "4e2b4e04ee90c6da",
+  "f06045cfe3171ec6",
+  "03968a5e0ca75001",
+  "6879012fd74fdabc",
+  "f18564b6a6e6d0cc",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw shrug exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "a5238c06cf188eba",
+  "45426b73c3806d3e",
+  "32fa49af4e77fcf1",
+  "b4e7ee742dafb34d",
+  "2aa49d08a2b8682b",
+  "335db816ac11b1c1",
+  "bf19abbdcbd73a04",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw sleepy exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "76993d4be1894173",
+  "92e0fab3664119ca",
+  "d708d45f941e6ac6",
+  "921fdaffb8752f7e",
+  "04217d60f628dc7b",
+  "bf67c5e2fab2fa4f",
+  "443c64214a75cff8",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw surprised exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "42a2f06fa33c9801",
+  "9b57e426c214308c",
+  "684d33e5f3b3ff93",
+  "a865de865c5418a0",
+  "87e38b831e4e6d20",
+  "d72538b2538c4e0b",
+  "09d39a7207242254",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw sweat exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "9ab24b44eed45962",
+  "a109859cb766614c",
+  "8bec2fb6d299c003",
+  "6dbddf00b33da7cd",
+  "8e8477c7cba0ae73",
+  "8dd442755ae19171",
+  "ed541bd6e995de6f",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw turn exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "b27eeb472b1364c8",
+  "458758c0fd43a4de",
+  "8e644892fc18ba20",
+  "444065aeb5a9baf7",
+  "1d9e8eb345e38c84",
+  "99f7a7ab991ea275",
+  "3452f63b99b9e9a7",
+  "8a2ace886e81fd02",
+]
+`;
+
+exports[`mascot characterization > should pose and draw type exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "ec091b87720104d2",
+  "77d87d9cef7ffa43",
+  "f0878f6c986be415",
+  "6a843f3157b02dc5",
+  "37f04c7ba2998dc7",
+  "a7272f4660993b13",
+  "5b8f5d18007ac4a0",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw walk exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "4b9c7fd9f272af18",
+  "3c9c4e98769bd9bb",
+  "6e3aea909bd9ccef",
+  "f1bc6fea917d3697",
+  "1b9071d5d2d7f1af",
+  "a6d2186fb5832b33",
+  "fe462d9076bcf680",
+  "0b418ce42753c1f6",
+]
+`;
+
+exports[`mascot characterization > should pose and draw walk exactly as pinned across its envelope > pose and drawing digests 2`] = `
+[
+  "fbd52d337c124b40",
+  "5959f7f921f2fe82",
+  "eea5147540ee2dae",
+  "134b3bb6da446965",
+  "b99c28b7d0dc0e0b",
+  "4154917fb94dfc10",
+  "3c908dfba5414ca9",
+  "ed541bd6e995de6f",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw wave exactly as pinned across its envelope > pose and drawing digests 1`] = `
+[
+  "fbd52d337c124b40",
+  "de2b252ca681a2bc",
+  "b274dcbc44378dd5",
+  "a425b0aec24cb074",
+  "ca91102bd2690c9e",
+  "e844fdd2e51009ed",
+  "41fc04d9d8b5ec9f",
+  "2c160001396e5b6a",
+  "3f94252d79be0e75",
+]
+`;
+
+exports[`mascot characterization > should pose and draw wave exactly as pinned across its envelope > pose and drawing digests 2`] = `
+[
+  "fbd52d337c124b40",
+  "c855696412702e66",
+  "a2c040bef3b3606c",
+  "63ca7b4a011ceeb6",
+  "327baa90465daea9",
+  "a5639e55fbebd20e",
+  "73cc3d534cebad28",
+  "fa47c03d2959dd0f",
+  "3f94252d79be0e75",
+]
+`;

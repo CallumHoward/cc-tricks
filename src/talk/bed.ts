@@ -1,7 +1,7 @@
 import type { ShaderNode } from "#/engine/gl/shaders-host";
 
 /** Haze colors: the stage ground and a barely warmer dark, so the bed never reads as a gradient. */
-export const HAZE = Object.freeze({ ground: "#262624", warm: "#2f2b27" });
+const HAZE = Object.freeze({ ground: "#262624", warm: "#2f2b27" });
 
 /** Slow warm haze in the palette darks: the world keeps drifting behind every plate (τ-driven). */
 export async function hazeBed(): Promise<ShaderNode[]> {

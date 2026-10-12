@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
 
+import { settleTime, SPRINGS } from "#/engine/motion/spring";
 import { smear, whipOffset } from "#/talk/kit/tui/tui-math";
 
-import { botX, breakWords, collapseScale, letterScale, scrollY, sweepX, T9 } from "./tracks";
+import {
+  botX,
+  breakWords,
+  collapseScale,
+  letterScale,
+  riseStart,
+  scrollY,
+  sweepX,
+  T9,
+} from "./tracks";
 
 describe("tip 9 tracks", () => {
   it("should hold the sweep's creep within 40 px per τ-second through the hold", () => {
@@ -40,6 +50,11 @@ describe("tip 9 tracks", () => {
   it("should have the transcript scrolled and still by the time copy must settle", () => {
     expect(scrollY(T9.at - 0.8)).toBeCloseTo(-120, 0);
     expect(scrollY(T9.start)).toBeCloseTo(0, 5);
+  });
+
+  it("should launch a title's first word one stagger per later word before the last settles", () => {
+    const last = 10 - settleTime(SPRINGS.LAND);
+    expect(riseStart("a b\nc", 10)).toBeCloseTo(last - 2 * 0.07, 9);
   });
 
   it("should break copy into lines of the given word counts", () => {

@@ -8,7 +8,7 @@ export type Routine = {
 };
 
 export const WINDOW_HOURS = 5;
-export const WINDOW_MINUTES = WINDOW_HOURS * 60;
+const WINDOW_MINUTES = WINDOW_HOURS * 60;
 
 export const ROUTINES: readonly Routine[] = [
   { id: "morning", name: "Good morning", at: 5 * 60 + 30, host: "cloud" },
@@ -17,9 +17,6 @@ export const ROUTINES: readonly Routine[] = [
 ];
 
 export const RULER = { from: 5 * 60, to: 21 * 60 } as const;
-
-export const ROUTINES_FOOT =
-  "It moves when your 5h bucket refills. Your weekly limit stays the same.";
 
 /** "05:30" */
 export function hhmm(minutes: number): string {

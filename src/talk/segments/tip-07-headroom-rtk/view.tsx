@@ -6,6 +6,7 @@ import { springFrom } from "#/talk/kit/motion/schedule";
 import { Counter, ReadToolRow } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
 import { scriptFor } from "#/talk/script";
+import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "#/talk/segments/shared/tip-title";
 import {
   Bot,
   Fx,
@@ -16,11 +17,6 @@ import {
   type StyleMap,
 } from "#/talk/segments/tip-06-cli-agents/boundary";
 import { placeAt, type PlaceKey } from "#/talk/segments/tip-06-cli-agents/timing";
-import {
-  TIP_TITLE_LINE,
-  TIP_TITLE_TOP,
-  TipTitle,
-} from "#/talk/segments/tip-06-cli-agents/tip-title";
 
 import { blockX, pressDepth, pullAt, splitAtSeparator, splitStat, TIP7 } from "./timing";
 

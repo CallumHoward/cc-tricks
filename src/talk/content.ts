@@ -29,7 +29,7 @@ export type TalkContent = {
 const NOTE_PREFIX = { verbatim: "", point: "• ", say: "› ", careful: "⚠ " } as const;
 
 /** Presenter notes: verbatim prose as written, prompts as bullets. */
-export function notesText(script: Pick<StopScript, "notes">): string {
+function notesText(script: Pick<StopScript, "notes">): string {
   return script.notes.map((note) => `${NOTE_PREFIX[note.kind]}${note.text}`).join("\n\n");
 }
 
@@ -74,7 +74,3 @@ export const content: TalkContent = {
     { id: "references", heading: "Additional references", body: [], links: SHOWNOTES.references },
   ],
 };
-
-export function stopContent(id: string): StopContent | undefined {
-  return content.stops.find((s) => s.id === id);
-}

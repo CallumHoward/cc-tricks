@@ -11,7 +11,7 @@ export const remap = (x: number, a0: number, a1: number, b0: number, b1: number)
 export const prog = (x: number, a: number, b: number, ease: Ease = linear): number =>
   ease(b === a ? (x >= b ? 1 : 0) : clamp((x - a) / (b - a)));
 
-export const linear: Ease = (u) => u;
+const linear: Ease = (u) => u;
 export const inQuad: Ease = (u) => u * u;
 export const outQuad: Ease = (u) => u * (2 - u);
 export const inOutQuad: Ease = (u) => (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2);

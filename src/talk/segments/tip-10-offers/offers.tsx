@@ -46,6 +46,14 @@ const STAMP_AT: Readonly<Record<number, { x: number; y: number }>> = {
   2: { x: 0.64, y: 0.86 },
 };
 
+/** Stamp ink on ivory: the deeper clay keeps the stamps above 3:1 against the bone tickets. */
+const BONE_INK = {
+  color: "var(--clay-deep)",
+  borderColor: "var(--clay-deep)",
+  boxShadow: "inset 0 0 0 2px var(--clay-deep)",
+  outlineColor: "var(--clay-deep)",
+} as const;
+
 const PEEK_ACTS: readonly Act[] = [
   { kind: "surprised", at: T10.peekAt + 0.3, dur: 0.3 },
   { kind: "look", at: T10.peekAt + 0.2, dur: Number.POSITIVE_INFINITY, x: -1, y: 0.9 },
@@ -184,6 +192,7 @@ function Rail({ row, rate }: { row: 0 | 1; rate: number }) {
             rotate={index === 1 ? -6 : 8}
             seed={index + 2}
             style={{
+              ...BONE_INK,
               left: colX(col) + colW(col) * BOARD.scale * (STAMP_AT[index]?.x ?? 0.6),
               top: ROW_H * (STAMP_AT[index]?.y ?? 0.74),
             }}

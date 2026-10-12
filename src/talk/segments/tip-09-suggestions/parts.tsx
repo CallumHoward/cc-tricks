@@ -5,13 +5,13 @@ import { useFrame } from "#/engine/stage/react";
 import type { Frame } from "#/engine/types";
 import { num, put } from "#/talk/kit/motion/dom";
 import { Chevron, HOME } from "#/talk/kit/tui";
+import { DisplayWindow } from "#/talk/segments/shared/display-window";
+
+import { sinkAt } from "./tracks";
 
 export const FILL: CSSProperties = { position: "absolute", inset: 0 };
 
-/**
- * Children rendered only while τ ∈ [from, to). Uses `display` (written only when it flips): kit
- * parts set `visibility: visible` on themselves, which would show through a hidden parent.
- */
+/** Children rendered only while τ ∈ [from, to), filling the stage. */
 export function During({
   from,
   to,
@@ -23,14 +23,10 @@ export function During({
   children: ReactNode;
   style?: CSSProperties;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useFrame((frame: Frame) => {
-    put(ref.current, "display", frame.tau >= from && frame.tau < to ? "block" : "none");
-  });
   return (
-    <div ref={ref} style={{ ...FILL, display: "none", ...style }}>
+    <DisplayWindow from={from} to={to} style={{ ...FILL, ...style }}>
       {children}
-    </div>
+    </DisplayWindow>
   );
 }
 
@@ -57,8 +53,21 @@ export function Layer({
   );
 }
 
-/** The submitted prompt as it sits in the transcript: `❯ text`, rising through its mask at `at`. */
-export function Echo({ text, at, style }: { text: string; at: number; style?: CSSProperties }) {
+/**
+ * The submitted prompt as it sits in the transcript: `❯ text`, rising through its mask at `at` and
+ * sinking back at `outAt`.
+ */
+export function Echo({
+  text,
+  at,
+  outAt,
+  style,
+}: {
+  text: string;
+  at: number;
+  outAt?: number;
+  style?: CSSProperties;
+}) {
   return (
     <div
       className="tui type-code"
@@ -70,7 +79,8 @@ export function Echo({ text, at, style }: { text: string; at: number; style?: CS
         style={{ color: "var(--text)" }}
         write={(el, frame) => {
           const u = prog(frame.tau, at, at + 0.32, outExpo);
-          put(el, "transform", `translate3d(0, ${num((1 - u) * 110, 2)}%, 0)`);
+          const y = (1 - u) * 1.1 + sinkAt(frame.tau, outAt);
+          put(el, "transform", `translate3d(0, ${num(y * 100, 2)}%, 0)`);
         }}
       >
         <span className="tui-clay">

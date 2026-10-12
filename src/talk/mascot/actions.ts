@@ -26,8 +26,6 @@ export type Act =
   | { kind: "sweat"; at: number; dur: number }
   | { kind: "type"; at: number; dur: number };
 
-export type ActKind = Act["kind"];
-
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
 /** 0 → 1 → 0 weight over [0, dur] with eased ramps; holds 1 for an infinite dur. */
@@ -103,7 +101,7 @@ export function blinkAt(w: number): number {
   return Math.max(one(local - start), twice);
 }
 
-export function breatheAt(w: number, period = 3.4, depth = 0.018): number {
+function breatheAt(w: number, period = 3.4, depth = 0.018): number {
   return 1 + depth * Math.sin((2 * Math.PI * w) / period);
 }
 
@@ -111,163 +109,156 @@ function addArm(arm: Arm, rot: number, k: number) {
   arm.rot += rot * k;
 }
 
+type ActOf<K extends Act["kind"]> = Extract<Act, { kind: K }>;
+
+/** Layers one act onto the pose; `t` is time since the act started (always > 0). */
+type ActHandler<K extends Act["kind"]> = (p: Pose, act: ActOf<K>, t: number) => void;
+
+const ACT_HANDLERS: { [K in Act["kind"]]: ActHandler<K> } = {
+  face: (p, act, t) => {
+    applyExpression(p, act.expr, envelope(t, act.dur, 0.12, 0.16));
+  },
+  look: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.12, 0.2);
+    const lag = envelope(t - 0.08, act.dur, 0.25, 0.25);
+    p.lookX += (act.x - p.lookX) * k;
+    p.lookY += (act.y - p.lookY) * k;
+    p.lean += 3 * act.x * lag;
+  },
+  turn: () => {},
+  walk: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.1, 0.15);
+    if (k <= 0) return;
+    const rate = act.stepRate ?? 4;
+    const w = walkPose(Math.min(t, act.dur) * (rate / 2));
+    const dir = Math.sign(act.dx) || 1;
+    w.legs.forEach((leg, i) => {
+      p.legs[i].swing += leg.swing * k;
+      p.legs[i].lift += leg.lift * k;
+    });
+    p.bob += w.bob * k;
+    p.sq *= 1 + (w.sq - 1) * k;
+    p.lean += (dir * 5 * Math.abs(Math.sin((p.yaw * Math.PI) / 180)) + w.roll) * k;
+    addArm(p.armL, w.armSwing, k);
+    addArm(p.armR, -w.armSwing, k);
+    p.armL.fwd += w.armSwing * 1.4 * k;
+    p.armR.fwd -= w.armSwing * 1.4 * k;
+  },
+  hop: (p, act, t) => {
+    const h = hopPose(t, act.height, act.air);
+    p.lift += h.lift;
+    p.sq *= h.sq;
+    addArm(p.armL, h.arms, 1);
+    addArm(p.armR, h.arms, 1);
+    mixEye(p.eyeL, { open: 1 + h.eyes, size: 1 + Math.max(0, h.eyes) * 0.4 }, 1);
+    mixEye(p.eyeR, { open: 1 + h.eyes, size: 1 + Math.max(0, h.eyes) * 0.4 }, 1);
+  },
+  wave: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.2, 0.25);
+    const arm = act.side === "L" ? p.armL : p.armR;
+    mixArm(arm, { rot: -66 + 24 * Math.sin(t * 2 * Math.PI * 2.4), len: 1.3 }, k);
+    p.lean += (act.side === "L" ? -3 : 3) * Math.sin(t * 2 * Math.PI * 1.2) * k;
+    applyExpression(p, "happy", k);
+  },
+  point: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.22, 0.25);
+    const pull = Math.sin(clamp01(t / 0.12) * Math.PI) * (1 - clamp01(t / 0.24));
+    const arm = act.side === "L" ? p.armL : p.armR;
+    mixArm(arm, { rot: act.angle + 20 * pull, len: 1.45 - 0.3 * pull }, k);
+    const sign = act.side === "L" ? -1 : 1;
+    p.lookX += (sign * 0.9 - p.lookX) * k;
+    p.lookY += (Math.sin((act.angle * Math.PI) / 180) * 0.6 - p.lookY) * k;
+    p.lean += sign * 4 * k;
+  },
+  shrug: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.2, 0.25);
+    mixArm(p.armL, { rot: -38, len: 0.95 }, k);
+    mixArm(p.armR, { rot: -38, len: 0.95 }, k);
+    p.bob -= 6 * k;
+    p.sq *= 1 + 0.04 * k;
+    p.lean += 5 * k;
+    applyExpression(p, "sideEye", k * 0.8);
+    if (k > 0.5) p.mouth = "wavy";
+  },
+  celebrate: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.15, 0.25);
+    const beat = (t * 2) % 1;
+    const h = hopPose(beat * 0.5 + 0.0, 46, 0.3);
+    p.lift += h.lift * k;
+    p.sq *= 1 + (h.sq - 1) * k;
+    const wiggle = 14 * Math.sin(t * 2 * Math.PI * 4);
+    mixArm(p.armL, { rot: -58 + wiggle, len: 1.15 }, k);
+    mixArm(p.armR, { rot: -58 - wiggle, len: 1.15 }, k);
+    applyExpression(p, "joy", k);
+    if (k > 0) p.fx.sparkle = 1e-3 + ((t * 0.9) % 1);
+  },
+  surprised: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.06, 0.3);
+    const jolt = springAt(t, SPRINGS.POP, 1.16, 1);
+    p.sq *= 1 + (jolt - 1) * k;
+    p.lift += 14 * Math.sin(clamp01(t / 0.3) * Math.PI) * k;
+    mixArm(p.armL, { rot: -24, len: 1.1 }, k);
+    mixArm(p.armR, { rot: -24, len: 1.1 }, k);
+    applyExpression(p, "surprised", k);
+    p.fx.alert = Math.max(p.fx.alert, springAt(t, SPRINGS.POP_CARTOON) * k);
+  },
+  sleepy: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.6, 0.3);
+    applyExpression(p, "sleepy", k);
+    p.sq *= 1 + 0.025 * Math.sin(t * 2 * Math.PI * 0.25) * k;
+    p.lean += 3 * Math.sin(t * 2 * Math.PI * 0.18) * k;
+    mixArm(p.armL, { rot: 55, len: 0.9 }, k);
+    mixArm(p.armR, { rot: 55, len: 0.9 }, k);
+    if (k > 0.05) p.fx.zzz = 1e-3 + ((t * 0.45) % 1);
+  },
+  carry: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.25, 0.25);
+    mixArm(p.armL, { rot: -72, len: 1.25 }, k);
+    mixArm(p.armR, { rot: -72, len: 1.25 }, k);
+    p.sq *= 1 - 0.05 * k;
+    applyExpression(p, "determined", k * 0.7);
+    if (k > 0.5) p.prop = "box";
+  },
+  push: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.25, 0.25);
+    const dir = act.dir ?? 1;
+    const lead = dir > 0 ? p.armR : p.armL;
+    const trail = dir > 0 ? p.armL : p.armR;
+    mixArm(lead, { rot: -4, len: 1.25 }, k);
+    mixArm(trail, { rot: 30, len: 1, fwd: 40 }, k);
+    p.lean += dir * 12 * k;
+    const strain = walkPose(t * 1.5, 6);
+    strain.legs.forEach((leg, i) => {
+      p.legs[i].lift += leg.lift * 0.5 * k;
+    });
+    applyExpression(p, "determined", k);
+    if (k > 0.05) p.fx.sweat = 1e-3 + ((t * 0.8) % 1);
+    if (k > 0.5) {
+      p.prop = "crate";
+      p.propReach = dir * 152;
+    }
+  },
+  sweat: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.1, 0.1);
+    if (k > 0.05) p.fx.sweat = 1e-3 + ((t * 0.8) % 1);
+  },
+  type: (p, act, t) => {
+    const k = envelope(t, act.dur, 0.2, 0.25);
+    const tap = (ph: number) => Math.max(0, Math.sin(t * 2 * Math.PI * 5 + ph));
+    mixArm(p.armL, { rot: 58 + 14 * tap(0), len: 1.1, fwd: 70 }, k);
+    mixArm(p.armR, { rot: 58 + 14 * tap(Math.PI), len: 1.1, fwd: 70 }, k);
+    p.bob += 1.5 * (tap(0) + tap(Math.PI)) * k;
+    p.lookY += (0.7 - p.lookY) * k;
+    mixEye(p.eyeL, { open: 0.75, slant: 0.4 }, k);
+    mixEye(p.eyeR, { open: 0.75, slant: 0.4 }, k);
+    if (k > 0.5) p.prop = "keyboard";
+  },
+};
+
 function applyAct(p: Pose, act: Act, tau: number): void {
   const t = tau - act.at;
   if (t <= 0) return;
-  switch (act.kind) {
-    case "face":
-      applyExpression(p, act.expr, envelope(t, act.dur, 0.12, 0.16));
-      return;
-    case "look": {
-      const k = envelope(t, act.dur, 0.12, 0.2);
-      const lag = envelope(t - 0.08, act.dur, 0.25, 0.25);
-      p.lookX += (act.x - p.lookX) * k;
-      p.lookY += (act.y - p.lookY) * k;
-      p.lean += 3 * act.x * lag;
-      return;
-    }
-    case "turn":
-      return;
-    case "walk": {
-      const k = envelope(t, act.dur, 0.1, 0.15);
-      if (k <= 0) return;
-      const rate = act.stepRate ?? 4;
-      const w = walkPose(Math.min(t, act.dur) * (rate / 2));
-      const dir = Math.sign(act.dx) || 1;
-      w.legs.forEach((leg, i) => {
-        p.legs[i].swing += leg.swing * k;
-        p.legs[i].lift += leg.lift * k;
-      });
-      p.bob += w.bob * k;
-      p.sq *= 1 + (w.sq - 1) * k;
-      p.lean += (dir * 5 * Math.abs(Math.sin((p.yaw * Math.PI) / 180)) + w.roll) * k;
-      addArm(p.armL, w.armSwing, k);
-      addArm(p.armR, -w.armSwing, k);
-      p.armL.fwd += w.armSwing * 1.4 * k;
-      p.armR.fwd -= w.armSwing * 1.4 * k;
-      return;
-    }
-    case "hop": {
-      const h = hopPose(t, act.height, act.air);
-      p.lift += h.lift;
-      p.sq *= h.sq;
-      addArm(p.armL, h.arms, 1);
-      addArm(p.armR, h.arms, 1);
-      mixEye(p.eyeL, { open: 1 + h.eyes, size: 1 + Math.max(0, h.eyes) * 0.4 }, 1);
-      mixEye(p.eyeR, { open: 1 + h.eyes, size: 1 + Math.max(0, h.eyes) * 0.4 }, 1);
-      return;
-    }
-    case "wave": {
-      const k = envelope(t, act.dur, 0.2, 0.25);
-      const arm = act.side === "L" ? p.armL : p.armR;
-      mixArm(arm, { rot: -66 + 24 * Math.sin(t * 2 * Math.PI * 2.4), len: 1.3 }, k);
-      p.lean += (act.side === "L" ? -3 : 3) * Math.sin(t * 2 * Math.PI * 1.2) * k;
-      applyExpression(p, "happy", k);
-      return;
-    }
-    case "point": {
-      const k = envelope(t, act.dur, 0.22, 0.25);
-      const pull = Math.sin(clamp01(t / 0.12) * Math.PI) * (1 - clamp01(t / 0.24));
-      const arm = act.side === "L" ? p.armL : p.armR;
-      mixArm(arm, { rot: act.angle + 20 * pull, len: 1.45 - 0.3 * pull }, k);
-      const sign = act.side === "L" ? -1 : 1;
-      p.lookX += (sign * 0.9 - p.lookX) * k;
-      p.lookY += (Math.sin((act.angle * Math.PI) / 180) * 0.6 - p.lookY) * k;
-      p.lean += sign * 4 * k;
-      return;
-    }
-    case "shrug": {
-      const k = envelope(t, act.dur, 0.2, 0.25);
-      mixArm(p.armL, { rot: -38, len: 0.95 }, k);
-      mixArm(p.armR, { rot: -38, len: 0.95 }, k);
-      p.bob -= 6 * k;
-      p.sq *= 1 + 0.04 * k;
-      p.lean += 5 * k;
-      applyExpression(p, "sideEye", k * 0.8);
-      if (k > 0.5) p.mouth = "wavy";
-      return;
-    }
-    case "celebrate": {
-      const k = envelope(t, act.dur, 0.15, 0.25);
-      const beat = (t * 2) % 1;
-      const h = hopPose(beat * 0.5 + 0.0, 46, 0.3);
-      p.lift += h.lift * k;
-      p.sq *= 1 + (h.sq - 1) * k;
-      const wiggle = 14 * Math.sin(t * 2 * Math.PI * 4);
-      mixArm(p.armL, { rot: -58 + wiggle, len: 1.15 }, k);
-      mixArm(p.armR, { rot: -58 - wiggle, len: 1.15 }, k);
-      applyExpression(p, "joy", k);
-      if (k > 0) p.fx.sparkle = 1e-3 + ((t * 0.9) % 1);
-      return;
-    }
-    case "surprised": {
-      const k = envelope(t, act.dur, 0.06, 0.3);
-      const jolt = springAt(t, SPRINGS.POP, 1.16, 1);
-      p.sq *= 1 + (jolt - 1) * k;
-      p.lift += 14 * Math.sin(clamp01(t / 0.3) * Math.PI) * k;
-      mixArm(p.armL, { rot: -24, len: 1.1 }, k);
-      mixArm(p.armR, { rot: -24, len: 1.1 }, k);
-      applyExpression(p, "surprised", k);
-      p.fx.alert = Math.max(p.fx.alert, springAt(t, SPRINGS.POP_CARTOON) * k);
-      return;
-    }
-    case "sleepy": {
-      const k = envelope(t, act.dur, 0.6, 0.3);
-      applyExpression(p, "sleepy", k);
-      p.sq *= 1 + 0.025 * Math.sin(t * 2 * Math.PI * 0.25) * k;
-      p.lean += 3 * Math.sin(t * 2 * Math.PI * 0.18) * k;
-      mixArm(p.armL, { rot: 55, len: 0.9 }, k);
-      mixArm(p.armR, { rot: 55, len: 0.9 }, k);
-      if (k > 0.05) p.fx.zzz = 1e-3 + ((t * 0.45) % 1);
-      return;
-    }
-    case "carry": {
-      const k = envelope(t, act.dur, 0.25, 0.25);
-      mixArm(p.armL, { rot: -72, len: 1.25 }, k);
-      mixArm(p.armR, { rot: -72, len: 1.25 }, k);
-      p.sq *= 1 - 0.05 * k;
-      applyExpression(p, "determined", k * 0.7);
-      if (k > 0.5) p.prop = "box";
-      return;
-    }
-    case "push": {
-      const k = envelope(t, act.dur, 0.25, 0.25);
-      const dir = act.dir ?? 1;
-      const lead = dir > 0 ? p.armR : p.armL;
-      const trail = dir > 0 ? p.armL : p.armR;
-      mixArm(lead, { rot: -4, len: 1.25 }, k);
-      mixArm(trail, { rot: 30, len: 1, fwd: 40 }, k);
-      p.lean += dir * 12 * k;
-      const strain = walkPose(t * 1.5, 6);
-      strain.legs.forEach((leg, i) => {
-        p.legs[i].lift += leg.lift * 0.5 * k;
-      });
-      applyExpression(p, "determined", k);
-      if (k > 0.05) p.fx.sweat = 1e-3 + ((t * 0.8) % 1);
-      if (k > 0.5) {
-        p.prop = "crate";
-        p.propReach = dir * 152;
-      }
-      return;
-    }
-    case "sweat": {
-      const k = envelope(t, act.dur, 0.1, 0.1);
-      if (k > 0.05) p.fx.sweat = 1e-3 + ((t * 0.8) % 1);
-      return;
-    }
-    case "type": {
-      const k = envelope(t, act.dur, 0.2, 0.25);
-      const tap = (ph: number) => Math.max(0, Math.sin(t * 2 * Math.PI * 5 + ph));
-      mixArm(p.armL, { rot: 58 + 14 * tap(0), len: 1.1, fwd: 70 }, k);
-      mixArm(p.armR, { rot: 58 + 14 * tap(Math.PI), len: 1.1, fwd: 70 }, k);
-      p.bob += 1.5 * (tap(0) + tap(Math.PI)) * k;
-      p.lookY += (0.7 - p.lookY) * k;
-      mixEye(p.eyeL, { open: 0.75, slant: 0.4 }, k);
-      mixEye(p.eyeR, { open: 0.75, slant: 0.4 }, k);
-      if (k > 0.5) p.prop = "keyboard";
-      return;
-    }
-  }
+  (ACT_HANDLERS[act.kind] as ActHandler<Act["kind"]>)(p, act, t);
 }
 
 /** Persistent state accumulated from finished-or-running acts: facing and walked distance. */

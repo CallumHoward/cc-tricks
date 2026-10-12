@@ -43,7 +43,7 @@ function EffortMark({ effort }: { effort: "low" | "max" }) {
 }
 
 /** "A · B · C" → ["A", "B · C"] so the long source line breaks at its first dot. */
-export function splitFirst(text: string, sep: string): [string, string] {
+function splitFirst(text: string, sep: string): [string, string] {
   const i = text.indexOf(sep);
   return i < 0 ? [text, ""] : [text.slice(0, i), text.slice(i + sep.length)];
 }

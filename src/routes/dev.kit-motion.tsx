@@ -30,12 +30,15 @@ import "#/talk/talk.css";
 
 type Search = { scene: string; tau?: number; v?: number; chrome: boolean };
 
+const optionalNumber = (x: unknown) => (x === undefined ? undefined : Number(x));
+const isOn = (x: unknown) => x !== false && x !== "0" && x !== 0;
+
 export const Route = createFileRoute("/dev/kit-motion")({
   validateSearch: (s: Record<string, unknown>): Search => ({
     scene: typeof s.scene === "string" ? s.scene : "world",
-    tau: s.tau === undefined ? undefined : Number(s.tau),
-    v: s.v === undefined ? undefined : Number(s.v),
-    chrome: s.chrome !== false && s.chrome !== "0" && s.chrome !== 0,
+    tau: optionalNumber(s.tau),
+    v: optionalNumber(s.v),
+    chrome: isOn(s.chrome),
   }),
   component: KitMotionGallery,
 });

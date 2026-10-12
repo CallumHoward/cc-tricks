@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 import { inOutCubic, outCubic, prog } from "#/engine/motion/ease";
-import { useStage, useTrack } from "#/engine/stage/react";
+import { useTrack } from "#/engine/stage/react";
 import { LAYA_BARS, LAYA_FOOT, LAYA_INPUT } from "#/talk/data/laya";
 import { ProbBars } from "#/talk/kit/data/prob-bars";
 import { RuleRise } from "#/talk/kit/motion";
@@ -9,6 +9,7 @@ import { Chevron } from "#/talk/kit/tui";
 import { scriptFor } from "#/talk/script";
 import { Layer, Live, Typed, Wiped } from "#/talk/segments/tip-03-effort/bracket";
 import { inCubic } from "#/talk/segments/tip-03-effort/tracks";
+import { type Guess, GuessChips } from "#/talk/widgets/guess-chips";
 import { WidgetShell } from "#/talk/widgets/widget-shell";
 
 import { PROB } from "./system-one";
@@ -17,12 +18,9 @@ import { TB } from "./timing";
 const script = scriptFor("b-laya");
 const SETTLE = TB.laya.at - 0.8;
 const EXIT = TB.laya.holdEnd;
-const GUESSES = ["billing", "technical"] as const;
-
 /** W6, folded into the film: the τ bars are the reveal; a guess replays them on the wall clock. */
 function Predict() {
-  const stage = useStage();
-  const [guess, setGuess] = useState<{ pick: string; at: number } | null>(null);
+  const [guess, setGuess] = useState<Guess | null>(null);
   return (
     <WidgetShell label="Predict, then reveal" className="seg-fill">
       <Layer track={barsWipe}>
@@ -50,17 +48,7 @@ function Predict() {
       <Wiped at={SETTLE - 0.5} className="seg-abs" style={{ left: 360, top: 904 }}>
         <div className="wg-row">
           <span className="type-label seg-soft">Billing or technical?</span>
-          {GUESSES.map((g) => (
-            <button
-              key={g}
-              type="button"
-              className="wg-chip type-label"
-              aria-pressed={guess?.pick === g}
-              onClick={() => setGuess({ pick: g, at: stage.frame().w })}
-            >
-              {g}
-            </button>
-          ))}
+          <GuessChips guess={guess} onGuess={setGuess} />
         </div>
       </Wiped>
     </WidgetShell>

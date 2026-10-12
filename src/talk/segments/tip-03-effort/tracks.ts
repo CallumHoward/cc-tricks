@@ -31,7 +31,7 @@ const lerpPt = (a: Pt, b: Pt, u: number): Pt => ({
 });
 
 /** Cumulative arc length at each vertex of a polyline. */
-export function arcLengths(points: readonly Pt[]): number[] {
+function arcLengths(points: readonly Pt[]): number[] {
   const out = [0];
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1] as Pt;

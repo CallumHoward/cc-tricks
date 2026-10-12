@@ -25,6 +25,46 @@ export type ScatterChartProps = {
   className?: string;
 };
 
+/** One model's mark: hit target, selection ring, and its effort glyph (or a plain dot). */
+function MarkerGlyph({
+  p,
+  r,
+  selected,
+  interactive,
+}: {
+  p: AaPoint;
+  r: number;
+  selected: boolean;
+  interactive: boolean;
+}) {
+  const fam = aaFamily(p);
+  const opus = fam === "opus";
+  return (
+    <>
+      {interactive ? <circle r={32} fill="transparent" /> : null}
+      {selected ? <circle r={r + 14} fill="none" stroke="var(--clay-hi)" strokeWidth={3} /> : null}
+      {fam === "other" ? (
+        <circle r={9} fill="var(--muted)" />
+      ) : (
+        <>
+          <path
+            d={effortGlyph(p.effort, r)}
+            stroke={opus ? "var(--clay)" : "var(--text)"}
+            strokeWidth={opus ? 6 : 3.5}
+            strokeLinecap="round"
+          />
+          <circle
+            r={r * 0.22}
+            fill={opus ? "var(--clay)" : "var(--bg)"}
+            stroke={opus ? "none" : "var(--text)"}
+            strokeWidth={2}
+          />
+        </>
+      )}
+    </>
+  );
+}
+
 /** AA Intelligence Index vs cost per task, with effort glyphs, the frontier and typed callouts. */
 export function ScatterChart({
   start,
@@ -176,7 +216,6 @@ export function ScatterChart({
           opacity={0.75}
         />
         {layout.markers.map((m, i) => {
-          const fam = aaFamily(m.p);
           const isSel = selected === m.p.slug;
           const interactive = onSelect !== undefined;
           return (
@@ -195,28 +234,7 @@ export function ScatterChart({
               style={interactive ? { cursor: "pointer", outline: "none" } : undefined}
               data-slug={m.p.slug}
             >
-              {interactive ? <circle r={32} fill="transparent" /> : null}
-              {isSel ? (
-                <circle r={m.r + 14} fill="none" stroke="var(--clay-hi)" strokeWidth={3} />
-              ) : null}
-              {fam === "other" ? (
-                <circle r={9} fill="var(--muted)" />
-              ) : (
-                <>
-                  <path
-                    d={effortGlyph(m.p.effort, m.r)}
-                    stroke={fam === "opus" ? "var(--clay)" : "var(--text)"}
-                    strokeWidth={fam === "opus" ? 6 : 3.5}
-                    strokeLinecap="round"
-                  />
-                  <circle
-                    r={m.r * 0.22}
-                    fill={fam === "opus" ? "var(--clay)" : "var(--bg)"}
-                    stroke={fam === "opus" ? "none" : "var(--text)"}
-                    strokeWidth={2}
-                  />
-                </>
-              )}
+              <MarkerGlyph p={m.p} r={m.r} selected={isSel} interactive={interactive} />
             </g>
           );
         })}

@@ -1,4 +1,6 @@
 import { outCubic, prog } from "#/engine/motion/ease";
+import { settleTime, SPRINGS } from "#/engine/motion/spring";
+import { firstImpact } from "#/talk/segments/tip-06-cli-agents/cue-timing";
 
 export const TIP8 = {
   window: { start: 209.4, end: 222.9 },
@@ -14,7 +16,8 @@ export const TIP8 = {
   board: { foldStart: 216.55, foldEnd: 217.1 },
   towers: { start: 216.7, cursorEnd: 217.3, ccSettle: 218.7 },
   headline: 218.5,
-  stamp: 218.7,
+  /** The ANECDOTAL stamp hits the paper on the storyboard's slam */
+  stampHit: 218.3,
   foot: { start: 217.9, cps: 90 },
   x18: { at: 219.5, hold: 2 },
   exit: 221.5,
@@ -68,4 +71,17 @@ export function flapCounter(tau: number): number {
   const start = rows[0];
   const settle = cache.at - 0.8;
   return 140_000 * outCubic(prog(tau, start, settle)) + Math.max(0, tau - settle) * 0.62;
+}
+
+/** Digit places of a `digits`-wide counter, most significant first, flagging where "," follows. */
+export function counterPlaces(digits: number): { place: number; comma: boolean }[] {
+  return Array.from({ length: digits }, (_, i) => {
+    const place = digits - 1 - i;
+    return { place, comma: place > 0 && place % 3 === 0 };
+  });
+}
+
+/** `settleBy` for a kit `Stamp` whose first impact lands at `hit`. */
+export function stampSettleFor(hit: number): number {
+  return hit + settleTime(SPRINGS.SLAM) - firstImpact(0, SPRINGS.SLAM);
 }

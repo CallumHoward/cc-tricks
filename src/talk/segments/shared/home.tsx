@@ -1,7 +1,4 @@
-import { useRef } from "react";
-
-import { useFrame } from "#/engine/stage/react";
-import type { Frame } from "#/engine/types";
+import { useVisibleWindow } from "#/engine/stage/react";
 import { ContextBar } from "#/talk/kit/motion";
 import { HOME, Pile, PromptBox } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
@@ -17,14 +14,6 @@ export const HOME_ZONES = [
   { id: "claude-md", size: 10, state: "cached" as const },
   { id: "messages", size: 30, state: "paid" as const },
 ];
-
-/**
- * Tokens pocketed after tip `n`; tips pocket one each on their exit, so the pile is `n` after tip
- * n.
- */
-export function pileAfterTip(n: number): number {
-  return Math.max(0, Math.min(10, n));
-}
 
 const IDLE: readonly Act[] = [];
 
@@ -46,17 +35,7 @@ export function HomeRest({
   acts?: readonly Act[];
   bot?: boolean;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useFrame((frame: Frame) => {
-    const el = ref.current;
-    if (!el) return;
-    const visible = frame.tau >= from && frame.tau < to;
-    const next = visible ? "1" : "0";
-    if (el.style.opacity !== next) {
-      el.style.opacity = next;
-      el.style.pointerEvents = visible ? "" : "none";
-    }
-  });
+  const ref = useVisibleWindow<HTMLDivElement>(from, to);
   return (
     <div ref={ref} style={{ position: "absolute", inset: 0, opacity: 0, pointerEvents: "none" }}>
       <PromptBox

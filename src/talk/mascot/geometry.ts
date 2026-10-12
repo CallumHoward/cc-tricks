@@ -30,7 +30,7 @@ export function polyPath(pts: readonly Pt[], closed = false): string {
 }
 
 /** Resamples a closed polyline to `count` points evenly spaced by arc length. */
-export function resample(pts: readonly Pt[], count: number): Pt[] {
+function resample(pts: readonly Pt[], count: number): Pt[] {
   const n = pts.length;
   const cum = [0];
   for (let i = 1; i <= n; i++) {

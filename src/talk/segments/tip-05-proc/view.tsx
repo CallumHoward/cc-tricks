@@ -22,7 +22,7 @@ import { HORIZON, T5, T5_TOKENS } from "./timing";
 const NAP: Pt = { x: 290, y: HORIZON };
 
 /** Bot: hops off home to nap at the dawn end of the ruler, then comes home to pocket a token. */
-export const botPath: BotPath = (tau) => {
+const botPath: BotPath = (tau) => {
   if (tau < 162.65) return { ...BOT_FEET, scale: 1 };
   if (tau < T5.chain.holdEnd) {
     const u = prog(tau, 162.65, 163.4, outCubic);

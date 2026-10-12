@@ -28,7 +28,7 @@ function boot({ stops, segments, tuning }: Omit<Props, "children">) {
   return { start, stage: createStage({ clock, stops, segments }) };
 }
 
-export function openPresenterWindow(): void {
+function openPresenterWindow(): void {
   window.open("/presenter", "cc-tricks-presenter", "popup,width=1280,height=800");
 }
 

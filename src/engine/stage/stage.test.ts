@@ -5,6 +5,14 @@ import type { Frame, Stop } from "#/engine/types";
 
 import { createStage, inMountWindow, mountedAt, PRIORITY, type StageCommand } from "./stage";
 
+/** Lets the frozen-frame readiness chain run: microtasks around a few scheduler flushes. */
+async function settle(scheduler: { flush: () => void }) {
+  for (let i = 0; i < 6; i++) {
+    await Promise.resolve();
+    scheduler.flush();
+    await Promise.resolve();
+  }
+}
 describe("createStage", () => {
   const STOPS: readonly Stop[] = [
     { id: "a", at: 2, holdSpan: 2 },
@@ -178,11 +186,7 @@ describe("createStage", () => {
     expect(frames[0]).toEqual({ tau: 7, v: 0, w: 3, dt: 0 });
     expect(window.__stageReady).toBe(false);
 
-    for (let i = 0; i < 6; i++) {
-      await Promise.resolve();
-      scheduler.flush();
-      await Promise.resolve();
-    }
+    await settle(scheduler);
 
     expect(window.__stageReady).toBe(true);
     expect(stage.frozen).toBe(true);
@@ -200,11 +204,7 @@ describe("createStage", () => {
     expect(window.__stageReady).toBeUndefined();
 
     release();
-    for (let i = 0; i < 6; i++) {
-      await Promise.resolve();
-      scheduler.flush();
-      await Promise.resolve();
-    }
+    await settle(scheduler);
     expect(window.__stageReady).toBe(true);
   });
 

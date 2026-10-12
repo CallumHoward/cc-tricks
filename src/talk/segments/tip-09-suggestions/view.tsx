@@ -16,17 +16,18 @@ import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { scriptFor } from "#/talk/script";
 import { BOT_HOME, HOME_ZONES, HomeRest } from "#/talk/segments/shared/home";
+import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "#/talk/segments/shared/tip-title";
 
 import { During, Echo, FILL, Layer } from "./parts";
 import {
   botX,
   breakWords,
   collapseScale,
-  echoScale,
   foldAt,
   GHOST_TEXT,
   letterScale,
   PILE_KEYS,
+  riseStart,
   scrollY,
   strikeAt,
   sweepX,
@@ -35,6 +36,7 @@ import {
 } from "./tracks";
 
 const SCRIPT = scriptFor("t9-suggestions");
+const TITLE = SCRIPT.headline ?? GHOST_TEXT;
 const GHOST = SCRIPT.ui[0] ?? GHOST_TEXT;
 const CODE = SCRIPT.code[0]?.code ?? "";
 const [L1 = "", L2 = ""] = SCRIPT.lines;
@@ -46,8 +48,10 @@ const PROMPT_Y = HOME.promptTop + HOME.promptHeight / 2;
 const CH = 20.4;
 /** The fresh prompt's caret sits two cells right of the prompt's text origin. */
 const CARET_X = HOME.left + 40 + 2 * CH;
-const COPY_X = 1080;
+/** The claim sits right of the transcript under the title; the stat pairs with the docs footnote. */
+const COPY = { x: 1140, top: TIP_TITLE_TOP + TIP_TITLE_LINE + 32 };
 const TAPE = { x: 200, bottom: 740, width: 1200 };
+const STAT = { x: 1080, top: TAPE.bottom + 28 };
 
 const BOT_ACTS: readonly Act[] = [
   { kind: "look", at: T9.ghostAt, dur: 1.1, x: -1, y: 0.7 },
@@ -169,21 +173,12 @@ function FoldingPlate() {
           put(el, "transform", `translate3d(0, ${num(scrollY(frame.tau), 2)}px, 0)`)
         }
       >
-        <Layer
-          style={{
-            position: "absolute",
-            left: 0,
-            top: HOME.echoY,
-            transformOrigin: `${HOME.textX}px 0`,
-          }}
-          write={(el, frame) => put(el, "transform", `scale(${num(echoScale(frame.tau), 4)})`)}
-        >
-          <Echo
-            text={GHOST}
-            at={T9.submitAt + 0.2}
-            style={{ top: 0, transform: "translateY(-50%)" }}
-          />
-        </Layer>
+        <Echo
+          text={GHOST}
+          at={T9.submitAt + 0.2}
+          outAt={riseStart(TITLE, T9.titleSettle) - 0.4}
+          style={{ top: HOME.echoY, transform: "translateY(-50%)" }}
+        />
         <ReadToolRow
           tool="Update"
           arg="settings.json"
@@ -194,21 +189,27 @@ function FoldingPlate() {
         />
       </Layer>
 
+      <TipTitle text={TITLE} settleBy={T9.titleSettle} exit={T9.exit.foldAt} />
       <RuleRise
-        text={breakWords(L1, [6])}
+        text={breakWords(L1, [5])}
         settleBy={T9.copySettle}
         className="type-body"
         rule={false}
-        style={{ position: "absolute", left: COPY_X, top: 196, width: 700 }}
+        style={{ position: "absolute", left: COPY.x, top: COPY.top }}
       />
       <RuleRise
         text={L2}
         settleBy={T9.copySettle + 0.12}
         className="type-body"
         rule={false}
-        style={{ position: "absolute", left: COPY_X, top: 318, color: "var(--clay-hi)" }}
+        style={{ position: "absolute", left: STAT.x, top: STAT.top, color: "var(--clay-hi)" }}
       />
-      <Stamp text={STAMP} settleBy={T9.stampSettle} rotate={-8} style={{ left: 1430, top: 436 }} />
+      <Stamp
+        text={STAMP}
+        settleBy={T9.stampSettle}
+        rotate={-6}
+        style={{ left: STAT.x + 340, top: STAT.top + 100 }}
+      />
       <GhostSweep />
       <RuleRise
         text={FOOT}

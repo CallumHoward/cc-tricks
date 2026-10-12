@@ -1,7 +1,7 @@
 import type { Stage } from "#/engine/stage/stage";
 import type { NavAction } from "#/engine/types";
 
-export const PRESENTER_CHANNEL = "cc-tricks-presenter";
+const PRESENTER_CHANNEL = "cc-tricks-presenter";
 
 export type StateMessage = {
   type: "state";

@@ -34,8 +34,6 @@ export type SegmentData = {
   owner: string;
 };
 
-export const FPS = 60;
-
 export const STOPS: readonly StopData[] = [
   {
     id: "title",

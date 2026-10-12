@@ -13,7 +13,7 @@ import {
 const EFFORT_RANK: Record<AaEffort, number> = { low: 0, medium: 1, high: 2, xhigh: 3, max: 4 };
 const X_TICKS = [0.3, 1, 3, 10] as const;
 const Y_TICKS = [30, 40, 50, 60] as const;
-export const CHAR_W = 18;
+const CHAR_W = 18;
 export const LINE_H = 36;
 
 export const DEFAULT_CALLOUTS = [
@@ -37,7 +37,7 @@ export function effortGlyph(effort: AaEffort, radius: number): string {
   return d;
 }
 
-export const glyphRadius = (effort: AaEffort) => 13 + EFFORT_RANK[effort] * 3.5;
+const glyphRadius = (effort: AaEffort) => 13 + EFFORT_RANK[effort] * 3.5;
 
 export type ScatterLayout = {
   plot: Rect;

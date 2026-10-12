@@ -77,7 +77,7 @@ function Chips() {
 }
 
 /** Flicker bar `i` in the right column; drains into its ProbBars track as b-laya begins. */
-export function flickerRect(i: number, tau: number, w: number) {
+function flickerRect(i: number, tau: number, w: number) {
   const home = { x: RIGHT.x, y: RIGHT.y + 72 + i * 44, w: 520, h: 24 };
   const goal = { x: TRACK_X, y: PROB.y + i * (PROB.rowH + PROB.gap) + 4, w: TRACK_W, h: 28 };
   const u = prog(tau, EXIT, EXIT + 0.5, outCubic);

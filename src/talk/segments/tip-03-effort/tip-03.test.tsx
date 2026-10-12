@@ -1,11 +1,11 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { renderAt } from "#/engine/stage/render-at";
 import { scriptFor } from "#/talk/script";
 
 import { splitCallout } from "./chart-plate";
 import { needleSeat } from "./dial-plate";
-import { renderAt } from "./render-at";
 import { BOT_ARC_AT, FRONTIER, OPUS_TARGETS, T3 } from "./timing";
 import { arcAt, pointAlong, typedCount } from "./tracks";
 import Tip03EffortSegment, { frontierArc } from "./view";

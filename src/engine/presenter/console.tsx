@@ -16,7 +16,7 @@ export type ConsoleStop = {
 type Received = { state: StateMessage | null; stopSince: number };
 
 /** Holds the latest stage state from the channel plus when the current stop began. */
-export function createStateStore(port: Port, now: () => number = Date.now) {
+function createStateStore(port: Port, now: () => number = Date.now) {
   let received: Received = { state: null, stopSince: now() };
   const listeners = new Set<() => void>();
   const onMessage = (event: MessageEvent) => {
@@ -75,6 +75,85 @@ export function PresenterConsole({
   return <ConsoleView store={store} stops={stops} budget={budget} />;
 }
 
+function ConsoleClock({
+  elapsed,
+  budget,
+  onStop,
+  current,
+  state,
+}: {
+  elapsed: number;
+  budget: number;
+  onStop: number;
+  current: ConsoleStop | undefined;
+  state: StateMessage;
+}) {
+  const status = pace(elapsed, state.target, state.stopIds.length, budget);
+  const target = current?.target;
+  return (
+    <header className="presenter-clock">
+      <span className="type-label" data-pace={status}>
+        {formatClock(elapsed)} / {formatClock(budget * 1000)}
+      </span>
+      <span
+        className="type-label"
+        data-pace={target && onStop > target * 1000 ? "behind" : undefined}
+      >
+        stop {formatClock(onStop)}
+        {target ? ` / ${formatClock(target * 1000)}` : ""}
+      </span>
+      <span className="type-label">
+        {state.target + 1} of {state.stopIds.length}
+      </span>
+    </header>
+  );
+}
+
+function ConsoleNav({ store }: { store: Store }) {
+  const nav = (action: NavAction) => store.send({ type: "nav", action });
+  return (
+    <nav className="presenter-buttons" aria-label="Stage navigation">
+      <button type="button" onClick={() => nav({ type: "prev" })}>
+        ← Back
+      </button>
+      <button type="button" onClick={() => nav({ type: "next" })}>
+        Next →
+      </button>
+      <button type="button" onClick={() => store.send({ type: "reset-timer" })}>
+        Reset timer
+      </button>
+    </nav>
+  );
+}
+
+/** Talk time since the first navigation; zero before the talk starts or the tick runs. */
+const elapsedSince = (startedAt: number | null, now: number) =>
+  startedAt === null || now === 0 ? 0 : now - startedAt;
+
+function StopPanels({
+  state,
+  current,
+  stops,
+}: {
+  state: StateMessage;
+  current: ConsoleStop | undefined;
+  stops: readonly ConsoleStop[];
+}) {
+  const nextId: string | undefined = state.stopIds[state.target + 1];
+  const next = stops.find((s) => s.id === nextId);
+  return (
+    <>
+      <section aria-label="Current stop" className="presenter-current">
+        <h1 className="presenter-title">{current?.title ?? state.stopId}</h1>
+        <p className="presenter-notes">{current?.notes ?? ""}</p>
+      </section>
+      <section aria-label="Next stop" className="presenter-next">
+        <h2 className="type-label">Next: {next?.title ?? nextId ?? "end"}</h2>
+      </section>
+    </>
+  );
+}
+
 function ConsoleView({
   store,
   stops,
@@ -93,50 +172,20 @@ function ConsoleView({
   if (!state)
     return <p className="presenter-waiting">Waiting for the stage… (open / in another window)</p>;
 
-  const byId = (id: string | undefined): ConsoleStop | undefined => stops.find((s) => s.id === id);
-  const current = byId(state.stopId);
-  const nextId: string | undefined = state.stopIds[state.target + 1];
-  const next = byId(nextId);
-  const elapsed = state.startedAt === null || now === 0 ? 0 : now - state.startedAt;
+  const current = stops.find((s) => s.id === state.stopId);
   const onStop = now === 0 ? 0 : Math.max(0, now - stopSince);
-  const status = pace(elapsed, state.target, state.stopIds.length, budget);
-  const nav = (action: NavAction) => store.send({ type: "nav", action });
 
   return (
     <div className="presenter" data-target={state.target}>
-      <header className="presenter-clock">
-        <span className="type-label" data-pace={status}>
-          {formatClock(elapsed)} / {formatClock(budget * 1000)}
-        </span>
-        <span
-          className="type-label"
-          data-pace={current?.target && onStop > current.target * 1000 ? "behind" : undefined}
-        >
-          stop {formatClock(onStop)}
-          {current?.target ? ` / ${formatClock(current.target * 1000)}` : ""}
-        </span>
-        <span className="type-label">
-          {state.target + 1} of {state.stopIds.length}
-        </span>
-      </header>
-      <section aria-label="Current stop" className="presenter-current">
-        <h1 className="presenter-title">{current?.title ?? state.stopId}</h1>
-        <p className="presenter-notes">{current?.notes ?? ""}</p>
-      </section>
-      <section aria-label="Next stop" className="presenter-next">
-        <h2 className="type-label">Next: {next?.title ?? nextId ?? "end"}</h2>
-      </section>
-      <nav className="presenter-buttons" aria-label="Stage navigation">
-        <button type="button" onClick={() => nav({ type: "prev" })}>
-          ← Back
-        </button>
-        <button type="button" onClick={() => nav({ type: "next" })}>
-          Next →
-        </button>
-        <button type="button" onClick={() => store.send({ type: "reset-timer" })}>
-          Reset timer
-        </button>
-      </nav>
+      <ConsoleClock
+        elapsed={elapsedSince(state.startedAt, now)}
+        budget={budget}
+        onStop={onStop}
+        current={current}
+        state={state}
+      />
+      <StopPanels state={state} current={current} stops={stops} />
+      <ConsoleNav store={store} />
     </div>
   );
 }

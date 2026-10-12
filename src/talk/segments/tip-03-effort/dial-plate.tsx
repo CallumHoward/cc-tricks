@@ -35,7 +35,7 @@ export function needleSeat(tau: number): number {
 }
 
 /** One effort glyph: unrolls from the spinner onto its dial seat, then floats to its Opus point. */
-export function glyphAt(i: number, tau: number): StyleValues {
+function glyphAt(i: number, tau: number): StyleValues {
   const seat = DIAL_SEATS[i] ?? SPIN_AT;
   const target = OPUS_TARGETS[i] ?? seat;
   const size = glyphSize(i);

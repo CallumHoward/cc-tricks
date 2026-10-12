@@ -4,6 +4,7 @@ import { RuleRise, SPIN_GLYPH } from "#/talk/kit/motion";
 import { Counter, ReadToolRow, SpinnerGlyph } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
 import { scriptFor } from "#/talk/script";
+import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "#/talk/segments/shared/tip-title";
 
 import { Bot, Chip, Fx, px, Rule, SegmentRoot, TipFrame, Typed, type StyleMap } from "./boundary";
 import {
@@ -17,7 +18,6 @@ import {
   wrapCard,
   type Point,
 } from "./timing";
-import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "./tip-title";
 
 const D = TIP6;
 const SPLIT_Y = 520;
@@ -209,7 +209,7 @@ const ACTS: readonly Act[] = [
   { kind: "hop", at: 190.75, height: 60 },
 ];
 
-export function CliAgentsPlate() {
+function CliAgentsPlate() {
   const paneFx = (frame: Frame): StyleMap => {
     const u = prog(frame.tau, D.split.start + 0.05, D.split.end + 0.05, outExpo);
     const shut = blind(frame.tau, 1);
@@ -296,7 +296,7 @@ export function CliAgentsPlate() {
       />
       {BATON_END.map((x, i) => (
         <Baton
-          key={x}
+          key={cardX(i)}
           from={HANDS}
           to={{ x: cardX(i) + x, y: CARD.top + 44 }}
           path={dropPoint}

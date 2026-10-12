@@ -2,5 +2,34 @@
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
   "entry": ["src/remotion/index.ts", "remotion.config.ts", "scripts/*.ts"],
   "ignoreDependencies": ["babel-plugin-react-compiler"],
-  "dynamicallyLoaded": ["vitest-setup.ts"]
+  "dynamicallyLoaded": ["vitest-setup.ts"],
+  "ignoreExports": [
+    {
+      "file": "src/talk/kit/*/index.ts",
+      "exports": ["*"]
+    },
+    {
+      "file": "src/talk/kit/*/*.{ts,tsx}",
+      "exports": [
+        "poseAt",
+        "CoverWipe",
+        "ZERO_COUNTER",
+        "codeBlockLanding",
+        "SPINNER_VERBS",
+        "promptLanding",
+        "PAST_VERBS",
+        "REWIND_VERB"
+      ]
+    },
+    {
+      "file": "src/talk/segments/*/cues.ts",
+      "exports": ["CUES"]
+    }
+  ],
+  "duplicates": {
+    "ignoreImports": true
+  },
+  "health": {
+    "ignore": ["src/engine/gl/shaders-layer.tsx", "src/engine/gl/overlay.tsx"]
+  }
 }

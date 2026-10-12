@@ -10,7 +10,7 @@ import { flapAt, flapChar, type FlapOpts } from "./schedule";
 type Cell = { id: string; to: string; delay: number; seed: number };
 
 /** Pads rows to equal width and assigns each cell its stagger delay. */
-export function flapCells(
+function flapCells(
   rows: readonly string[],
   { rowStagger, colStagger }: { rowStagger: number; colStagger: number },
 ): { cols: number; cells: Cell[] } {
@@ -28,6 +28,32 @@ export function flapCells(
     });
   });
   return { cols, cells };
+}
+
+type FlapEls = { top: HTMLElement; bot: HTMLElement; leaf: HTMLElement; face: HTMLElement };
+
+const setTextIfChanged = (el: HTMLElement, text: string) => {
+  if (el.textContent !== text) el.textContent = text;
+};
+
+/** One cell at a flap step: static halves show the current glyph, the leaf flips to the next. */
+function paintCell(
+  el: FlapEls,
+  cell: { to: string; seed: number },
+  { step, phase }: { step: number; phase: number },
+  flips: number,
+) {
+  const cur = flapChar(" ", cell.to, step, flips, cell.seed);
+  const nxt = flapChar(" ", cell.to, step + 1, flips, cell.seed);
+  const flipping = phase > 0;
+  setTextIfChanged(el.top, flipping ? nxt : cur);
+  setTextIfChanged(el.bot, cur);
+  put(el.leaf, "visibility", flipping ? "visible" : "hidden");
+  if (!flipping) return;
+  const first = phase < 0.5;
+  setTextIfChanged(el.face, first ? cur : nxt);
+  put(el.leaf, "transform", `rotateX(${num(first ? -phase * 180 : 180 - phase * 180, 1)}deg)`);
+  el.leaf.dataset.half = first ? "top" : "bottom";
 }
 
 /**
@@ -51,27 +77,13 @@ export function SplitFlap({
 }) {
   const { cols, cells } = flapCells(rows, { rowStagger, colStagger });
   const opts: FlapOpts = { start, stagger: 0, flips, flipDur };
-  const els = useRef<
-    ({ top: HTMLElement; bot: HTMLElement; leaf: HTMLElement; face: HTMLElement } | null)[]
-  >([]);
+  const els = useRef<(FlapEls | null)[]>([]);
 
   useFrame((frame: Frame) => {
     cells.forEach((cell, i) => {
       const el = els.current[i];
       if (!el) return;
-      const { step, phase } = flapAt(frame.tau, cell.delay, opts);
-      const cur = flapChar(" ", cell.to, step, flips, cell.seed);
-      const nxt = flapChar(" ", cell.to, step + 1, flips, cell.seed);
-      const flipping = phase > 0;
-      if (el.top.textContent !== (flipping ? nxt : cur)) el.top.textContent = flipping ? nxt : cur;
-      if (el.bot.textContent !== cur) el.bot.textContent = cur;
-      put(el.leaf, "visibility", flipping ? "visible" : "hidden");
-      if (!flipping) return;
-      const first = phase < 0.5;
-      const face = first ? cur : nxt;
-      if (el.face.textContent !== face) el.face.textContent = face;
-      put(el.leaf, "transform", `rotateX(${num(first ? -phase * 180 : 180 - phase * 180, 1)}deg)`);
-      el.leaf.dataset.half = first ? "top" : "bottom";
+      paintCell(el, cell, flapAt(frame.tau, cell.delay, opts), flips);
     });
   });
 

@@ -6,22 +6,22 @@ import { T } from "./timing";
 
 /** Pure model of Tip 2's GL tape: every block, the monolith, drawer and skip as f(τ). */
 
-export const N_TOKENS = 66;
-export const N_GHOST = 12;
+const N_TOKENS = 66;
+const N_GHOST = 12;
 export const N_BLOCKS = N_TOKENS + N_GHOST;
 
 /** Staircase rows: each turn re-sends the previous request plus 3 new blocks. */
-export const ROW_LENGTHS = [12, 15, 18, 21] as const;
+const ROW_LENGTHS = [12, 15, 18, 21] as const;
 const ROW_START = [0, 12, 27, 45] as const;
 export const PITCH = 56;
-export const BLOCK = 46;
+const BLOCK = 46;
 export const STAIR_X0 = 200;
 export const STAIR_Y0 = 446;
 export const ROW_PITCH = 60;
 /** Columns of the newest request that repeat the previous request (the prefix). */
 export const PREFIX_COLS = 18;
 
-export const COLORS = Object.freeze({
+const COLORS = Object.freeze({
   paid: hdr("#d97757", 1.8),
   hot: hdr("#d97757", 2.6),
   cached: linear("#885340"),
@@ -31,7 +31,7 @@ export const COLORS = Object.freeze({
   base: mixRgb(linear("#3a3934"), linear("#918f86"), 0.55),
 });
 
-export function mixRgb(a: Rgb, b: Rgb, u: number): Rgb {
+function mixRgb(a: Rgb, b: Rgb, u: number): Rgb {
   return [lerp(a[0], b[0], u), lerp(a[1], b[1], u), lerp(a[2], b[2], u)];
 }
 
@@ -92,7 +92,7 @@ export function rowCol(i: number): { row: number; col: number } {
 // ── views ────────────────────────────────────────────────────────────────────────────────────
 
 /** Road centre in the switch shot; the camera pivots on it so the road clears the copy. */
-export const ROAD_X = 1450;
+const ROAD_X = 1450;
 
 type ViewKey = { at: number; v: View };
 const VIEWS: readonly ViewKey[] = [
@@ -190,7 +190,7 @@ export function scanX(tau: number): number {
 }
 
 /** Slide-in offset of staircase row r (row 0 slides up from the tape instead). */
-export function rowSlide(row: number, col: number, tau: number): number {
+function rowSlide(row: number, col: number, tau: number): number {
   if (row === 0) return 0;
   const at = T.rows[row - 1] ?? 0;
   const u = outExpo(prog(tau, at + col * 0.012, at + 0.9 + col * 0.012));
@@ -262,16 +262,16 @@ function fuse(b: Block, row: number, col: number, len: number, tau: number): Blo
 
 // ── t2-kv ────────────────────────────────────────────────────────────────────────────────────
 
-export const KV_COLS = 11;
+const KV_COLS = 11;
 export const KV_PREFIX = 8;
-export const KV_LAYERS = 6;
+const KV_LAYERS = 6;
 export const KV_X0 = 470;
 export const KV_PITCH = 84;
 export const KV_Y0 = 836;
 export const KV_LAYER_PITCH = 58;
 
 /** Height of the prefill wave front in layers (0..6) for the first request. */
-export function prefillFront(tau: number): number {
+function prefillFront(tau: number): number {
   return KV_LAYERS * prog(tau, T.wave, T.waveEnd);
 }
 
@@ -282,7 +282,7 @@ export function suffixFront(tau: number): number {
 }
 
 /** How far the prefix wall has slid back onto the shelf (0 in place, 1 stored). */
-export function wallOut(tau: number): number {
+function wallOut(tau: number): number {
   return (
     inOutCubic(prog(tau, T.wallStack, T.wallStack + 0.5)) *
     (1 - outCubic(prog(tau, T.wallBack, T.wallBack + 0.45)))
@@ -321,7 +321,7 @@ export const PRICE_X = [1200, 1370, 1540, 1710] as const;
 export const PRICE_BASE = 880;
 export const COIN = 13.2;
 
-export function priceSlot(i: number): { column: number; index: number } {
+function priceSlot(i: number): { column: number; index: number } {
   let start = 0;
   for (let c = 0; c < PRICE_COUNTS.length; c++) {
     const n = PRICE_COUNTS[c] ?? 0;
@@ -371,12 +371,12 @@ function priceSink(i: number, tau: number): Block {
 
 // ── t2-idle ──────────────────────────────────────────────────────────────────────────────────
 
-export const IDLE_LEN = 21;
+const IDLE_LEN = 21;
 export const IDLE_Y = 690;
-export const IDLE_X0 = 220;
+const IDLE_X0 = 220;
 
 /** X of the cachebeat pulse (first run relights the tape; the second creeps through the hold). */
-export function pulseX(tau: number): number | null {
+function pulseX(tau: number): number | null {
   if (tau >= T.pulse && tau < T.pulseEnd + 0.1)
     return lerp(
       IDLE_X0 - 30,
@@ -423,8 +423,8 @@ function idleBlock(i: number, tau: number): Block {
 
 // ── t2-switch ────────────────────────────────────────────────────────────────────────────────
 
-export const ROAD_NEAR = 930;
-export const ROAD_ROW = 96;
+const ROAD_NEAR = 930;
+const ROAD_ROW = 96;
 const PREFIX_ROWS = 7;
 
 /** Slide of appended turn rows (0 placed; px still to travel toward the viewer side). */

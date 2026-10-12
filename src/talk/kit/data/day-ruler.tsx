@@ -35,6 +35,11 @@ const PIN_KEYS = ["first", "second", "third", "fourth", "fifth"];
 const AXIS_Y = 150;
 const PAD = 60;
 
+/** An `onPinChange` that moves pin `i` to minute `m` in a `useState` pin list. */
+export const movePin =
+  (setPins: (update: (prev: number[]) => number[]) => void) => (i: number, m: number) =>
+    setPins((prev) => prev.map((p, k) => (k === i ? m : p)));
+
 /** 05:00–21:00 ruler with ping pins and the chained 5h windows they open. */
 export function DayRuler({
   start,
@@ -113,6 +118,25 @@ export function DayRuler({
     }
   };
 
+  /** Pins are sliders only when the ruler is editable. */
+  const sliderProps = (i: number, m: number) => {
+    if (!onPinChange) return {};
+    const onDrag = drag(i);
+    return {
+      role: "slider",
+      tabIndex: 0,
+      "aria-label": `Ping ${i + 1}`,
+      "aria-valuemin": RULER.from,
+      "aria-valuemax": RULER.to,
+      "aria-valuenow": m,
+      "aria-valuetext": hhmm(m),
+      onPointerDown: onDrag,
+      onPointerMove: onDrag,
+      onKeyDown: key(i),
+      style: { cursor: "ew-resize", touchAction: "none", outline: "none" },
+    };
+  };
+
   return (
     <div className={`dk-root ${className ?? ""}`} style={{ width, height: HEIGHT, ...style }}>
       <svg
@@ -187,21 +211,7 @@ export function DayRuler({
               pinEls.current[i] = el;
             }}
             transform={`translate(${mx(m)} -160)`}
-            role={onPinChange ? "slider" : undefined}
-            tabIndex={onPinChange ? 0 : undefined}
-            aria-label={onPinChange ? `Ping ${i + 1}` : undefined}
-            aria-valuemin={onPinChange ? RULER.from : undefined}
-            aria-valuemax={onPinChange ? RULER.to : undefined}
-            aria-valuenow={onPinChange ? m : undefined}
-            aria-valuetext={onPinChange ? hhmm(m) : undefined}
-            onPointerDown={onPinChange ? drag(i) : undefined}
-            onPointerMove={onPinChange ? drag(i) : undefined}
-            onKeyDown={onPinChange ? key(i) : undefined}
-            style={
-              onPinChange
-                ? { cursor: "ew-resize", touchAction: "none", outline: "none" }
-                : undefined
-            }
+            {...sliderProps(i, m)}
           >
             {onPinChange ? (
               <rect x={-36} y={AXIS_Y - 110} width={72} height={124} fill="transparent" />

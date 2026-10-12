@@ -20,7 +20,7 @@ import Tip10OffersSegment from "./tip-10-offers/view";
 import TitleSegment from "./title/view";
 
 /** Story seconds after a segment's last hold in which it performs its own exit (fold, pocket, whip). */
-export const EXIT_TAIL = 1.4;
+const EXIT_TAIL = 1.4;
 
 /** The first segment is also visible before τ 0, so the pre-roll stop shows its empty prompt. */
 const PRE_ROLL = 1;

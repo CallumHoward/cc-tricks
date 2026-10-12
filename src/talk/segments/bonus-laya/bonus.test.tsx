@@ -1,8 +1,8 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { renderAt } from "#/engine/stage/render-at";
 import { scriptFor } from "#/talk/script";
-import { renderAt } from "#/talk/segments/tip-03-effort/render-at";
 
 import { CUES } from "./cues";
 import { chipsWritten, cursorAt, RINGED, stepAt, TARGETS, TB } from "./timing";

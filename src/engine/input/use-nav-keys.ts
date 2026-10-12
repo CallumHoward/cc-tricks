@@ -4,7 +4,7 @@ import type { Stage } from "#/engine/stage/stage";
 
 import { INITIAL_KEY_STATE, isInteractiveTarget, reduceKey, type KeyIntent } from "./keys";
 
-export function routeIntent(stage: Stage, intent: KeyIntent): void {
+function routeIntent(stage: Stage, intent: KeyIntent): void {
   if (intent.type === "nav") stage.dispatch(intent.action);
   else stage.emit(intent);
 }

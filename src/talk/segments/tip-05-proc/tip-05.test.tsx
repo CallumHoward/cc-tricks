@@ -1,8 +1,8 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { renderAt } from "#/engine/stage/render-at";
 import { scriptFor } from "#/talk/script";
-import { renderAt } from "#/talk/segments/tip-03-effort/render-at";
 
 import { CARD, cardCopy } from "./routines-plate";
 import { HORIZON, minuteToX, RULER_BOX, sunMinute, T5 } from "./timing";

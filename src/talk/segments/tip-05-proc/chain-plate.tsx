@@ -4,7 +4,7 @@ import { SPRINGS } from "#/engine/motion/spring";
 import { useFrame, useTrack } from "#/engine/stage/react";
 import type { Frame } from "#/engine/types";
 import { chainLabel, chainWindows, hhmm, ROUTINES } from "#/talk/data/routines";
-import { DayRuler } from "#/talk/kit/data/day-ruler";
+import { DayRuler, movePin } from "#/talk/kit/data/day-ruler";
 import { RuleRise } from "#/talk/kit/motion";
 import { put } from "#/talk/kit/motion/dom";
 import { springFrom } from "#/talk/kit/motion/schedule";
@@ -20,8 +20,7 @@ const FIRST_MESSAGE = 9 * 60;
 const C = T5.chain;
 
 /** Pin `i` shows once its card has folded into it (the pin's drop start). */
-export const pinShown = (i: number, tau: number): boolean =>
-  tau >= C.pinsAt + i * C.pinStagger - 0.02;
+const pinShown = (i: number, tau: number): boolean => tau >= C.pinsAt + i * C.pinStagger - 0.02;
 
 function HaikuTile({ i }: { i: number }) {
   const m = ROUTINES[i]?.at ?? 330;
@@ -63,9 +62,7 @@ function Chain() {
           bandDur={C.bandDur}
           bandLabels={false}
           width={RULER_BOX.w}
-          onPinChange={
-            on ? (i, m) => setPins((prev) => prev.map((p, k) => (k === i ? m : p))) : undefined
-          }
+          onPinChange={on ? movePin(setPins) : undefined}
         />
       </div>
       <Live from={C.bandsAt} to={T5.winEnd}>

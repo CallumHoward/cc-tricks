@@ -284,112 +284,104 @@ function burst(
   return f;
 }
 
-function playCue(rig: Rig, cue: CueName, gain: number, direction: 1 | -1, jitter: number) {
-  const t = rig.ctx.currentTime + 0.005;
-  const up = direction === 1;
-  switch (cue) {
-    case "slam": {
-      tone(rig, t, "sine", 130, 42, 0.22, envelope(rig, t, 0.9 * gain, 0.004, 0.4), 0.45);
-      burst(rig, t, "highpass", 2200, 0.7, envelope(rig, t, 0.5 * gain, 0.001, 0.03), 0.05, jitter);
-      return;
-    }
-    case "thud": {
-      tone(rig, t, "sine", 95, 48, 0.16, envelope(rig, t, 0.6 * gain, 0.004, 0.25), 0.3);
-      return;
-    }
-    case "tick": {
+/** One cue's voice, started at audio time `t`; `up` is true when the stage plays forward. */
+type Recipe = (rig: Rig, t: number, gain: number, up: boolean, jitter: number) => void;
+
+type Sweep = {
+  peak: number;
+  attack: number;
+  release: number;
+  lo: number;
+  hi: number;
+  q: number;
+  len: number;
+  glide: number;
+};
+
+/** A filtered noise sweep (riser, whoosh) that reverses direction when the stage rewinds. */
+function sweep(rig: Rig, t: number, sw: Sweep, up: boolean, jitter: number) {
+  const env = rig.ctx.createGain();
+  env.gain.setValueAtTime(0.0001, t);
+  env.gain.exponentialRampToValueAtTime(sw.peak, t + sw.attack);
+  env.gain.exponentialRampToValueAtTime(0.0001, t + sw.release);
+  env.connect(rig.out);
+  const f = burst(rig, t, "bandpass", sw.lo, sw.q, env, sw.len, jitter);
+  f.frequency.setValueAtTime(up ? sw.lo : sw.hi, t);
+  f.frequency.exponentialRampToValueAtTime(up ? sw.hi : sw.lo, t + sw.glide);
+}
+
+const RECIPES: Record<CueName, Recipe> = {
+  slam: (rig, t, gain, _up, jitter) => {
+    tone(rig, t, "sine", 130, 42, 0.22, envelope(rig, t, 0.9 * gain, 0.004, 0.4), 0.45);
+    burst(rig, t, "highpass", 2200, 0.7, envelope(rig, t, 0.5 * gain, 0.001, 0.03), 0.05, jitter);
+  },
+  thud: (rig, t, gain) => {
+    tone(rig, t, "sine", 95, 48, 0.16, envelope(rig, t, 0.6 * gain, 0.004, 0.25), 0.3);
+  },
+  tick: (rig, t, gain, _up, jitter) => {
+    burst(
+      rig,
+      t,
+      "bandpass",
+      3200 + 800 * jitter,
+      6,
+      envelope(rig, t, 0.35 * gain, 0.001, 0.02),
+      0.03,
+      jitter,
+    );
+  },
+  type: (rig, t, gain, _up, jitter) => {
+    const hz = 1600 + 1400 * jitter;
+    burst(rig, t, "bandpass", hz, 4, envelope(rig, t, 0.22 * gain, 0.001, 0.035), 0.045, jitter);
+    tone(rig, t, "square", hz / 4, hz / 5, 0.02, envelope(rig, t, 0.03 * gain, 0.001, 0.02), 0.03);
+  },
+  pop: (rig, t, gain, up, jitter) => {
+    const [a, b] = up ? [380, 980] : [980, 380];
+    tone(
+      rig,
+      t,
+      "sine",
+      a + 80 * jitter,
+      b,
+      0.06,
+      envelope(rig, t, 0.45 * gain, 0.002, 0.09),
+      0.12,
+    );
+  },
+  shutter: (rig, t, gain, _up, jitter) => {
+    for (const dt of [0, 0.045]) {
       burst(
         rig,
-        t,
+        t + dt,
         "bandpass",
-        3200 + 800 * jitter,
-        6,
-        envelope(rig, t, 0.35 * gain, 0.001, 0.02),
-        0.03,
+        2600,
+        2,
+        envelope(rig, t + dt, 0.3 * gain, 0.001, 0.03),
+        0.04,
         jitter,
       );
-      return;
     }
-    case "type": {
-      const hz = 1600 + 1400 * jitter;
-      burst(rig, t, "bandpass", hz, 4, envelope(rig, t, 0.22 * gain, 0.001, 0.035), 0.045, jitter);
-      tone(
-        rig,
-        t,
-        "square",
-        hz / 4,
-        hz / 5,
-        0.02,
-        envelope(rig, t, 0.03 * gain, 0.001, 0.02),
-        0.03,
-      );
-      return;
+  },
+  riser: (rig, t, gain, up, jitter) => {
+    const shape = { attack: 0.75, release: 0.85, lo: 300, hi: 4000, q: 3, len: 0.9, glide: 0.8 };
+    sweep(rig, t, { ...shape, peak: 0.35 * gain }, up, jitter);
+  },
+  whoosh: (rig, t, gain, up, jitter) => {
+    const shape = { attack: 0.18, release: 0.5, lo: 500, hi: 2600, q: 1.2, len: 0.55, glide: 0.45 };
+    sweep(rig, t, { ...shape, peak: 0.4 * gain }, up, jitter);
+  },
+  chime: (rig, t, gain) => {
+    const env = envelope(rig, t, 0.28 * gain, 0.005, 1.4);
+    for (const [hz, type] of [
+      [880, "sine"],
+      [1320.9, "sine"],
+      [2641, "triangle"],
+    ] as const) {
+      tone(rig, t, type, hz, hz, 0.01, env, 1.5);
     }
-    case "pop": {
-      const [a, b] = up ? [380, 980] : [980, 380];
-      tone(
-        rig,
-        t,
-        "sine",
-        a + 80 * jitter,
-        b,
-        0.06,
-        envelope(rig, t, 0.45 * gain, 0.002, 0.09),
-        0.12,
-      );
-      return;
-    }
-    case "shutter": {
-      for (const dt of [0, 0.045]) {
-        burst(
-          rig,
-          t + dt,
-          "bandpass",
-          2600,
-          2,
-          envelope(rig, t + dt, 0.3 * gain, 0.001, 0.03),
-          0.04,
-          jitter,
-        );
-      }
-      return;
-    }
-    case "riser": {
-      const env = rig.ctx.createGain();
-      env.gain.setValueAtTime(0.0001, t);
-      env.gain.exponentialRampToValueAtTime(0.35 * gain, t + 0.75);
-      env.gain.exponentialRampToValueAtTime(0.0001, t + 0.85);
-      env.connect(rig.out);
-      const f = burst(rig, t, "bandpass", 300, 3, env, 0.9, jitter);
-      f.frequency.setValueAtTime(up ? 300 : 4000, t);
-      f.frequency.exponentialRampToValueAtTime(up ? 4000 : 300, t + 0.8);
-      return;
-    }
-    case "whoosh": {
-      const env = rig.ctx.createGain();
-      env.gain.setValueAtTime(0.0001, t);
-      env.gain.exponentialRampToValueAtTime(0.4 * gain, t + 0.18);
-      env.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
-      env.connect(rig.out);
-      const f = burst(rig, t, "bandpass", 500, 1.2, env, 0.55, jitter);
-      f.frequency.setValueAtTime(up ? 500 : 2600, t);
-      f.frequency.exponentialRampToValueAtTime(up ? 2600 : 500, t + 0.45);
-      return;
-    }
-    case "chime": {
-      const env = envelope(rig, t, 0.28 * gain, 0.005, 1.4);
-      for (const [hz, type] of [
-        [880, "sine"],
-        [1320.9, "sine"],
-        [2641, "triangle"],
-      ] as const) {
-        tone(rig, t, type, hz, hz, 0.01, env, 1.5);
-      }
-      return;
-    }
-    default: {
-      const exhaustive: never = cue;
-      return exhaustive;
-    }
-  }
+  },
+};
+
+function playCue(rig: Rig, cue: CueName, gain: number, direction: 1 | -1, jitter: number) {
+  RECIPES[cue](rig, rig.ctx.currentTime + 0.005, gain, direction === 1, jitter);
 }

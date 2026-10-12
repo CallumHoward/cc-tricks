@@ -84,6 +84,19 @@ function setup(options: Parameters<typeof createAudio>[0] = {}) {
   return { ctx, audio };
 }
 
+/** Unlocked and playing forward just before the `land` beat at τ 1. */
+async function primedBeforeBeat() {
+  const rig = setup();
+  await rig.audio.unlock();
+  rig.audio.frame(frame(0.98, 1));
+  return rig;
+}
+
+function oscsAddedBy(ctx: FakeContext, step: () => void): number {
+  const before = ctx.count("osc");
+  step();
+  return ctx.count("osc") - before;
+}
 describe("audio synth", () => {
   it("should stay silent until unlocked by a gesture", async () => {
     const { ctx, audio } = setup();
@@ -144,6 +157,36 @@ describe("audio synth", () => {
     expect(() => audio.fire("whoosh", { direction: -1 })).not.toThrow();
   });
 
+  it("should voice every cue exactly as pinned in both directions", async () => {
+    const { ctx, audio } = setup();
+    await audio.unlock();
+    const param = (p: FakeParam) => ({
+      value: p.value,
+      set: p.setValueAtTime.mock.calls,
+      exp: p.exponentialRampToValueAtTime.mock.calls,
+      lin: p.linearRampToValueAtTime.mock.calls,
+    });
+    const voices = (
+      ["whoosh", "slam", "tick", "type", "pop", "shutter", "riser", "thud", "chime"] as const
+    )
+      .flatMap((cue) => [1, -1].map((direction) => ({ cue, direction: direction as 1 | -1 })))
+      .map(({ cue, direction }) => {
+        const before = ctx.nodes.length;
+        audio.fire(cue, { direction, seed: cue });
+        const nodes = ctx.nodes.slice(before).map((n) => ({
+          kind: n.kind,
+          type: n.type,
+          gain: param(n.gain),
+          frequency: param(n.frequency),
+          Q: n.Q.value,
+          start: n.start.mock.calls,
+          stop: n.stop.mock.calls,
+        }));
+        return `${cue}@${direction} ${JSON.stringify(nodes)}`;
+      });
+    expect(voices).toMatchSnapshot("cue node graphs");
+  });
+
   it("should not fire cues while muted and ramp the master gain to zero", async () => {
     const { ctx, audio } = setup();
     await audio.unlock();
@@ -172,12 +215,8 @@ describe("audio synth", () => {
   });
 
   it("should play a beat cue when the playhead crosses it", async () => {
-    const { ctx, audio } = setup();
-    await audio.unlock();
-    audio.frame(frame(0.98, 1));
-    const before = ctx.count("osc");
-    audio.frame(frame(1.0, 1));
-    expect(ctx.count("osc")).toBeGreaterThan(before);
+    const { ctx, audio } = await primedBeforeBeat();
+    expect(oscsAddedBy(ctx, () => audio.frame(frame(1.0, 1)))).toBeGreaterThan(0);
   });
 
   it("should keep the ramp voice silent while holding", async () => {
@@ -198,13 +237,9 @@ describe("audio synth", () => {
   });
 
   it("should still fire a crossed beat after a zero-length realtime tick", async () => {
-    const { ctx, audio } = setup();
-    await audio.unlock();
-    audio.frame(frame(0.98, 1));
+    const { ctx, audio } = await primedBeforeBeat();
     audio.frame(frame(0.99, 1, 0));
-    const before = ctx.count("osc");
-    audio.frame(frame(1.0, 1));
-    expect(ctx.count("osc")).toBeGreaterThan(before);
+    expect(oscsAddedBy(ctx, () => audio.frame(frame(1.0, 1)))).toBeGreaterThan(0);
   });
 
   it("should close the context and drop listeners on dispose", async () => {

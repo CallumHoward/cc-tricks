@@ -20,7 +20,7 @@ export type CodeBlockProps = {
   style?: CSSProperties;
 };
 
-export const CODE_RISE = 0.3;
+const CODE_RISE = 0.3;
 
 /** τ at which the block and its highlight have landed. */
 export function codeBlockLanding({ lines, at, stagger = 0.08, highlight }: CodeBlockProps): number {

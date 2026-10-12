@@ -1,8 +1,8 @@
 import { clamp, inOutCubic, inOutExpo, outCubic, outExpo, prog } from "#/engine/motion/ease";
 import { keys, sampleKeys } from "#/engine/motion/track";
 import type { StyleValues } from "#/engine/stage/applier";
-import { HOME } from "#/talk/kit/tui";
 import { BOT_HOME } from "#/talk/segments/shared/home";
+import { foldFlat, hopArc, hopFlight, whipScroll } from "#/talk/segments/shared/tip-turn";
 
 /** Visible window of this segment (registry: start + tail → next start + tail). */
 export const WIN = Object.freeze({ start: 47.4, end: 69.9 });
@@ -32,7 +32,7 @@ export const EXIT = Object.freeze({
 });
 
 /** The prompt box, context bar and pile drop off-screen while the plates play. */
-export const DOCK_DROP = 640;
+const DOCK_DROP = 640;
 
 export function dockY(tau: number): number {
   const down = prog(tau, 48.7, 49.3, inOutExpo);
@@ -55,7 +55,7 @@ export const SUBAGENTS = [
 ] as const;
 
 /** Spokes snap off the ✳ 0.25 apart (cues 49.1 … 50.0) and fly 0.36 to their bullets. */
-export const SPOKE = Object.freeze({ first: 49.1, gap: 0.25, flight: 0.36 });
+const SPOKE = Object.freeze({ first: 49.1, gap: 0.25, flight: 0.36 });
 
 export function spokeLaunch(i: number): number {
   return i === 0 ? SPOKE.first : SPOKE.first + 0.15 + (i - 1) * SPOKE.gap;
@@ -64,7 +64,7 @@ export function spokeLaunch(i: number): number {
 export const spokeLand = (i: number): number => spokeLaunch(i) + SPOKE.flight;
 
 /** The big ✳ grows out of the spinner glyph, sheds five spokes, then sinks back into it. */
-export const STAR = Object.freeze({ x: 218, y: 500, grow: 48.95, sink: 50.25, size: 150 });
+const STAR = Object.freeze({ x: 218, y: 500, grow: 48.95, sink: 50.25, size: 150 });
 
 /** Spoke angles (deg) of an 8-spoke ✳; the first five snap off. */
 export const SPOKE_ANGLES = [90, 45, 135, 0, 180, 270, 225, 315] as const;
@@ -180,7 +180,7 @@ export const cardLineY = (i: number): number =>
 /** Left x of column `col` in the YAML panel. */
 export const cardColX = (col: number): number => CARD.left + 40 + col * CARD.chX;
 
-export const CARD_OPEN = Object.freeze({ start: 54.85, end: 55.5 });
+const CARD_OPEN = Object.freeze({ start: 54.85, end: 55.5 });
 export const CARD_CLOSE = Object.freeze({ start: 60, end: 60.4 });
 
 /** The card unfolds from the folded row line and folds back into it for the advisor. */
@@ -263,7 +263,7 @@ export const TRANSCRIPT = [
   { width: 400, y: 762 },
 ] as const;
 export const TRANSCRIPT_LEFT = 640;
-export const TRANSCRIPT_IN = 60.45;
+const TRANSCRIPT_IN = 60.45;
 
 /** Line i's horizontal scale: wipes on from the left, collapses once the scan has passed it. */
 export function transcriptLine(i: number, tau: number): number {
@@ -303,23 +303,13 @@ export function crateRise(i: number, tau: number): number {
 // Bot ------------------------------------------------------------------------------------------
 
 /** Where the bot's box sits (offset from BOT_HOME); its rig acts animate inside the box. */
-export const BOT_SPOTS = Object.freeze({
+const BOT_SPOTS = Object.freeze({
   home: { x: 0, y: 0 },
   card: { x: 1440 - BOT_HOME.left, y: 740 - 180 - BOT_HOME.top },
 });
 
 /** Push spot: the rig's crate prop sits ~190 px into its box. */
-export const botPushX = (tau: number): number => crateX(1, tau) - 190 - BOT_HOME.left;
-
-const arc = (
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  u: number,
-  h: number,
-) => ({
-  x: from.x + (to.x - from.x) * u,
-  y: from.y + (to.y - from.y) * u - Math.sin(u * Math.PI) * h,
-});
+const botPushX = (tau: number): number => crateX(1, tau) - 190 - BOT_HOME.left;
 
 /** Hops: home → card (54.6), card → crate (62.6), crate → home (68.5). Flight = 0.16 + air. */
 export const BOT_HOPS = Object.freeze({
@@ -329,32 +319,27 @@ export const BOT_HOPS = Object.freeze({
 });
 
 export function botOffset(tau: number): { x: number; y: number } {
-  const flight = (h: { at: number; air: number }) => prog(tau, h.at + 0.16, h.at + 0.16 + h.air);
-  const a = flight(BOT_HOPS.toCard);
-  const b = flight(BOT_HOPS.toCrate);
-  const c = flight(BOT_HOPS.toHome);
+  const a = hopFlight(tau, BOT_HOPS.toCard);
+  const b = hopFlight(tau, BOT_HOPS.toCrate);
+  const c = hopFlight(tau, BOT_HOPS.toHome);
   const crateSpot = { x: botPushX(tau), y: PANEL.floor - 180 - BOT_HOME.top };
-  if (c > 0) return arc({ x: botPushX(BOT_HOPS.toHome.at), y: crateSpot.y }, BOT_SPOTS.home, c, 90);
+  if (c > 0)
+    return hopArc({ x: botPushX(BOT_HOPS.toHome.at), y: crateSpot.y }, BOT_SPOTS.home, c, 90);
   if (tau >= BOT_HOPS.toCrate.at + 0.78) return crateSpot;
   if (b > 0)
-    return arc(BOT_SPOTS.card, { x: botPushX(BOT_HOPS.toCrate.at + 0.78), y: crateSpot.y }, b, 140);
-  if (a > 0) return arc(BOT_SPOTS.home, BOT_SPOTS.card, a, 70);
+    return hopArc(
+      BOT_SPOTS.card,
+      { x: botPushX(BOT_HOPS.toCrate.at + 0.78), y: crateSpot.y },
+      b,
+      140,
+    );
+  if (a > 0) return hopArc(BOT_SPOTS.home, BOT_SPOTS.card, a, 70);
   return BOT_SPOTS.home;
 }
 
 // Exit -----------------------------------------------------------------------------------------
 
 /** Everything on the plate folds into the completion line at the spinner row. */
-export function plateFold(tau: number): StyleValues {
-  const u = prog(tau, EXIT.fold, EXIT.foldEnd, inOutExpo);
-  return { scaleY: 1 - u, opacity: u >= 1 ? 0 : 1 };
-}
+export const plateFold = (tau: number): StyleValues => foldFlat(tau, EXIT.fold, EXIT.foldEnd);
 
-/** The completion line whips up the scrollback, smeared by its own speed. */
-export function whipUp(tau: number): StyleValues {
-  const u = prog(tau, EXIT.whipAt, EXIT.whipEnd, inOutExpo);
-  const mid = Math.sin(u * Math.PI);
-  return { y: -620 * u, scaleY: 1 + 1.4 * mid, blur: 6 * mid, opacity: u >= 1 ? 0 : 1 };
-}
-
-export const SEGMENT_HOME = Object.freeze({ textX: HOME.textX, spinnerY: HOME.spinnerY });
+export const whipUp = (tau: number): StyleValues => whipScroll(tau, EXIT.whipAt, EXIT.whipEnd);

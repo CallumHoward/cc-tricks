@@ -1,13 +1,12 @@
-import { useRef, type CSSProperties, type ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import "./seg.css";
 
 import { clamp, outCubic, prog } from "#/engine/motion/ease";
 import type { StyleValues } from "#/engine/stage/applier";
-import { useFrame, useTrack } from "#/engine/stage/react";
+import { useTrack } from "#/engine/stage/react";
 import type { Frame } from "#/engine/types";
 import { ContextBar } from "#/talk/kit/motion";
-import { put } from "#/talk/kit/motion/dom";
 import {
   CompletionLine,
   HOME,
@@ -20,6 +19,7 @@ import {
 } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
+import { DisplayWindow } from "#/talk/segments/shared/display-window";
 import { BOT_HOME, HOME_ZONES, HomeRest } from "#/talk/segments/shared/home";
 
 import { botBox, homeLeave, inCubic, typedCount, wipe } from "./tracks";
@@ -43,14 +43,10 @@ export function Live({
   className?: string;
   style?: CSSProperties;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useFrame((frame: Frame) => {
-    put(ref.current, "display", frame.tau >= from && frame.tau < to ? "block" : "none");
-  });
   return (
-    <div ref={ref} className={className} style={{ ...FILL, display: "none", ...style }}>
+    <DisplayWindow from={from} to={to} className={className} style={{ ...FILL, ...style }}>
       {children}
-    </div>
+    </DisplayWindow>
   );
 }
 

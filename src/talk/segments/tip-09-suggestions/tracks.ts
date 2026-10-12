@@ -1,5 +1,15 @@
-import { clamp, inOutCubic, outCubic, outExpo, prog, smoothstep } from "#/engine/motion/ease";
+import {
+  clamp,
+  inOutCubic,
+  inQuad,
+  outCubic,
+  outExpo,
+  prog,
+  smoothstep,
+} from "#/engine/motion/ease";
+import { SPRINGS } from "#/engine/motion/spring";
 import type { Key } from "#/engine/motion/track";
+import { splitWords, staggerStarts } from "#/talk/kit/motion/schedule";
 import { pocketKeys } from "#/talk/kit/tui";
 
 /** Absolute τ for tip 9 (window [222.9, 231.4); stop at 227.5, hold to 230). */
@@ -14,6 +24,7 @@ export const T9 = Object.freeze({
   spinnerAt: 223.9,
   scrollAt: 224.5,
   scrollDur: 0.4,
+  titleSettle: 225.9,
   updateAt: 224.62,
   updateOutAt: 224.8,
   reghostAt: 224.62,
@@ -48,9 +59,15 @@ export function scrollY(tau: number): number {
   return -120 * up;
 }
 
-/** Echo line scale: grows as it scrolls into the headline slot. */
-export function echoScale(tau: number): number {
-  return 1 + 0.2 * prog(tau, T9.scrollAt, T9.scrollAt + T9.scrollDur, outExpo);
+/** τ the first word of a `RuleRise` title launches (its default 0.07 stagger on LAND). */
+export function riseStart(text: string, settleBy: number): number {
+  const n = splitWords(text).words.length;
+  return staggerStarts(n, settleBy, 0.07, SPRINGS.LAND)[0] ?? settleBy;
+}
+
+/** How far (fraction of a line) a masked line has sunk below its mask: 0 in place, 1.1 gone. */
+export function sinkAt(tau: number, at: number | undefined, dur = 0.3): number {
+  return at === undefined ? 0 : 1.1 * prog(tau, at, at + dur, inQuad);
 }
 
 /** Context bar height: flat 12 px → 28 px tape while the ghost reads it, flat again in the fold. */
@@ -108,7 +125,7 @@ export function letterScale(s: number, i: number, n: number): number {
 }
 
 /** How far the bot walks left: onto the prompt's top rule, just past the ghost's far end. */
-export const BOT_SHOO_DX = -470;
+const BOT_SHOO_DX = -470;
 
 /** Bot travel (px from BOT_HOME.left): walks left to shoo the ghost, hops home in the fold. */
 export function botX(tau: number): number {

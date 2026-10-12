@@ -50,10 +50,6 @@ export const PRICING: readonly ModelPricing[] = [
   },
 ];
 
-export const PRICING_SOURCE = "https://platform.claude.com/docs/en/about-claude/pricing";
-
-export const WRITE_MULTIPLIER = { "5m": 1.25, "1h": 2 } as const;
-
 export function modelPricing(id: ModelId): ModelPricing {
   const found = PRICING.find((m) => m.id === id);
   if (!found) throw new Error(`Unknown model ${id}`);

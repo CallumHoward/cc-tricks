@@ -46,10 +46,7 @@ function number(flag: string, raw: string | undefined): number {
   return n;
 }
 
-export function parseStillsArgs(
-  argv: readonly string[],
-  readFile: (path: string) => string,
-): StillsArgs {
+function parseFlags(argv: readonly string[]): Map<string, string> {
   const flags = new Map<string, string>();
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? "";
@@ -57,37 +54,50 @@ export function parseStillsArgs(
     const [key = "", inline] = arg.slice(2).split("=", 2);
     flags.set(key, inline ?? argv[++i] ?? "");
   }
-  let frames: StillFrame[];
-  if (flags.has("beats")) {
-    frames = timelineFrames(JSON.parse(readFile(flags.get("beats") ?? "")) as Timeline);
-  } else if (flags.has("taus")) {
-    frames = (flags.get("taus") ?? "").split(",").map((t) => {
-      const tau = number("--taus", t);
-      return { tau, label: tauLabel(tau) };
-    });
-  } else if (flags.has("from") || flags.has("to")) {
-    const n = Math.max(1, Math.round(number("--n", flags.get("n") ?? "12")));
-    frames = linspace(number("--from", flags.get("from")), number("--to", flags.get("to")), n).map(
-      (t) => ({
-        tau: round(t),
-        label: tauLabel(t),
-      }),
-    );
-  } else {
-    throw new Error("Pass --taus a,b,c | --from A --to B [--n N] | --beats timeline.json");
-  }
+  return flags;
+}
+
+function tauListFrames(raw: string): StillFrame[] {
+  return raw.split(",").map((t) => {
+    const tau = number("--taus", t);
+    return { tau, label: tauLabel(tau) };
+  });
+}
+
+function rangeFrames(flags: Map<string, string>): StillFrame[] {
+  const n = Math.max(1, Math.round(number("--n", flags.get("n") ?? "12")));
+  const from = number("--from", flags.get("from"));
+  const to = number("--to", flags.get("to"));
+  return linspace(from, to, n).map((t) => ({ tau: round(t), label: tauLabel(t) }));
+}
+
+function framesFrom(flags: Map<string, string>, readFile: (path: string) => string): StillFrame[] {
+  if (flags.has("beats"))
+    return timelineFrames(JSON.parse(readFile(flags.get("beats") ?? "")) as Timeline);
+  if (flags.has("taus")) return tauListFrames(flags.get("taus") ?? "");
+  if (flags.has("from") || flags.has("to")) return rangeFrames(flags);
+  throw new Error("Pass --taus a,b,c | --from A --to B [--n N] | --beats timeline.json");
+}
+
+const atLeast = (min: number, flag: string, raw: string) =>
+  Math.max(min, Math.round(number(flag, raw)));
+
+export function parseStillsArgs(
+  argv: readonly string[],
+  readFile: (path: string) => string,
+): StillsArgs {
+  const flags = parseFlags(argv);
+  const frames = framesFrom(flags, readFile);
   if (frames.length === 0) throw new Error("No frames to capture");
+  const base = flags.get("base") ?? process.env["STILLS_BASE_URL"] ?? DEFAULT_BASE_URL;
   return {
     frames,
     out: flags.get("out") ?? "stills",
-    cols: Math.max(1, Math.round(number("--cols", flags.get("cols") ?? "4"))),
-    baseUrl: (flags.get("base") ?? process.env["STILLS_BASE_URL"] ?? DEFAULT_BASE_URL).replace(
-      /\/$/,
-      "",
-    ),
+    cols: atLeast(1, "--cols", flags.get("cols") ?? "4"),
+    baseUrl: base.replace(/\/$/, ""),
     path: flags.get("path") ?? "/",
     w: number("--w", flags.get("w") ?? "1"),
-    thumb: Math.max(64, Math.round(number("--thumb", flags.get("thumb") ?? "480"))),
+    thumb: atLeast(64, "--thumb", flags.get("thumb") ?? "480"),
   };
 }
 

@@ -4,27 +4,14 @@ import { createClock } from "#/engine/clock/clock";
 import { createStage } from "#/engine/stage/stage";
 import type { Stop } from "#/engine/types";
 
-import { bridgeStage, isPresenterMessage, type Port } from "./channel";
+import { bridgeStage, isPresenterMessage } from "./channel";
+import { fakePort } from "./fake-port";
 
 describe("presenter channel", () => {
   const STOPS: readonly Stop[] = [
     { id: "a", at: 1, holdSpan: 1 },
     { id: "b", at: 5, holdSpan: 1 },
   ];
-
-  function fakePort() {
-    const listeners = new Set<(event: MessageEvent) => void>();
-    const sent: unknown[] = [];
-    const port: Port = {
-      postMessage: (message) => sent.push(message),
-      addEventListener: (_type, listener) => listeners.add(listener),
-      removeEventListener: (_type, listener) => listeners.delete(listener),
-    };
-    const receive = (data: unknown) => {
-      for (const listener of listeners) listener(new MessageEvent("message", { data }));
-    };
-    return { port, sent, receive, listeners };
-  }
 
   function setup() {
     const stage = createStage({

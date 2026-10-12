@@ -1,44 +1,15 @@
-import { act, render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Clock } from "#/engine/clock/clock";
-import { StageProvider } from "#/engine/stage/react";
-import { createStage } from "#/engine/stage/stage";
+import { renderAt as renderStageAt } from "#/engine/stage/render-at";
 
-import { IDLE, KV, PRICE, STATELESS, SWITCH } from "./timing";
+import { IDLE, KV, PRICE, STATELESS, SWITCH, TTL } from "./timing";
 import Tip02CacheSegment from "./view";
 
 vi.mock("#/engine/gl/three-layer", () => ({ useThreeLayer: () => {} }));
 vi.mock("#/talk/mascot/stage-mascot", () => ({ StageMascot: () => null }));
 
-function renderAt(tau: number) {
-  const clock: Clock = {
-    sample: () => ({ tau, v: 0 }),
-    dispatch: () => {},
-    target: 0,
-    subscribe: () => () => {},
-    plan: () => [],
-  };
-  let pending: (() => void) | undefined;
-  const stage = createStage({
-    clock,
-    now: () => 0,
-    scheduler: {
-      request: (cb) => {
-        pending = cb;
-        return 1;
-      },
-      cancel: () => {},
-    },
-  });
-  render(
-    <StageProvider stage={stage}>
-      <Tip02CacheSegment />
-    </StageProvider>,
-  );
-  stage.start();
-  act(() => pending?.());
-}
+const renderAt = (tau: number) => renderStageAt(tau, <Tip02CacheSegment />);
 
 describe("tip 2 segment", () => {
   it("should show the stateless line at its stop", () => {
@@ -56,6 +27,11 @@ describe("tip 2 segment", () => {
   it("should show the cache write label at the price stop", () => {
     renderAt(PRICE.at);
     expect(screen.getByText("Cache hit, per million tokens")).toBeVisible();
+  });
+
+  it("should keep the cold price line on screen at the ttl stop", () => {
+    renderAt(TTL.at);
+    expect(screen.getByText("Cold is 25–80× the price of warm.")).toBeVisible();
   });
 
   it("should show why a late check-in costs a re-read at the idle stop", () => {

@@ -2,8 +2,9 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import type { Port, StateMessage } from "./channel";
+import type { StateMessage } from "./channel";
 import { PresenterConsole } from "./console";
+import { fakePort } from "./fake-port";
 
 describe("PresenterConsole", () => {
   const STOPS = [
@@ -11,19 +12,9 @@ describe("PresenterConsole", () => {
     { id: "b", title: "Caching" },
   ];
 
-  function fakePort() {
-    const listeners = new Set<(event: MessageEvent) => void>();
-    const sent: unknown[] = [];
-    const port: Port = {
-      postMessage: (message) => sent.push(message),
-      addEventListener: (_type, listener) => listeners.add(listener),
-      removeEventListener: (_type, listener) => listeners.delete(listener),
-    };
-    const receive = (data: StateMessage) =>
-      act(() => {
-        for (const listener of listeners) listener(new MessageEvent("message", { data }));
-      });
-    return { port, sent, receive };
+  function fakeConsolePort() {
+    const { port, sent, receive } = fakePort();
+    return { port, sent, receive: (data: StateMessage) => act(() => receive(data)) };
   }
 
   const state = (target: number): StateMessage => ({
@@ -37,7 +28,7 @@ describe("PresenterConsole", () => {
   });
 
   it("should ask the stage for its state when it opens", () => {
-    const { port, sent } = fakePort();
+    const { port, sent } = fakeConsolePort();
 
     render(<PresenterConsole stops={STOPS} budget={1200} port={port} />);
 
@@ -45,7 +36,7 @@ describe("PresenterConsole", () => {
   });
 
   it("should show the current stop's notes and the next stop", () => {
-    const { port, receive } = fakePort();
+    const { port, receive } = fakeConsolePort();
     render(<PresenterConsole stops={STOPS} budget={1200} port={port} />);
 
     receive(state(0));
@@ -57,7 +48,7 @@ describe("PresenterConsole", () => {
 
   it("should send navigation to the stage from the buttons", async () => {
     const user = userEvent.setup();
-    const { port, sent, receive } = fakePort();
+    const { port, sent, receive } = fakeConsolePort();
     render(<PresenterConsole stops={STOPS} budget={1200} port={port} />);
     receive(state(0));
 
@@ -71,7 +62,7 @@ describe("PresenterConsole", () => {
   });
 
   it("should show the current stop's speaking target beside the stop timer", () => {
-    const { port, receive } = fakePort();
+    const { port, receive } = fakeConsolePort();
     render(<PresenterConsole stops={STOPS} budget={1200} port={port} />);
 
     receive(state(0));

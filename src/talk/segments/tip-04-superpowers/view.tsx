@@ -1,23 +1,15 @@
 import { prog } from "#/engine/motion/ease";
 import type { Frame } from "#/engine/types";
-import { ContextBar, RuleRise } from "#/talk/kit/motion";
-import {
-  CompletionLine,
-  GLYPH_PATHS,
-  HOME,
-  Pile,
-  pocketKeys,
-  PromptBox,
-  punch,
-  SpinnerLine,
-} from "#/talk/kit/tui";
+import { RuleRise } from "#/talk/kit/motion";
+import { CompletionLine, GLYPH_PATHS, HOME, punch, SpinnerLine } from "#/talk/kit/tui";
 import { setStyle, setText, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { scriptFor } from "#/talk/script";
-import { BOT_HOME, HOME_ZONES, HomeRest } from "#/talk/segments/shared/home";
+import { Drive, Gate, TypedMono } from "#/talk/segments/shared/gated-parts";
+import { BOT_HOME, HomeRest } from "#/talk/segments/shared/home";
+import { TipDock } from "#/talk/segments/shared/tip-turn";
 
-import { Drive, Gate, TypedMono } from "./parts";
 import {
   AT,
   BOT_HOPS,
@@ -63,26 +55,6 @@ const ACTS: readonly Act[] = [
 ];
 
 const abs = (left: number, top: number) => ({ position: "absolute" as const, left, top });
-
-const dockTrack = (tau: number) => ({ y: dockY(tau) });
-
-function Dock() {
-  return (
-    <Gate from={TURN.typeAt} to={EXIT.home}>
-      <Drive fn={dockTrack} style={{ inset: 0 }}>
-        <PromptBox
-          style={abs(HOME.left, HOME.promptTop)}
-          text={TURN.prompt}
-          typeAt={TURN.typeAt}
-          cps={TURN.cps}
-          submitAt={TURN.submitAt}
-        />
-        <ContextBar zones={HOME_ZONES} />
-        <Pile count={pocketKeys(EXIT.pocketAt, 4, 0.35)} x={HOME.pileX} y={HOME.pileY} />
-      </Drive>
-    </Gate>
-  );
-}
 
 /** Bot: flinches beside the walnut; trembles 1 px on wall time while it waits for the CRACK. */
 const botTrack = (tau: number, frame: Frame) => {
@@ -448,7 +420,12 @@ export default function Tip04SuperpowersSegment() {
       <Gate from={WIN.start} to={TURN.typeAt}>
         <HomeRest pile={3} from={WIN.start} to={TURN.typeAt} bot={false} />
       </Gate>
-      <Dock />
+      <TipDock
+        turn={TURN}
+        until={EXIT.home}
+        dockY={dockY}
+        pile={{ at: EXIT.pocketAt, n: 4, dur: 0.35 }}
+      />
       <Drive fn={foldTrack} style={{ inset: 0, transformOrigin: `50% ${HOME.spinnerY}px` }}>
         <Drive fn={shakeTrack} style={{ inset: 0 }}>
           <Plan />

@@ -3,8 +3,6 @@ import { isSpring, settleTime } from "#/engine/motion/spring";
 import type { Key, TrackSpec } from "#/engine/motion/track";
 import type { Beat, Segment, Stop } from "#/engine/types";
 
-export { lastLanding } from "#/engine/motion/track";
-
 export type TimelineInput = {
   stops: readonly Stop[];
   beats: readonly Beat[];
@@ -16,8 +14,8 @@ export type TimelineInput = {
 
 export type LintResult = { errors: string[]; warnings: string[] };
 
-export const MAX_MOTION_GAP = 6;
-export const WARN_MOTION_GAP = 3;
+const MAX_MOTION_GAP = 6;
+const WARN_MOTION_GAP = 3;
 const EPS = 1e-6;
 
 const fmt = (n: number) => `${+n.toFixed(3)}`;
@@ -71,23 +69,22 @@ function lintSegments(segments: readonly Segment[], r: LintResult) {
   }
 }
 
-function lintBeats(stops: readonly Stop[], beats: readonly Beat[], r: LintResult) {
-  for (const b of beats) {
-    if (b.end < b.start) r.errors.push(`beat ${b.id}: ends before it starts`);
-    const hold = holdContaining(stops, b.start);
-    if (hold) {
-      r.warnings.push(`beat ${b.id}: starts inside ${hold.id}'s hold at ${fmt(b.start)}`);
-    } else {
-      const landsIn = holdContaining(stops, b.end);
-      if (landsIn) {
-        r.errors.push(
-          `beat ${b.id}: lands at ${fmt(b.end)}, inside ${landsIn.id}'s hold (land before ${fmt(landsIn.at)})`,
-        );
-      }
-    }
+function lintBeatLanding(stops: readonly Stop[], b: Beat, r: LintResult) {
+  if (b.end < b.start) r.errors.push(`beat ${b.id}: ends before it starts`);
+  const hold = holdContaining(stops, b.start);
+  if (hold) {
+    r.warnings.push(`beat ${b.id}: starts inside ${hold.id}'s hold at ${fmt(b.start)}`);
+    return;
   }
+  const landsIn = holdContaining(stops, b.end);
+  if (landsIn) {
+    r.errors.push(
+      `beat ${b.id}: lands at ${fmt(b.end)}, inside ${landsIn.id}'s hold (land before ${fmt(landsIn.at)})`,
+    );
+  }
+}
 
-  if (beats.length === 0) return;
+function lintMotionGaps(stops: readonly Stop[], beats: readonly Beat[], r: LintResult) {
   const events = [
     ...beats.map((b) => ({
       at: b.start,
@@ -110,24 +107,32 @@ function lintBeats(stops: readonly Stop[], beats: readonly Beat[], r: LintResult
   }
 }
 
+function lintBeats(stops: readonly Stop[], beats: readonly Beat[], r: LintResult) {
+  for (const b of beats) lintBeatLanding(stops, b, r);
+  if (beats.length > 0) lintMotionGaps(stops, beats, r);
+}
+
+/** A key that lands inside a hold must have started in it and must not overshoot. */
+function lintKey(stops: readonly Stop[], where: string, prev: Key, key: Key, r: LintResult) {
+  if (key.value === prev.value) return;
+  const spring = isSpring(key.ease) ? key.ease : undefined;
+  const landing = spring ? Math.min(key.at, prev.at + settleTime(spring)) : key.at;
+  const hold = holdContaining(stops, landing);
+  if (!hold) return;
+  if (prev.at < hold.at - EPS) {
+    r.errors.push(
+      `track ${where}: lands at ${fmt(landing)}, inside ${hold.id}'s hold (land before ${fmt(hold.at)})`,
+    );
+  } else if (spring && spring.zeta < 1) {
+    r.errors.push(`track ${where}: overshooting spring inside ${hold.id}'s hold`);
+  }
+}
+
 function lintTracks(stops: readonly Stop[], tracks: TimelineInput["tracks"], r: LintResult) {
   for (const { id, spec } of tracks ?? []) {
     for (const [channel, track] of Object.entries(spec) as [string, readonly Key[]][]) {
       for (let i = 1; i < track.length; i++) {
-        const prev = track[i - 1] as Key;
-        const key = track[i] as Key;
-        if (key.value === prev.value) continue;
-        const spring = isSpring(key.ease) ? key.ease : undefined;
-        const landing = spring ? Math.min(key.at, prev.at + settleTime(spring)) : key.at;
-        const hold = holdContaining(stops, landing);
-        if (!hold) continue;
-        if (prev.at < hold.at - EPS) {
-          r.errors.push(
-            `track ${id}.${channel}: lands at ${fmt(landing)}, inside ${hold.id}'s hold (land before ${fmt(hold.at)})`,
-          );
-        } else if (spring && spring.zeta < 1) {
-          r.errors.push(`track ${id}.${channel}: overshooting spring inside ${hold.id}'s hold`);
-        }
+        lintKey(stops, `${id}.${channel}`, track[i - 1] as Key, track[i] as Key, r);
       }
     }
   }

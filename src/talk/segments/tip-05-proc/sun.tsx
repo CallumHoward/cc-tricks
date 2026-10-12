@@ -13,7 +13,7 @@ const SET_AT = T5.chain.holdEnd;
 const SHRINK_AT = T5.chain.pinsAt + 0.8;
 
 /** The ✳: leaves the spinner, rises as the sun, sweeps the day, then sets into the ✻. */
-export function sunPose(tau: number): StyleValues {
+function sunPose(tau: number): StyleValues {
   const rest = sunAt(sunMinute(tau));
   const u = prog(tau, T5.leave, T5.leave + 1.15, outCubic);
   const set = prog(tau, SET_AT, SET_AT + 0.3, inCubic);

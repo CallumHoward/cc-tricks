@@ -34,7 +34,7 @@ export type AgentRowProps = {
   style?: CSSProperties;
 };
 
-export const ROW_ENTER = 0.42;
+const ROW_ENTER = 0.42;
 
 /** `○ general-purpose Reading files… 19m 58s · ↓ 171.9k tokens` */
 export function AgentRow({

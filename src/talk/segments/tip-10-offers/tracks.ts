@@ -17,6 +17,7 @@ export const T10 = Object.freeze({
   spinnerAt: 232.7,
   scrollAt: 232.95,
   scrollDur: 0.5,
+  titleSettle: 234.4,
   diveAt: 233.05,
   diveDur: 0.6,
   barsAt: 233.55,
@@ -26,6 +27,7 @@ export const T10 = Object.freeze({
   bankedAt: 234.3,
   instantAt: 234.6,
   instantLand: 235.15,
+  pileHopAt: 234.55,
   pileHopDur: 0.5,
   stampSettle: 235.15,
   botHopAt: 234.2,
@@ -59,10 +61,6 @@ export const swapAt = (w: { start: number; end: number }): number => (w.start + 
 /** Transcript scroll (px, up) as the Settings panel opens under the echo. */
 export function resetsScrollY(tau: number): number {
   return -200 * prog(tau, T10.scrollAt, T10.scrollAt + T10.scrollDur, outExpo);
-}
-
-export function resetsEchoScale(tau: number): number {
-  return 1 + 0.3 * prog(tau, T10.scrollAt, T10.scrollAt + T10.scrollDur, outExpo);
 }
 
 /** ⏎ → panel morph progress (0 = the ⏎ glyph's box, 1 = the full panel). */
@@ -106,10 +104,9 @@ export function panelDrift(tau: number): number {
   return -8 * prog(tau, T10.resetsAt, T10.resetsHoldEnd);
 }
 
-/** The pile hops from home onto the Settings panel's lid once the lid is in place (0 → 1). */
+/** The pile hops from home onto the banked ticket once it has landed (0 → 1). */
 export function pileHop(tau: number): number {
-  const from = T10.diveAt + 0.45;
-  return prog(tau, from, from + T10.pileHopDur, inOutCubic);
+  return prog(tau, T10.pileHopAt, T10.pileHopAt + T10.pileHopDur, inOutCubic);
 }
 
 /** Ticket i of the offers board runs in along its rail and LANDs 0.3 τ-s after the previous one. */

@@ -30,7 +30,7 @@ const stripX = (tau: number) =>
   STRIP.x + 760 * outCubic(prog(tau, 261.8, TB.browser.at)) + 20 * Math.max(0, tau - TB.browser.at);
 
 /** Bot: perches on the book, points at the uncertain bar, then walks the browser strip's top edge. */
-export const botPath: BotPath = (tau) => {
+const botPath: BotPath = (tau) => {
   if (tau < 251.75) return { ...BOT_FEET, scale: 1 };
   if (tau < TB.one.holdEnd) {
     const u = prog(tau, 251.75, 252.15, outCubic);

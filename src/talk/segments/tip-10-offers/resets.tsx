@@ -7,7 +7,9 @@ import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { scriptFor } from "#/talk/script";
 import { BOT_HOME, HOME_ZONES } from "#/talk/segments/shared/home";
+import { TipTitle } from "#/talk/segments/shared/tip-title";
 import { During, Echo, FILL, Layer } from "#/talk/segments/tip-09-suggestions/parts";
+import { riseStart, sinkAt } from "#/talk/segments/tip-09-suggestions/tracks";
 import { ResetButton } from "#/talk/widgets/reset-button";
 
 import "./resets.css";
@@ -21,7 +23,6 @@ import {
   panelDrift,
   pileCount,
   pileHop,
-  resetsEchoScale,
   resetsScrollY,
   splitLead,
   T10,
@@ -29,6 +30,9 @@ import {
 } from "./tracks";
 
 const SCRIPT = scriptFor("t10-resets");
+const TITLE = SCRIPT.headline ?? T10.prompt;
+/** The echo and spinner sink out of the transcript as the title rises over them. */
+const CLEAR_AT = riseStart(TITLE, T10.titleSettle) - 0.4;
 const L1 = SCRIPT.lines[0] ?? "";
 const [BANKED = "", INSTANT = ""] = SCRIPT.labels;
 const STAMP = SCRIPT.stamps[0] ?? "";
@@ -45,8 +49,11 @@ const PANEL: Rect = { x: 200, y: 360, w: 940, h: 520 };
 const TICKET = { x: 1190, w: 550, h: 220, stub: 100 };
 
 const BOT_SPOT = { left: 1470, top: 390 - 180 };
-/** The pile hops onto the panel's lid, clear of the tickets and the bot (bottom-centre anchor). */
-const PILE_SPOT = { x: 1060, y: PANEL.y - 2 };
+/**
+ * The pile hops onto the banked ticket's lid, between the title's end and the bot (bottom-centre
+ * anchor).
+ */
+const PILE_SPOT = { x: 1375, y: PANEL.y + 32 };
 /** COMMUNITY TERMS lands across the instant ticket's lower edge, under both labels. */
 const STAMP_AT = { left: 1395, top: 868 };
 
@@ -266,37 +273,38 @@ export function ResetsPlate() {
           put(el, "transform", `translate3d(0, ${num(resetsScrollY(frame.tau), 2)}px, 0)`)
         }
       >
-        <Layer
-          style={{
-            position: "absolute",
-            left: 0,
-            top: HOME.echoY,
-            transformOrigin: `${HOME.textX}px 0`,
-          }}
-          write={(el, frame) =>
-            put(el, "transform", `scale(${num(resetsEchoScale(frame.tau), 4)})`)
-          }
-        >
-          <Echo
-            text={T10.prompt}
-            at={T10.submitAt + 0.2}
-            style={{ top: 0, transform: "translateY(-50%)" }}
-          />
-        </Layer>
-        <SpinnerLine
-          className="type-label"
+        <Echo
+          text={T10.prompt}
+          at={T10.submitAt + 0.2}
+          outAt={CLEAR_AT}
+          style={{ top: HOME.echoY, transform: "translateY(-50%)" }}
+        />
+        <div
           style={{
             position: "absolute",
             left: HOME.textX,
             top: HOME.spinnerY,
             transform: "translateY(-50%)",
+            overflow: "hidden",
           }}
-          verb="Razzle-dazzling"
-          at={T10.spinnerAt}
-          tokens={keys([T10.spinnerAt, 0], [T10.resetsAt, 2600], [T10.resetsHoldEnd, 2900])}
-          elapsed={keys([T10.spinnerAt, 0], [T10.resetsHoldEnd, 40])}
-        />
+        >
+          <Layer
+            write={(el, frame) => {
+              const y = sinkAt(frame.tau, CLEAR_AT + 0.08);
+              put(el, "transform", `translate3d(0, ${num(y * 100, 2)}%, 0)`);
+            }}
+          >
+            <SpinnerLine
+              className="type-label"
+              verb="Razzle-dazzling"
+              at={T10.spinnerAt}
+              tokens={keys([T10.spinnerAt, 0], [T10.resetsAt, 2600], [T10.resetsHoldEnd, 2900])}
+              elapsed={keys([T10.spinnerAt, 0], [T10.resetsHoldEnd, 40])}
+            />
+          </Layer>
+        </div>
       </Layer>
+      <TipTitle text={TITLE} settleBy={T10.titleSettle} exit={T10.resetsHoldEnd} />
       <Layer
         style={{ ...FILL, zIndex: 2, pointerEvents: "none" }}
         write={(el, frame) => {

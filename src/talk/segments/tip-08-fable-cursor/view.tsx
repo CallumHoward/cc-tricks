@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import { inOutCubic, inQuad, outExpo, prog } from "#/engine/motion/ease";
 import type { Frame } from "#/engine/types";
 import {
@@ -11,6 +13,7 @@ import {
 } from "#/talk/kit/motion";
 import type { Act } from "#/talk/mascot/actions";
 import { scriptFor } from "#/talk/script";
+import { TipTitle } from "#/talk/segments/shared/tip-title";
 import {
   Bot,
   Fx,
@@ -21,15 +24,24 @@ import {
   type StyleMap,
 } from "#/talk/segments/tip-06-cli-agents/boundary";
 import { placeAt, type PlaceKey } from "#/talk/segments/tip-06-cli-agents/timing";
-import { TipTitle } from "#/talk/segments/tip-06-cli-agents/tip-title";
 
-import { BASE, BLOCK, ccTower, cursorTower, flapCounter, flapRows, TIP8 } from "./timing";
+import {
+  BASE,
+  BLOCK,
+  ccTower,
+  counterPlaces,
+  cursorTower,
+  flapCounter,
+  flapRows,
+  stampSettleFor,
+  TIP8,
+} from "./timing";
 
 const D = TIP8;
 const cache = scriptFor("t8-cache");
 const x18 = scriptFor("t8-18x");
 const TABLE = cache.tables[0] ?? { head: [], rows: [] };
-export const BOARD_ROWS = TABLE.rows.map(([l = "", r = ""]) => flapRows(l, r, 24));
+const BOARD_ROWS = TABLE.rows.map(([l = "", r = ""]) => flapRows(l, r, 24));
 
 /** The `0` of the spinner's `↓ 0 tokens` (measured from a still). */
 const ZERO = { x: 594, y: 486, size: 28 };
@@ -42,8 +54,10 @@ const DIVE = {
 };
 
 const COL_X = [200, 980] as const;
-const HEAD_Y = 348;
-const FLAP_ROW_Y = [414, 508, 602] as const;
+const HEAD_Y = 372;
+const FLAP_ROW_Y = [446, 566, 686] as const;
+/** The ↓ counter anchors the lower half under the CC column. */
+const COUNTER = { top: 812, size: 64 };
 const FLOOR = 860;
 const TOWER_X = [1272, 1432] as const;
 const TOWER_W = 138;
@@ -59,15 +73,18 @@ const tileFade = (tau: number, row: number) =>
 const boardFold = (tau: number, row: number) =>
   prog(tau, D.board.foldStart + row * 0.08, D.board.foldStart + row * 0.08 + 0.3, inQuad);
 
+/** The counter snaps shut before the tower bases rise through its row. */
+const counterFold = (tau: number) =>
+  prog(tau, D.cache.at + D.cache.hold, D.towers.start - 0.1, inQuad);
+
 function FlapCounter() {
   const digits = 6;
   const fx =
-    (i: number) =>
+    (place: number) =>
     (frame: Frame): StyleMap => {
       const v = flapCounter(frame.tau);
-      const place = 10 ** (digits - 1 - i);
-      const digit = Math.floor(v / place) % 10;
-      const phase = i === digits - 1 ? v - Math.floor(v) : 0;
+      const digit = Math.floor(v / 10 ** place) % 10;
+      const phase = place === 0 ? v - Math.floor(v) : 0;
       const flipping = phase > 0.02 && phase < 0.98;
       return {
         "--d": `"${digit}"`,
@@ -77,19 +94,23 @@ function FlapCounter() {
     };
   return (
     <div
-      className="tui type-code"
+      className="tui type-code t8-counter"
       style={{
         position: "absolute",
         left: COL_X[1],
-        top: 694,
+        top: COUNTER.top,
+        fontSize: COUNTER.size,
         display: "flex",
-        gap: 2,
+        gap: 3,
         alignItems: "center",
       }}
     >
-      <span style={{ color: "var(--muted)", marginRight: 12 }}>↓</span>
-      {Array.from({ length: digits }, (_, i) => (
-        <Fx key={`d${i + 1}`} fx={fx(i)} className="t8-digit" style={{ position: "relative" }} />
+      <span style={{ color: "var(--muted)", marginRight: "0.3em" }}>↓</span>
+      {counterPlaces(digits).map(({ place, comma }) => (
+        <Fragment key={place}>
+          <Fx fx={fx(place)} className="t8-digit" style={{ position: "relative" }} />
+          {comma && <span className="t8-sep">,</span>}
+        </Fragment>
       ))}
       <style>{DIGIT_CSS}</style>
     </div>
@@ -97,7 +118,8 @@ function FlapCounter() {
 }
 
 const DIGIT_CSS = `
-.t8-digit{width:1.15em;height:1.5em;border-radius:4px;background:var(--panel);color:var(--text);font-weight:600;perspective:300px;overflow:visible}
+.t8-sep{width:0.42em;height:1.5em;line-height:1.5em;color:var(--soft);text-align:center}
+.t8-digit{width:0.95em;height:1.5em;border-radius:4px;background:var(--panel);color:var(--text);font-weight:600;perspective:300px;overflow:visible}
 .t8-digit::before{content:var(--d);position:absolute;inset:0;display:grid;place-items:center;line-height:1.5em}
 .t8-digit::after{content:var(--n);position:absolute;left:0;right:0;top:0;height:50%;overflow:hidden;display:grid;place-items:start center;line-height:1.5em;background:#2c2b28;border-radius:4px 4px 0 0;transform-origin:50% 100%;transform:rotateX(var(--flip));backface-visibility:hidden}
 `;
@@ -166,7 +188,7 @@ function Board() {
 
 /** Tighter cells than the kit's default so each phrase reads as words, not spaced letters. */
 const FLAP_CSS = `
-.t8-flap .km-flap-board{grid-template-columns:repeat(var(--cols),0.62em)!important;gap:6px 2px}
+.t8-flap .km-flap-board{font-size:42px;grid-template-columns:repeat(var(--cols),0.62em)!important;gap:6px 2px}
 .t8-flap .km-flap-top,.t8-flap .km-flap-leaf[data-half="top"]{background:color-mix(in srgb,var(--hairline) calc(var(--tile)*100%),transparent)}
 .t8-flap .km-flap-bot,.t8-flap .km-flap-leaf[data-half="bottom"]{background:color-mix(in srgb,var(--panel) calc(var(--tile)*100%),transparent)}
 `;
@@ -265,8 +287,8 @@ function Plate() {
             <CssBed tone="dark" />
             <TipTitle text={cache.headline ?? ""} settleBy={D.title} exit={D.board.foldStart} />
             <Fx
-              fx={(frame) => ({ transform: `scaleY(${(1 - boardFold(frame.tau, 0)).toFixed(4)})` })}
-              style={{ inset: 0, transformOrigin: "0 720px" }}
+              fx={(frame) => ({ transform: `scaleY(${(1 - counterFold(frame.tau)).toFixed(4)})` })}
+              style={{ inset: 0, transformOrigin: `0 ${COUNTER.top + COUNTER.size * 0.75}px` }}
             >
               <FlapCounter />
             </Fx>
@@ -287,7 +309,7 @@ function Plate() {
             />
             <Stamp
               text={x18.stamps[0] ?? ""}
-              settleBy={D.stamp}
+              settleBy={stampSettleFor(D.stampHit)}
               rotate={-9}
               style={{ left: 560, top: 780 }}
             />
@@ -307,10 +329,13 @@ const homeFx = (frame: Frame): StyleMap => {
   };
 };
 
+/** Where the bot stands for t8-cache: under the Cursor column, balancing the counter. */
+const CACHE_SPOT = { x: -1000, y: 370, scale: 0.7 };
+
 const PLACES: readonly PlaceKey[] = [
   { at: 210.9, x: 0, y: 0, scale: 1 },
-  { at: 211.6, x: -520, y: 290, scale: 0.7 },
-  { at: 216.6, x: -520, y: 290, scale: 0.7 },
+  { at: 211.6, ...CACHE_SPOT },
+  { at: 216.6, ...CACHE_SPOT },
   { at: 217.3, x: -460, y: 280, scale: 0.7 },
   { at: 221.5, x: -460, y: 280, scale: 0.7 },
   { at: 221.85, x: 0, y: 0, scale: 1 },
@@ -335,7 +360,16 @@ function Coin() {
     };
   };
   return (
-    <Fx fx={fx} style={{ left: 942, top: 742, width: 40, height: 40, visibility: "hidden" }}>
+    <Fx
+      fx={fx}
+      style={{
+        left: 1462 + CACHE_SPOT.x,
+        top: 452 + CACHE_SPOT.y,
+        width: 40,
+        height: 40,
+        visibility: "hidden",
+      }}
+    >
       <svg viewBox="0 0 100 100" width={40} height={40} aria-hidden>
         <circle cx={50} cy={50} r={48} fill="var(--clay)" />
         <path

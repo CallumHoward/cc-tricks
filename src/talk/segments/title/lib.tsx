@@ -13,6 +13,7 @@ import { poseAt } from "#/talk/mascot/actions";
 import type { MascotHandle } from "#/talk/mascot/apply";
 import { stepMascot } from "#/talk/mascot/driver";
 import { Mascot } from "#/talk/mascot/mascot";
+import { DisplayWindow } from "#/talk/segments/shared/display-window";
 
 /** Rendered only while from ≤ τ < to (display, so kit children forcing `visibility` stay hidden). */
 export function Win({
@@ -26,14 +27,10 @@ export function Win({
   children: ReactNode;
   style?: CSSProperties;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useFrame((frame: Frame) => {
-    put(ref.current, "display", frame.tau >= from && frame.tau < to ? "block" : "none");
-  });
   return (
-    <div ref={ref} className="so-fill" style={{ display: "none", ...style }}>
+    <DisplayWindow from={from} to={to} className="so-fill" style={style}>
       {children}
-    </div>
+    </DisplayWindow>
   );
 }
 
@@ -49,6 +46,9 @@ export type Place = {
   clip?: string;
   hidden?: boolean;
 };
+
+const placeTransform = ({ x = 0, y = 0, r = 0, skew = 0, s = 1, sx = 1, sy = 1 }: Place) =>
+  `translate3d(${num(x, 2)}px, ${num(y, 2)}px, 0) rotate(${num(r, 3)}deg) skewX(${num(skew, 3)}deg) scale(${num(s * sx, 5)}, ${num(s * sy, 5)})`;
 
 /** An absolutely placed box whose transform, opacity and clip are a pure function of the frame. */
 export function Mover({
@@ -69,13 +69,7 @@ export function Mover({
     const p = place(frame.tau, frame);
     put(el, "display", p.hidden ? "none" : "block");
     if (p.hidden) return;
-    const sx = (p.s ?? 1) * (p.sx ?? 1);
-    const sy = (p.s ?? 1) * (p.sy ?? 1);
-    put(
-      el,
-      "transform",
-      `translate3d(${num(p.x ?? 0, 2)}px, ${num(p.y ?? 0, 2)}px, 0) rotate(${num(p.r ?? 0, 3)}deg) skewX(${num(p.skew ?? 0, 3)}deg) scale(${num(sx, 5)}, ${num(sy, 5)})`,
-    );
+    put(el, "transform", placeTransform(p));
     put(el, "opacity", num(p.o ?? 1, 3));
     put(el, "clip-path", p.clip ?? "none");
   });

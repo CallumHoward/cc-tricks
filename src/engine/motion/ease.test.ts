@@ -10,7 +10,6 @@ import {
   inOutQuad,
   inQuad,
   lerp,
-  linear,
   outBack,
   outCubic,
   outExpo,
@@ -23,7 +22,6 @@ import {
 
 describe("ease", () => {
   const EASES: [string, Ease][] = [
-    ["linear", linear],
     ["inQuad", inQuad],
     ["outQuad", outQuad],
     ["inOutQuad", inOutQuad],

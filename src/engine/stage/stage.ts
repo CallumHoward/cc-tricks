@@ -12,7 +12,7 @@ export const PRIORITY = Object.freeze({
 });
 
 /** Story seconds a segment stays mounted before and after its window. */
-export const MOUNT_ROLL = 1;
+const MOUNT_ROLL = 1;
 
 /** Coarse state for React; identity only changes when a field changes. */
 export type StageSnapshot = {

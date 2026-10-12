@@ -5,8 +5,8 @@ import type { Clock } from "#/engine/clock/clock";
 import { StageProvider } from "#/engine/stage/react";
 import { createStage } from "#/engine/stage/stage";
 
-/** Renders `ui` on a stage frozen at τ (one frame ticked), for segment smoke tests. */
-export function renderAt(tau: number, ui: ReactNode, v = 1) {
+/** Test helper: mounts `ui` on a stage frozen at τ (velocity `v`) and runs one frame. */
+export function renderAt(tau: number, ui: ReactNode, v = 0) {
   const clock: Clock = {
     sample: () => ({ tau, v }),
     dispatch: () => {},
@@ -26,8 +26,8 @@ export function renderAt(tau: number, ui: ReactNode, v = 1) {
       cancel: () => {},
     },
   });
-  const result = render(<StageProvider stage={stage}>{ui}</StageProvider>);
+  const view = render(<StageProvider stage={stage}>{ui}</StageProvider>);
   stage.start();
   act(() => pending?.());
-  return result;
+  return view;
 }

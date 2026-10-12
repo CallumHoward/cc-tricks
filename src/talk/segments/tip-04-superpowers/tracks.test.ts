@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { HOP } from "#/talk/mascot/actions";
+import { homeDrift } from "#/talk/segments/shared/test-utils";
 
 import {
   AT,
@@ -74,10 +75,6 @@ describe("tip 4 tracks", () => {
   });
 
   it("should rest on the home shot at both window edges", () => {
-    for (const tau of [WIN.start, WIN.end - 0.01]) {
-      expect(dockY(tau)).toBeCloseTo(0, 3);
-      expect(botOffset(tau).x).toBeCloseTo(0, 3);
-      expect(botOffset(tau).y).toBeCloseTo(0, 3);
-    }
+    expect(homeDrift(WIN, dockY, botOffset)).toBeCloseTo(0, 3);
   });
 });

@@ -10,18 +10,30 @@ import { num, put } from "./dom";
 import { springFrom } from "./schedule";
 import { stubSwing, tearClips } from "./tear";
 
+/** A τ window, or any τ → 0..1 progress (e.g. fast into a stop, then creeping through the hold). */
+type TearSpec = { start: number; end: number } | ((tau: number) => number);
+
+function tearAt(tear: TearSpec | undefined, tau: number): number {
+  if (!tear) return 0;
+  return typeof tear === "function" ? tear(tau) : prog(tau, tear.start, tear.end);
+}
+
 /**
- * A ticket with a perforated stub, a punch hole (punched at `punchAt`) and a stub that tears along
- * the perforation over `tear`. `stamp` sits in the stamp slot over the body.
+ * A ticket with a perforated stub, a punch hole (punched at `punchAt`, `punchY` down the ticket)
+ * and a stub that tears along the perforation over `tear`. `stamp` sits in the stamp slot.
  */
 export function Ticket({
   width = 760,
   height = 300,
   stubWidth = 170,
   punchAt,
+  punchY = 0.28,
   tear,
   stub,
   stamp,
+  padding,
+  stubPadding,
+  holeStyle,
   children,
   style,
 }: {
@@ -29,9 +41,13 @@ export function Ticket({
   height?: number;
   stubWidth?: number;
   punchAt?: number;
-  tear?: { start: number; end: number };
+  punchY?: number;
+  tear?: TearSpec;
   stub?: ReactNode;
   stamp?: ReactNode;
+  padding?: CSSProperties["padding"];
+  stubPadding?: CSSProperties["padding"];
+  holeStyle?: CSSProperties;
   children: ReactNode;
   style?: CSSProperties;
 }) {
@@ -42,7 +58,7 @@ export function Ticket({
   const geom = { width, height, perf, seed: width + height };
 
   useFrame((frame: Frame) => {
-    const p = tear ? prog(frame.tau, tear.start, tear.end) : 0;
+    const p = tearAt(tear, frame.tau);
     const clips = tearClips(p, geom);
     put(body.current, "clip-path", clips.body);
     put(stubEl.current, "clip-path", clips.stub);
@@ -67,13 +83,16 @@ export function Ticket({
         className="km-ticket-part km-ticket-stub"
         style={{ maskImage: notch(perf), maskComposite: "intersect" }}
       >
-        <div className="km-ticket-stub-content" style={{ left: perf, width: stubWidth }}>
+        <div
+          className="km-ticket-stub-content"
+          style={{ left: perf, width: stubWidth, padding: stubPadding }}
+        >
           {stub}
         </div>
         <div
           ref={hole}
           className="km-ticket-hole"
-          style={{ left: perf + stubWidth / 2, top: height * 0.28 }}
+          style={{ left: perf + stubWidth / 2, top: height * punchY, ...holeStyle }}
         />
       </div>
       <div
@@ -81,7 +100,7 @@ export function Ticket({
         className="km-ticket-part km-ticket-body"
         style={{ maskImage: notch(perf), maskComposite: "intersect" }}
       >
-        <div className="km-ticket-content" style={{ width: perf }}>
+        <div className="km-ticket-content" style={{ width: perf, padding }}>
           {children}
         </div>
         <div className="km-ticket-perf" style={{ left: perf }} />

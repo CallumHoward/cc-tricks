@@ -3,6 +3,7 @@ import {
   use,
   useCallback,
   useEffect,
+  useRef,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -36,10 +37,29 @@ export function useFrame(cb: FrameCallback, priority: number = PRIORITY.dom): vo
   useEffect(() => stage.onFrame(cb, priority), [stage, cb, priority]);
 }
 
+/**
+ * Shows the returned element only while τ ∈ [from, to). Opacity, not visibility: kit parts set
+ * `visibility: visible` on themselves and would leak through.
+ */
+export function useVisibleWindow<T extends HTMLElement>(from: number, to: number) {
+  const ref = useRef<T>(null);
+  useFrame((frame: Frame) => {
+    const el = ref.current;
+    if (!el) return;
+    const visible = frame.tau >= from && frame.tau < to;
+    const next = visible ? "1" : "0";
+    if (el.style.opacity !== next) {
+      el.style.opacity = next;
+      el.style.pointerEvents = visible ? "" : "none";
+    }
+  });
+  return ref;
+}
+
 export type TrackSource = TrackSpec | ((tau: number, frame: Frame) => StyleValues);
 
 /** Binds an element to a track; writes the current sample immediately and every tick after. */
-export function bindTrack(
+function bindTrack(
   stage: Stage,
   el: HTMLElement | SVGElement,
   source: TrackSource,

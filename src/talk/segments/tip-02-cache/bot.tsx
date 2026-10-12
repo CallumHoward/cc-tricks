@@ -9,7 +9,7 @@ import { hitSag, MONOLITH, PRICE_BASE, PRICE_X, COIN } from "./scene";
 import { T } from "./timing";
 
 /** Feet sit this far below the bot box's top edge. */
-export const FEET = 180;
+const FEET = 180;
 const HOME_FEET = { x: BOT_HOME.left + BOT_HOME.width / 2, y: BOT_HOME.top + FEET };
 
 /** Where the bot stands between hops (feet, stage px). */
@@ -27,7 +27,7 @@ type Spot = { x: number; y: number };
 type HopKey = { at: number; dur: number; to: Spot; height: number };
 
 /** Every hop between spots, in order (the bot starts at home and ends at home). */
-export const HOPS: readonly HopKey[] = [
+const HOPS: readonly HopKey[] = [
   { at: 72.5, dur: 0.6, to: SPOTS.monolith, height: 140 },
   { at: 83.3, dur: 0.7, to: SPOTS.shelf, height: 120 },
   { at: 96.6, dur: 0.7, to: SPOTS.hit, height: 140 },

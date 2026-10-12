@@ -7,6 +7,7 @@ import { ClayField, RuleRise } from "#/talk/kit/motion";
 import { AgentRow, ReadToolRow, SpinnerLine, StaticGlyph } from "#/talk/kit/tui";
 import { setStyle, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import { scriptFor } from "#/talk/script";
+import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "#/talk/segments/shared/tip-title";
 import { PriceOfATurn } from "#/talk/widgets/price-of-a-turn";
 
 import { Anchor, During, Leave, Rise, Typed } from "./parts";
@@ -31,13 +32,22 @@ import {
   STAIR_X0,
   STAIR_Y0,
 } from "./scene";
-import { holdEnd, IDLE, KV, PRICE, STATELESS, SWITCH, T, TTL } from "./timing";
+import { holdEnd, IDLE, KV, STATELESS, T, TTL } from "./timing";
 
 const LEFT = 200;
 
 // ── t2-stateless ─────────────────────────────────────────────────────────────────────────────
 
 const STAIR_BOTTOM = STAIR_Y0 + 3 * ROW_PITCH + 30;
+
+/** The stop's own headline sits under the tip title at 60% of display size. */
+const SUBHEAD_TOP = TIP_TITLE_TOP + TIP_TITLE_LINE + 16;
+const SUBHEAD = {
+  position: "absolute",
+  left: LEFT,
+  transform: "scale(0.6)",
+  transformOrigin: "0 0",
+} as const;
 
 /** A bracket under the staircase, drawn on from its left end. */
 function Bracket({
@@ -70,20 +80,15 @@ export function StatelessPlate() {
   const [bracketLabel, memory] = s.labels;
   return (
     <During from={T.dive} to={out + 0.6}>
-      <Rise at={72.2} out={out} className="type-label text-clay" style={{ left: LEFT, top: 104 }}>
-        {s.kicker}
-      </Rise>
-      <RuleRise
-        text={s.headline ?? ""}
-        settleBy={77.3}
-        exit={out}
-        style={{ position: "absolute", left: LEFT, top: 150 }}
-      />
+      <TipTitle text={s.kicker ?? ""} settleBy={T.tapeHome} exit={out} />
+      <div style={{ ...SUBHEAD, top: SUBHEAD_TOP }}>
+        <RuleRise text={s.headline ?? ""} settleBy={77.3} exit={out} rule={false} />
+      </div>
       <Rise
         at={78.7}
         out={out}
         className="type-body text-soft"
-        style={{ left: LEFT, top: 292, width: 1400 }}
+        style={{ left: LEFT, top: 744, width: 1400 }}
       >
         {s.lines[0]}
       </Rise>
@@ -126,7 +131,7 @@ export function StatelessPlate() {
       <Anchor x={STAIR_X0 + 8.5 * PITCH} y={STAIR_Y0 + 1.5 * ROW_PITCH} z={30} dx={-36} dy={-36}>
         <Emboss at={79.3} />
       </Anchor>
-      <Rise at={79.1} out={out} className="type-body" style={{ left: LEFT, top: 820, width: 1500 }}>
+      <Rise at={79.1} out={out} className="type-body" style={{ left: LEFT, top: 804, width: 1500 }}>
         {bracketLabel}
       </Rise>
     </During>
@@ -212,6 +217,8 @@ export function KvPlate() {
 // ── t2-price ─────────────────────────────────────────────────────────────────────────────────
 
 const COLUMN_NAMES = ["base", "5m write", "1h write", "hit"] as const;
+/** Column prices are the plate's key numbers: 34 px code type at 1.2× reads at phone size. */
+const VALUE_SCALE = 1.2;
 
 function ColumnValue({ i }: { i: number }) {
   const value = PRICE_VALUES[i] ?? 0;
@@ -225,15 +232,15 @@ function ColumnValue({ i }: { i: number }) {
     setStyle(
       el,
       "transform",
-      `translate3d(${((PRICE_X[i] ?? 0) - 80).toFixed(1)}px, ${top.toFixed(1)}px, 0)`,
+      `translate3d(${((PRICE_X[i] ?? 0) - 80).toFixed(1)}px, ${top.toFixed(1)}px, 0) scale(${VALUE_SCALE})`,
     );
     el.textContent = `$${(value * u).toFixed(2)}`;
   });
   return (
     <div
       ref={ref}
-      className="type-label t2-col-value"
-      style={{ position: "absolute", left: 0, top: 0 }}
+      className="type-code t2-col-value"
+      style={{ position: "absolute", left: 0, top: 0, transformOrigin: "50% 100%" }}
     >
       $0.00
     </div>
@@ -631,5 +638,3 @@ export function SwitchPlate() {
     </During>
   );
 }
-
-export const PLATE_STOPS = [STATELESS, KV, PRICE, TTL, IDLE, SWITCH] as const;

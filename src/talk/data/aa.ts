@@ -11,13 +11,6 @@ export type AaPoint = {
   answerTokens: number;
 };
 
-export const AA_SOURCE = {
-  methodology: "Artificial Analysis Intelligence Index v4.3.2",
-  url: "https://artificialanalysis.ai/",
-  capturedAt: "2026-10-12T13:42:07+00:00",
-  foot: "Artificial Analysis Intelligence Index v4.3.2 · cost per task at API list prices · 13 Oct 2026",
-} as const;
-
 /** Captured from the rendered Artificial Analysis charts; full precision, round only for display. */
 export const AA_POINTS: readonly AaPoint[] = [
   {

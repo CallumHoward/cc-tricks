@@ -1,5 +1,5 @@
 /** Laya playground run, preset "Billing email (example)", one request. */
-export const LAYA_RUN = {
+const LAYA_RUN = {
   _capture: {
     source:
       "http://127.0.0.1:8000/ playground, preset 'Billing email (example)', Run request pressed once",

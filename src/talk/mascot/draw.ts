@@ -77,17 +77,28 @@ function strokeShape(d: string, stroke: string, sw: number, opacity = 1): Shape 
   return { d, fill: "none", stroke, sw, opacity };
 }
 
-/** Pure: renders a pose to SVG path data. `drawing` picks the boil variant (cycle of three). */
-export function drawMascot(pose: Pose, drawing = 0, opts: DrawOptions = {}): Drawing {
-  const amp = opts.boil ?? 1.2;
+/** Projection and boil state shared by every part of one drawing. */
+type View = {
+  pose: Pose;
+  c: number;
+  s: number;
+  bob: number;
+  /** Projected body width at this yaw */
+  Wp: number;
+  screen: (X: number, Y: number) => Pt;
+  proj: (x: number, y: number, z: number) => Pt;
+  depthOf: (x: number, z: number) => number;
+  mapAll: (pts: readonly Pt[]) => Pt[];
+  wobble: (pts: Pt[], k?: number) => Pt[];
+};
+
+function makeView(pose: Pose, drawing: number, amp: number): View {
   const seedBase = (((drawing % 3) + 3) % 3) * 31;
   const c = Math.cos(pose.yaw * DEG);
   const s = Math.sin(pose.yaw * DEG);
   const { sx, sy } = squashScale(pose.sq);
   const cl = Math.cos(pose.lean * DEG);
   const sl = Math.sin(pose.lean * DEG);
-  const W = RIG.bodyW;
-  const D = RIG.bodyD;
 
   /** Projected 2D (pre-squash) → screen. */
   const screen = (X: number, Y: number): Pt => {
@@ -95,19 +106,27 @@ export function drawMascot(pose: Pose, drawing = 0, opts: DrawOptions = {}): Dra
     const y1 = Y * sy;
     return [x1 * cl - y1 * sl + pose.x, x1 * sl + y1 * cl - pose.lift];
   };
-  const proj = (x: number, y: number, z: number): Pt => screen(x * c + z * s, y);
-  const depthOf = (x: number, z: number) => -x * s + z * c;
-  const mapAll = (pts: readonly Pt[]) => pts.map(([X, Y]) => screen(X, Y));
   let slotSeed = 0;
-  const wobble = (pts: Pt[], k = 1) => boil(pts, amp * k, seedBase + ++slotSeed * 7);
+  return {
+    pose,
+    c,
+    s,
+    bob: pose.bob,
+    Wp: RIG.bodyW * Math.abs(c) + RIG.bodyD * Math.abs(s),
+    screen,
+    proj: (x, y, z) => screen(x * c + z * s, y),
+    depthOf: (x, z) => -x * s + z * c,
+    mapAll: (pts) => pts.map(([X, Y]) => screen(X, Y)),
+    wobble: (pts, k = 1) => boil(pts, amp * k, seedBase + ++slotSeed * 7),
+  };
+}
 
-  const shapes = Object.fromEntries(SLOTS.map((k) => [k, EMPTY])) as Record<Slot, Shape>;
-  const bob = pose.bob;
-
-  // Body silhouette and tone regions
-  const Wp = W * Math.abs(c) + D * Math.abs(s);
-  const silhouette = wobble(
-    mapAll(softBox(0, BODY_BOTTOM + bob, Wp, RIG.bodyH, RIG.radiusTop, RIG.radiusBottom, RIG.dome)),
+/** Body silhouette, outline and lit tone; returns the silhouette path (the clip). */
+function drawBody(shapes: Record<Slot, Shape>, v: View): string {
+  const silhouette = v.wobble(
+    v.mapAll(
+      softBox(0, BODY_BOTTOM + v.bob, v.Wp, RIG.bodyH, RIG.radiusTop, RIG.radiusBottom, RIG.dome),
+    ),
   );
   const silD = smoothPath(silhouette);
   shapes.body = { d: silD, fill: PALETTE.shade, stroke: "none", sw: 0, opacity: 1 };
@@ -119,104 +138,110 @@ export function drawMascot(pose: Pose, drawing = 0, opts: DrawOptions = {}): Dra
     sw: 0,
     opacity: 1,
   };
+  return silD;
+}
 
-  const mainCenter = (c >= 0 ? 1 : -1) * (D / 2) * s;
+/** The turned-away side plane, when the body is turned enough to show one. */
+function drawSide(shapes: Record<Slot, Shape>, v: View) {
+  const { c, s, Wp } = v;
+  const W = RIG.bodyW;
+  const mainCenter = (c >= 0 ? 1 : -1) * (RIG.bodyD / 2) * s;
   const m0 = mainCenter - (W / 2) * Math.abs(c);
   const m1 = mainCenter + (W / 2) * Math.abs(c);
-  const top = BODY_TOP + bob - 20;
-  const bottom = BODY_BOTTOM + bob + 4;
+  const top = BODY_TOP + v.bob - 20;
+  const bottom = BODY_BOTTOM + v.bob + 4;
   const sideEdge = m0 > -Wp / 2 + 1 ? m0 : m1 < Wp / 2 - 1 ? m1 : null;
-  if (sideEdge !== null) {
-    const outer = sideEdge === m0 ? -Wp / 2 - 20 : Wp / 2 + 20;
-    const bulge = Math.sign(outer - sideEdge) * 5;
-    const region: Pt[] = [
-      [outer, top],
-      [sideEdge, top],
-      ...Array.from({ length: 7 }, (_, i): Pt => {
-        const u = (i + 1) / 8;
-        return [sideEdge + bulge * Math.sin(u * Math.PI), top + (bottom - top) * u];
-      }),
-      [sideEdge, bottom],
-      [outer, bottom],
-    ];
-    shapes.side = {
-      d: polyPath(mapAll(region), true),
-      fill: PALETTE.side,
-      stroke: "none",
-      sw: 0,
-      opacity: 1,
-    };
-  }
+  if (sideEdge === null) return;
+  const outer = sideEdge === m0 ? -Wp / 2 - 20 : Wp / 2 + 20;
+  const bulge = Math.sign(outer - sideEdge) * 5;
+  const region: Pt[] = [
+    [outer, top],
+    [sideEdge, top],
+    ...Array.from({ length: 7 }, (_, i): Pt => {
+      const u = (i + 1) / 8;
+      return [sideEdge + bulge * Math.sin(u * Math.PI), top + (bottom - top) * u];
+    }),
+    [sideEdge, bottom],
+    [outer, bottom],
+  ];
+  shapes.side = {
+    d: polyPath(v.mapAll(region), true),
+    fill: PALETTE.side,
+    stroke: "none",
+    sw: 0,
+    opacity: 1,
+  };
+}
 
+function drawHighlight(shapes: Record<Slot, Shape>, v: View) {
   const rt = RIG.radiusTop;
+  const at = (a: number): Pt => [
+    -v.Wp / 2 + rt + Math.cos(a) * (rt - 12),
+    BODY_TOP + v.bob + rt + Math.sin(a) * (rt - 12),
+  ];
   const hl: Pt[] = [];
-  for (let i = 0; i <= 6; i++) {
-    const a = (198 + (i / 6) * 50) * DEG;
-    hl.push([
-      -Wp / 2 + rt + Math.cos(a) * (rt - 12),
-      BODY_TOP + bob + rt + Math.sin(a) * (rt - 12),
-    ]);
-  }
-  const dotA = 262 * DEG;
-  const dot = screen(
-    -Wp / 2 + rt + Math.cos(dotA) * (rt - 12),
-    BODY_TOP + bob + rt + Math.sin(dotA) * (rt - 12),
-  );
+  for (let i = 0; i <= 6; i++) hl.push(at((198 + (i / 6) * 50) * DEG));
+  const dot = v.screen(...at(262 * DEG));
   shapes.highlight = strokeShape(
-    `${smoothPath(mapAll(hl), false)}M${dot[0].toFixed(1)} ${dot[1].toFixed(1)}l0 0`,
+    `${smoothPath(v.mapAll(hl), false)}M${dot[0].toFixed(1)} ${dot[1].toFixed(1)}l0 0`,
     PALETTE.ivory,
     5,
     0.85,
   );
+}
 
-  // Ground shadow (unaffected by lean and squash)
-  const shadowK = 1 - Math.min(pose.lift, 220) / 380;
+/** Ground shadow (unaffected by lean and squash). */
+function drawShadow(shapes: Record<Slot, Shape>, v: View) {
+  const shadowK = 1 - Math.min(v.pose.lift, 220) / 380;
   shapes.shadow = {
-    d: smoothPath(ellipse(pose.x, 3, (Wp / 2) * 0.92 * shadowK, 8 * shadowK)),
+    d: smoothPath(ellipse(v.pose.x, 3, (v.Wp / 2) * 0.92 * shadowK, 8 * shadowK)),
     fill: PALETTE.ground,
     stroke: "none",
     sw: 0,
     opacity: 0.55 * shadowK,
   };
+}
 
-  // Legs, painted back to front
+/** Legs, painted back to front. */
+function drawLegs(shapes: Record<Slot, Shape>, v: View) {
   const legs = RIG.legAt.map(([lx, lz], i) => {
-    const leg = pose.legs[i];
-    const topPt = proj(lx, BODY_BOTTOM - 12 + bob, lz);
-    const foot = proj(lx, -leg.lift - RIG.legW / 2, lz + leg.swing);
-    const depth = depthOf(lx, lz);
-    const pts = wobble(capsule(topPt, foot, RIG.legW / 2, RIG.legW / 2 + 1), 0.7);
+    const leg = v.pose.legs[i];
+    const topPt = v.proj(lx, BODY_BOTTOM - 12 + v.bob, lz);
+    const foot = v.proj(lx, -leg.lift - RIG.legW / 2, lz + leg.swing);
+    const depth = v.depthOf(lx, lz);
+    const pts = v.wobble(capsule(topPt, foot, RIG.legW / 2, RIG.legW / 2 + 1), 0.7);
     return { depth, shape: fillShape(smoothPath(pts), depth < -1 ? PALETTE.side : PALETTE.clay) };
   });
   legs.sort((a, b) => a.depth - b.depth);
   legs.forEach((l, i) => {
     shapes[`leg${i}` as Slot] = l.shape;
   });
+}
 
-  // Arms: behind the body unless the hand comes toward the viewer
+/** Arms: behind the body unless the hand comes toward the viewer. Returns the hand points. */
+function drawArms(shapes: Record<Slot, Shape>, v: View): Pt[] {
   const hands: Pt[] = [];
   let back = 0;
   let front = 0;
   for (const [sgn, arm] of [
-    [-1, pose.armL],
-    [1, pose.armR],
+    [-1, v.pose.armL],
+    [1, v.pose.armR],
   ] as const) {
-    const shX = sgn * (W / 2 - RIG.shoulderInset);
-    const shY = RIG.shoulderY + bob;
+    const shX = sgn * (RIG.bodyW / 2 - RIG.shoulderInset);
+    const shY = RIG.shoulderY + v.bob;
     const rot = arm.rot * DEG;
     // Arms drift forward as the body turns so a side view never shows an end-on nub
-    const fwd = (arm.fwd + 55 * Math.abs(s)) * DEG;
+    const fwd = (arm.fwd + 55 * Math.abs(v.s)) * DEG;
     const L = RIG.armLen * arm.len;
     const hx = shX + sgn * Math.cos(rot) * Math.cos(fwd) * L;
     const hy = shY + Math.sin(rot) * L;
     const hz = Math.cos(rot) * Math.sin(fwd) * L;
-    const a = proj(shX, shY, 0);
-    const b = proj(hx, hy, hz);
+    const a = v.proj(shX, shY, 0);
+    const b = v.proj(hx, hy, hz);
     hands.push(b);
-    const pts = wobble(capsule(a, b, RIG.armR, RIG.handR), 0.7);
-    const isFront = depthOf(hx, hz) > 2;
+    const pts = v.wobble(capsule(a, b, RIG.armR, RIG.handR), 0.7);
     const shape = fillShape(smoothPath(pts), PALETTE.clay);
-    if (isFront) {
+    if (v.depthOf(hx, hz) > 2) {
       // Outline only the free end so the arm reads as growing out of the body
       shapes[`armF${front}` as Slot] = { ...shape, stroke: "none", sw: 0 };
       shapes[`armF${front++}Line` as Slot] = strokeShape(
@@ -226,66 +251,83 @@ export function drawMascot(pose: Pose, drawing = 0, opts: DrawOptions = {}): Dra
       );
     } else shapes[`armB${back++}` as Slot] = { ...shape, fill: PALETTE.side };
   }
+  return hands;
+}
 
-  // Face on the front plane
+/** Face on the front plane: eyes, blush and mouth, fading out as the body turns away. */
+function drawFace(shapes: Record<Slot, Shape>, v: View) {
+  const { pose, c, s } = v;
   const faceVis = smoothstep(-0.3, -0.08, c);
-  if (faceVis > 0) {
-    const xs = Math.sqrt(Math.max(0.25, c));
-    const faceX = (x: number) => x * c + (D / 2) * s * (1 - 0.22 * s * s);
-    const face = (x: number, y: number, dx: number, dy: number) =>
-      screen(faceX(x) + dx * xs, y + dy);
-    const lookX = pose.lookX * 9;
-    const lookY = pose.lookY * 6;
-    const blushPts: string[] = [];
-    for (const [sgn, eye, key, glint] of [
-      [-1, pose.eyeL, "eyeL", "glintL"],
-      [1, pose.eyeR, "eyeR", "glintR"],
-    ] as const) {
-      const far = sgn * s > 0 ? 1 - smoothstep(0.8, 0.97, Math.abs(s)) : 1;
-      const k = faceVis * far;
-      if (k < 0.05) continue;
-      const ex = sgn * RIG.eyeX + lookX;
-      const ey = RIG.eyeY + lookY + bob;
-      drawEye(shapes, key, glint, eye, ex, ey, k, sgn, face, wobble);
-      const b = ellipse(0, 0, 8.5 * k, 4.5, 14).map(([dx, dy]) =>
-        face(sgn * (RIG.eyeX + 13) + lookX * 0.6, ey + 19, dx, dy),
-      );
-      blushPts.push(smoothPath(b));
-    }
-    if (pose.blush > 0.01 && blushPts.length > 0) {
-      shapes.blush = {
-        d: blushPts.join(""),
-        fill: PALETTE.blush,
-        stroke: "none",
-        sw: 0,
-        opacity: pose.blush * 0.75 * faceVis,
-      };
-    }
-    shapes.mouth = drawMouth(pose, (dx, dy) =>
-      face(lookX * 0.6, RIG.mouthY + lookY * 0.7 + bob, dx, dy),
+  if (faceVis <= 0) return;
+  const xs = Math.sqrt(Math.max(0.25, c));
+  const faceX = (x: number) => x * c + (RIG.bodyD / 2) * s * (1 - 0.22 * s * s);
+  const face = (x: number, y: number, dx: number, dy: number) =>
+    v.screen(faceX(x) + dx * xs, y + dy);
+  const lookX = pose.lookX * 9;
+  const lookY = pose.lookY * 6;
+  const blushPts: string[] = [];
+  for (const [sgn, eye, key, glint] of [
+    [-1, pose.eyeL, "eyeL", "glintL"],
+    [1, pose.eyeR, "eyeR", "glintR"],
+  ] as const) {
+    const far = sgn * s > 0 ? 1 - smoothstep(0.8, 0.97, Math.abs(s)) : 1;
+    const k = faceVis * far;
+    if (k < 0.05) continue;
+    const ex = sgn * RIG.eyeX + lookX;
+    const ey = RIG.eyeY + lookY + v.bob;
+    drawEye(shapes, key, glint, eye, ex, ey, k, sgn, face, v.wobble);
+    const b = ellipse(0, 0, 8.5 * k, 4.5, 14).map(([dx, dy]) =>
+      face(sgn * (RIG.eyeX + 13) + lookX * 0.6, ey + 19, dx, dy),
     );
-    if (shapes.mouth.d) shapes.mouth = { ...shapes.mouth, opacity: faceVis };
+    blushPts.push(smoothPath(b));
   }
-
-  drawProps(shapes, pose, hands, proj);
-  drawFx(shapes, pose, proj);
-
-  if (opts.silhouette) {
-    for (const key of SLOTS) {
-      const sh = shapes[key];
-      if (!sh.d) continue;
-      const solid =
-        key === "body" ||
-        key.startsWith("leg") ||
-        key.startsWith("arm") ||
-        (key.startsWith("prop") && !key.endsWith("Detail"));
-      shapes[key] = solid
-        ? { d: sh.d, fill: opts.silhouette, stroke: opts.silhouette, sw: RIG.line, opacity: 1 }
-        : EMPTY;
-    }
+  if (pose.blush > 0.01 && blushPts.length > 0) {
+    shapes.blush = {
+      d: blushPts.join(""),
+      fill: PALETTE.blush,
+      stroke: "none",
+      sw: 0,
+      opacity: pose.blush * 0.75 * faceVis,
+    };
   }
+  shapes.mouth = drawMouth(pose, (dx, dy) =>
+    face(lookX * 0.6, RIG.mouthY + lookY * 0.7 + v.bob, dx, dy),
+  );
+  if (shapes.mouth.d) shapes.mouth = { ...shapes.mouth, opacity: faceVis };
+}
 
-  return { clip: silD, shapes };
+const isSolidSlot = (key: Slot) =>
+  key === "body" ||
+  key.startsWith("leg") ||
+  key.startsWith("arm") ||
+  (key.startsWith("prop") && !key.endsWith("Detail"));
+
+/** Every solid part filled with one colour; detail parts dropped. */
+function silhouetteOf(shapes: Record<Slot, Shape>, color: string) {
+  for (const key of SLOTS) {
+    const sh = shapes[key];
+    if (!sh.d) continue;
+    shapes[key] = isSolidSlot(key)
+      ? { d: sh.d, fill: color, stroke: color, sw: RIG.line, opacity: 1 }
+      : EMPTY;
+  }
+}
+
+/** Pure: renders a pose to SVG path data. `drawing` picks the boil variant (cycle of three). */
+export function drawMascot(pose: Pose, drawing = 0, opts: DrawOptions = {}): Drawing {
+  const v = makeView(pose, drawing, opts.boil ?? 1.2);
+  const shapes = Object.fromEntries(SLOTS.map((k) => [k, EMPTY])) as Record<Slot, Shape>;
+  const clip = drawBody(shapes, v);
+  drawSide(shapes, v);
+  drawHighlight(shapes, v);
+  drawShadow(shapes, v);
+  drawLegs(shapes, v);
+  const hands = drawArms(shapes, v);
+  drawFace(shapes, v);
+  drawProps(shapes, pose, hands, v.proj);
+  drawFx(shapes, pose, v.proj);
+  if (opts.silhouette) silhouetteOf(shapes, opts.silhouette);
+  return { clip, shapes };
 }
 
 type FaceMap = (x: number, y: number, dx: number, dy: number) => Pt;

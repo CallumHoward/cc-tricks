@@ -29,7 +29,7 @@ export type ReadToolRowProps = {
 const LINE_RISE = 0.14;
 
 /** Absolute τ each output line lands at. */
-export const outputTimes = (count: number, outputAt: number, stagger: number): number[] =>
+const outputTimes = (count: number, outputAt: number, stagger: number): number[] =>
   Array.from({ length: count }, (_, i) => outputAt + i * stagger);
 
 const lineOf = (line: ToolOutputLine) =>

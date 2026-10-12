@@ -40,7 +40,7 @@ export const T = Object.freeze({
 });
 
 export const PROMPT = "fix the typo in README";
-export const MAIN_TOKENS = 97_300;
+const MAIN_TOKENS = 97_300;
 export const ROW_TOKENS = [171_900, 150_500, 217_600, 162_900, 231_200] as const;
 export const TOTAL_TOKENS = MAIN_TOKENS + ROW_TOKENS.reduce((a, b) => a + b, 0);
 
@@ -51,7 +51,7 @@ const MAIN_KEYS: readonly (readonly [number, number])[] = [
   [1.38, MAIN_TOKENS],
 ];
 
-export function mainTokensAt(tau: number): number {
+function mainTokensAt(tau: number): number {
   if (tau < T.spinnerAt) return 0;
   for (let i = 1; i < MAIN_KEYS.length; i++) {
     const a = MAIN_KEYS[i - 1] as readonly [number, number];
@@ -73,7 +73,7 @@ export function rowTokenKeys(i: number): readonly Key[] {
   return keys([start, 0], [end, ROW_TOKENS[i] ?? 0, outCubic]);
 }
 
-export function rowTokensAt(i: number, tau: number): number {
+function rowTokensAt(i: number, tau: number): number {
   const { start, end } = rowRoll(i);
   return (ROW_TOKENS[i] ?? 0) * outCubic(prog(tau, start, end));
 }
@@ -102,7 +102,7 @@ export function magnitudeCrossings(): number[] {
 /** Cold-open camera, in home-shot world px. The ❯ starts at hero size in the left third. */
 const CHEVRON = { x: 210, y: 620 };
 const CARET_END = 240.8 + PROMPT.length * 20.4;
-export const COLD_CAM_REST: Cam = { x: 600, y: 462, zoom: 2.3, roll: 0, tilt: 0 };
+const COLD_CAM_REST: Cam = { x: 600, y: 462, zoom: 2.3, roll: 0, tilt: 0 };
 
 export const COLD_SHOTS: readonly Shot[] = [
   { at: 0, x: CHEVRON.x + (960 - 380) / 6, y: CHEVRON.y, zoom: 6, roll: -2 },
@@ -130,7 +130,7 @@ export function coldPunch(tau: number, v: number, crossings: readonly number[]):
 }
 
 /** Spinner ✳ box in world px (where the dive starts). */
-export const SPIN_BOX = { x: 200, y: 500, size: 36 };
+const SPIN_BOX = { x: 200, y: 500, size: 36 };
 
 /** Where the ✳ sits on screen under the resting cold-open camera. */
 export function spinOnScreen(cam: Cam = COLD_CAM_REST) {
@@ -142,7 +142,7 @@ export function spinOnScreen(cam: Cam = COLD_CAM_REST) {
 }
 
 /** Projected height of a plane of `height` px pitched back `pitch`° under `perspective(d)`. */
-export function roadFar(height: number, pitch: number, d = 900): number {
+function roadFar(height: number, pitch: number, d = 900): number {
   const r = (pitch * Math.PI) / 180;
   return (height * Math.cos(r) * d) / (d + height * Math.sin(r));
 }
@@ -179,9 +179,9 @@ export function laneScroll(tau: number): number {
 }
 
 /** Token blocks falling from the sun onto the road's left shoulder: a pure f(i, τ). */
-export const BLOCK_EVERY = 0.6;
-export const BLOCK_FALL = 1.8;
-export const BLOCK_FIRST = 6.2;
+const BLOCK_EVERY = 0.6;
+const BLOCK_FALL = 1.8;
+const BLOCK_FIRST = 6.2;
 export const BLOCK_COUNT = 12;
 
 const COLUMNS = [
