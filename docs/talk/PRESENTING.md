@@ -9,6 +9,15 @@ pnpm dev            # http://localhost:3000
 
 Use Chrome (WebGL and WebGPU layers). Open `/`, press `F` for fullscreen and `P` for the presenter window.
 
+The page opens on a blinking prompt, a pre-roll stop before the film. The first press plays the cold open into the
+title. Sound is on by default; browsers only allow it after a key press, so that first press also unlocks audio.
+
+The presenter window shows the notes for the current stop, the next stop, the elapsed time against the 20-minute
+budget, and how long you have been on the current stop against its speaking target (`0:42 / 0:55`).
+
+The outro QR and the show notes link point at the Notion show notes. To point them somewhere else, set
+`VITE_SHOWNOTES_URL=https://…` when running `pnpm dev` or `pnpm build`. `/shownotes` renders the same notes locally.
+
 ## Keys
 
 | Key                          | Action                                                        |
@@ -34,6 +43,9 @@ first key press unlocks audio.
 
 - `src/engine/` — planner, clock, stage loop, tracks, springs, GL post chain, shaders host, audio, presenter channel
 - `src/talk/` — tokens, kit (TUI, motion, data viz, widgets), mascot, script (copy + notes), timeline data, segments
+- `src/talk/segments/<id>/` — one folder per segment. Each owns a τ window, including its exit tail. Every
+  boundary is a match cut on the empty home prompt (`shared/home.tsx`). A segment can own its sound timing with
+  a `cues.ts` that exports `CUES`.
 - `docs/talk/COPY.md`, `docs/talk/FACTS.md` — reviewed copy and the fact table with sources
 
 ## Stills and renders
