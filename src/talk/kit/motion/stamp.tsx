@@ -9,7 +9,7 @@ import type { Frame } from "#/engine/types";
 import { attr, cssId, num, put } from "./dom";
 import { springFrom } from "./schedule";
 
-/** Stamp pose: SLAM from ×2.6 so it rests by `settleBy`, then ink creeps ≤ 0.5 px per τ-s. */
+/** Stamp pose: SLAM from ×2.6 so it rests by `settleBy`, then ink creeps a little (≤ 0.35 px). */
 export function stampAt(tau: number, settleBy: number, rotate: number) {
   const start = settleBy - settleTime(SPRINGS.SLAM);
   const t = tau - start;
@@ -19,7 +19,7 @@ export function stampAt(tau: number, settleBy: number, rotate: number) {
     shown: true,
     scale: 2.6 + (1 - 2.6) * k,
     rotate: rotate + 7 * (1 - k),
-    spread: clamp((tau - settleBy) * 0.5, 0, 1.6),
+    spread: clamp((tau - settleBy) * 0.12, 0, 0.35),
   };
 }
 
@@ -63,7 +63,7 @@ export function Stamp({
             seed={seed}
             result="grain"
           />
-          <feDisplacementMap in="SourceGraphic" in2="grain" scale="2.5" result="rough" />
+          <feDisplacementMap in="SourceGraphic" in2="grain" scale="1.4" result="rough" />
           <feMorphology ref={dilate} in="rough" operator="dilate" radius="0" result="ink" />
           <feTurbulence
             type="fractalNoise"
@@ -75,7 +75,7 @@ export function Stamp({
           <feColorMatrix
             in="blot"
             type="matrix"
-            values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3.2 2.3"
+            values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.4 2.1"
             result="wear"
           />
           <feComposite in="ink" in2="wear" operator="in" />
