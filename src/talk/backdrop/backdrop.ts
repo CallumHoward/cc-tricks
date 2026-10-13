@@ -1,24 +1,27 @@
 import * as THREE from "three";
 
 import { hdr, linear, type Rgb } from "#/engine/gl/palette";
-import type { PostParams } from "#/engine/gl/post-params";
+import { DEFAULT_POST, type PostParams } from "#/engine/gl/post-params";
 import type { ThreeBackdrop } from "#/engine/gl/three-host";
 import { lerp } from "#/engine/motion/ease";
 import { ambientRate, ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
 
 import { fieldParticle, spriteHash } from "./field";
+import { presenceAt, rigAt, type ShotStop } from "./shots";
 import {
   cameraAt,
   cameraVelocity,
   CEILING,
   CELL,
+  centerAt,
+  focusAt,
   HEIGHT_GLSL,
   lightsAt,
   moodAt,
   TRAVEL,
+  WELL_RADIUS,
   type MoodSegment,
-  type MoodStop,
 } from "./world";
 
 const FOV = 56;
@@ -42,6 +45,7 @@ const vec3 = ([r, g, b]: Rgb) => new THREE.Vector3(r, g, b);
 
 const LINE = vec3(linear("#c9c7bc"));
 const CLAY = hdr("#d97757", 7);
+const CLAY_LINE = vec3(linear("#d97757"));
 const COOL = hdr("#dfe7ff", 6);
 const DUST_COLOR = linear("#e9e4d6");
 const WARM_DUST_COLOR = linear("#eb9f7f");
@@ -61,9 +65,10 @@ void main() {
 }`;
 
 const GRID_FRAG = /* glsl */ `
-uniform vec3 uCam, uLine;
-uniform float uGrid, uContour, uContourGain, uCalm, uAlpha;
-uniform vec2 uRes;
+uniform vec3 uCam, uLine, uClay;
+uniform float uGrid, uContour, uContourGain, uCalm, uAlpha, uPresence, uRho;
+uniform float uPolar, uSwirl, uRing, uGlow;
+uniform vec2 uRes, uCenter;
 uniform vec3 uLightPos[${LIGHTS}];
 uniform vec3 uLightCol[${LIGHTS}];
 varying vec3 vW;
@@ -75,12 +80,35 @@ float lineAA(float g, float width) {
   return (1.0 - smoothstep(width - 0.5, width + 0.5, a)) * (1.0 - smoothstep(0.25, 0.6, d));
 }
 
+float axisAA(float d) {
+  return 1.0 - smoothstep(0.6, 1.6, abs(d) / max(fwidth(d), 1e-4));
+}
+
 void main() {
-  vec2 g = vW.xz / ${CELL.toFixed(1)};
+  vec2 q = vW.xz - uCenter;
+  float r = length(q);
+  // Vortex: twist the grid about the centre, strongest at the throat.
+  float tw = uSwirl * 4.2 * exp(-r * 0.1) * (1.0 + 0.25 * sin(uRho * 0.21));
+  vec2 tq = mat2(cos(tw), sin(tw), -sin(tw), cos(tw)) * q;
+  vec2 g = (uCenter + tq) / ${CELL.toFixed(1)};
   float minor = max(lineAA(g.x, 0.55), lineAA(g.y, 0.55));
   float major = max(lineAA(g.x / 5.0, 1.0), lineAA(g.y / 5.0, 1.0));
+  float cart = minor * 0.5 + major * 0.95;
+  // Tikz plot: polar rings and 15° spokes, with clay axes, diagonals and a protractor arc.
+  float rings = lineAA(r / 2.0, 0.9);
+  float spokes = lineAA(atan(q.y, q.x) * 3.8197, 0.7) * smoothstep(1.5, 5.0, r);
+  float polar = rings * 1.2 + spokes * 0.6 + minor * 0.2;
+  float construct = max(axisAA(q.x), axisAA(q.y)) * 0.9
+    + max(axisAA(dot(q, vec2(0.5, 0.866))), axisAA(dot(q, vec2(0.866, 0.5)))) * 0.45
+    + axisAA(r - 7.0) * step(q.y, 0.0) * 0.8;
+  construct *= uPolar * exp(-r * 0.035);
   float contour = lineAA(vH / 0.22, 0.8);
-  float lines = uGrid * (minor * 0.5 + major * 0.95) + uContour * uContourGain * contour * 0.75;
+  float lines = uGrid * mix(cart, polar, uPolar) + uContour * uContourGain * contour * 0.75;
+  // Gravity well: the throat swallows the lines inside a glowing ring.
+  float throat = ${(WELL_RADIUS * 0.9).toFixed(3)};
+  lines *= mix(1.0, smoothstep(throat * 0.7, throat * 1.1, r), uRing);
+  float ring = uRing * (exp(-pow((r - throat) / 0.12, 2.0)) * 3.0 + exp(-pow((r - throat) / 0.9, 2.0)) * 0.12);
+  vec3 emissive = uClay * (ring + uGlow * exp(-r * r / 22.0) * 0.55) + uClay * construct * 0.9;
 
   float dist = distance(vW, uCam);
   float fog = exp(-dist * 0.05) * smoothstep(0.8, 3.5, dist) * smoothstep(52.0, 26.0, dist);
@@ -97,14 +125,14 @@ void main() {
     lit += uLightCol[i] * k * 0.16;
     pool += uLightCol[i] * k * k * 0.01;
   }
-  gl_FragColor = vec4((lit * lines + pool) * fog * calm * uAlpha, 1.0);
+  gl_FragColor = vec4((lit * lines + pool + emissive) * fog * calm * uAlpha * uPresence, 1.0);
 }`;
 
 const SPRITE_VERT = /* glsl */ `
 attribute vec3 aPos;
 attribute vec4 aSeed;
 attribute vec3 aCol;
-uniform float uRho, uTravel, uShutter, uFocal, uDust;
+uniform float uRho, uTravel, uShutter, uFocal, uDust, uAnchor;
 uniform vec3 uCam, uCamVel;
 uniform vec2 uRes;
 varying vec2 vLocal;
@@ -120,7 +148,7 @@ void main() {
     float depth = kind < 0.5 ? ${DUST_DEPTH.toFixed(1)} : ${BOKEH_DEPTH.toFixed(1)};
     float ahead = depth - fract(uTravel / depth + aSeed.x) * depth;
     float lead = kind < 0.5 ? 1.5 : 0.35;
-    p.z = uCam.z - ahead + lead;
+    p.z = (kind < 0.5 ? uAnchor : uCam.z) - ahead + lead;
     p += vec3(sin(uRho * 0.31 + aSeed.y * 40.0), sin(uRho * 0.23 + aSeed.z * 40.0), 0.0) * 0.18;
     if (kind > 0.5) p.xy += uCam.xy * 0.6;
     alpha = smoothstep(0.0, depth * 0.25, depth - ahead) * smoothstep(0.1, 0.6, ahead - lead) * uDust;
@@ -239,13 +267,14 @@ function fieldGeometry() {
 
 export type BackdropOptions = {
   segments: readonly MoodSegment[];
-  stops: readonly MoodStop[];
+  stops: readonly ShotStop[];
 };
 
 /**
  * Pdoom-style world under every segment: a warping wire grid (floor, and a mirrored ceiling in rich
- * moods) with contour lines, sparse glowing lights and depth dust, seen from a crane that dollies
- * forward with ambient time ρ.
+ * moods) with contour lines, sparse glowing lights and depth dust. Each stop has its own shot (a
+ * tikz plot, contour terrain, ripples, a gravity well, a vortex, a low skim) and the camera cranes
+ * between them in transit, travelling with ambient time ρ.
  */
 export function createBackdrop({ segments, stops }: BackdropOptions): ThreeBackdrop {
   const scene = new THREE.Scene();
@@ -261,6 +290,15 @@ export function createBackdrop({ segments, stops }: BackdropOptions): ThreeBackd
     uLine: { value: LINE },
     uContour: { value: 0 },
     uCalm: { value: 0 },
+    uPresence: { value: 0 },
+    uCenter: { value: new THREE.Vector2() },
+    uWell: { value: 0 },
+    uRipple: { value: 0 },
+    uPolar: { value: 0 },
+    uSwirl: { value: 0 },
+    uRing: { value: 0 },
+    uGlow: { value: 0 },
+    uClay: { value: CLAY_LINE },
     uRes: { value: new THREE.Vector2(1920, 1080) },
     uLightPos: { value: lightPos },
     uLightCol: { value: lightCol },
@@ -278,6 +316,7 @@ export function createBackdrop({ segments, stops }: BackdropOptions): ThreeBackd
     uShutter: { value: SHUTTER },
     uFocal: { value: 1000 },
     uDust: { value: 1 },
+    uAnchor: { value: 0 },
     uCamVel: { value: new THREE.Vector3() },
   };
   const spriteMaterial = (dust: boolean) =>
@@ -312,7 +351,20 @@ export function createBackdrop({ segments, stops }: BackdropOptions): ThreeBackd
     update(frame: Frame, size): Partial<PostParams> | undefined {
       const rho = ambientTime(frame);
       const mood = moodAt(frame.tau, segments, stops);
-      const pose = cameraAt(rho);
+      const rig = rigAt(frame.tau, stops);
+      const presence = presenceAt(frame.tau);
+      const pose = cameraAt(rho, rig);
+      const focus = focusAt(rho, rig);
+      const center = centerAt(rho, rig);
+      const distort = {
+        warp: mood.warp * rig.warp,
+        well: rig.well,
+        ripple: rig.ripple,
+        cx: center.x,
+        cz: center.z,
+      };
+      // Dust, lights and the floor wrap ahead of whichever is nearer: the lens or the focus.
+      const anchorZ = Math.max(pose.z, focus.z + 12);
       const rate = frame.dt === 0 ? 0 : ambientRate(frame.v);
       const rush = 1 - Math.exp(-Math.max(0, Math.abs(rate) - 0.15) / 1.6);
 
@@ -326,22 +378,35 @@ export function createBackdrop({ segments, stops }: BackdropOptions): ThreeBackd
       // Snap to the vertex pitch so the sampled warp never swims under the camera.
       const pitch = PLANE_W / PLANE_SEG_W;
       const px = Math.round(pose.x / pitch) * pitch;
-      const pz = Math.round((pose.z - PLANE_D / 2 + 6) / pitch) * pitch;
+      const pz = Math.round((anchorZ - PLANE_D / 2 + 6) / pitch) * pitch;
       floor.position.set(px, 0, pz);
       ceiling.position.set(px, 0, pz);
 
+      const visible = presence > 0.001;
+      floor.visible = visible;
+      fieldMesh.visible = visible;
+      lightMesh.visible = visible;
+
       shared["uRho"]!.value = rho;
-      shared["uWarp"]!.value = mood.warp;
-      shared["uContour"]!.value = mood.contour;
+      shared["uWarp"]!.value = distort.warp;
+      shared["uContour"]!.value = mood.contour * rig.contour;
       shared["uCalm"]!.value = mood.calm;
+      shared["uPresence"]!.value = presence;
+      shared["uWell"]!.value = rig.well;
+      shared["uRipple"]!.value = rig.ripple;
+      shared["uPolar"]!.value = rig.polar;
+      shared["uSwirl"]!.value = rig.swirl;
+      shared["uRing"]!.value = rig.ring;
+      shared["uGlow"]!.value = rig.glow;
+      (shared["uCenter"]!.value as THREE.Vector2).set(center.x, center.z);
       (shared["uCam"]!.value as THREE.Vector3).set(pose.x, pose.y, pose.z);
       (shared["uRes"]!.value as THREE.Vector2).set(size.width, size.height);
-      floorU["uGrid"]!.value = mood.grid;
+      floorU["uGrid"]!.value = mood.grid * rig.grid;
       ceilU["uGrid"]!.value = mood.grid * 0.8;
-      ceilU["uAlpha"]!.value = mood.ceiling;
-      ceiling.visible = mood.ceiling > 0.01;
+      ceilU["uAlpha"]!.value = mood.ceiling * rig.ceiling;
+      ceiling.visible = visible && mood.ceiling * rig.ceiling > 0.01;
 
-      lightsAt(rho, mood).forEach((l, i) => {
+      lightsAt(rho, mood, { anchorZ, focusX: focus.x, distort, presence }).forEach((l, i) => {
         lightPos[i]!.set(l.x, l.y, l.z);
         const k = l.intensity;
         lightCol[i]!.set(
@@ -355,13 +420,20 @@ export function createBackdrop({ segments, stops }: BackdropOptions): ThreeBackd
       lights.pos.needsUpdate = true;
       lights.col.needsUpdate = true;
 
-      const [vx, vy, vz] = cameraVelocity(rho);
+      const [vx, vy, vz] = cameraVelocity(rho, rig);
       spriteUniforms["uTravel"]!.value = TRAVEL * rho;
-      spriteUniforms["uDust"]!.value = mood.dust;
+      spriteUniforms["uAnchor"]!.value = anchorZ;
+      spriteUniforms["uDust"]!.value = mood.dust * presence;
       spriteUniforms["uFocal"]!.value = size.height / 2 / Math.tan((camera.fov * Math.PI) / 360);
       (spriteUniforms["uCamVel"]!.value as THREE.Vector3).set(vx * rate, vy * rate, vz * rate);
 
-      return { bloom: 0.7, bloomThreshold: 0.9, vignette: 0.32 };
+      // Edge aberration and a deeper vignette come in with the world; the cold open keeps its grade.
+      return {
+        bloom: 0.7,
+        bloomThreshold: 0.9,
+        vignette: lerp(0.32, 0.46, presence),
+        ca: lerp(DEFAULT_POST.ca, rig.ca + 0.9 * rush, presence),
+      };
     },
     dispose() {
       for (const mesh of [floor, ceiling, fieldMesh, lightMesh]) {

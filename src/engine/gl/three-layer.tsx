@@ -23,6 +23,9 @@ import {
   type ThreeRegistry,
 } from "./three-host";
 
+/** GL renders below device resolution: its layers are soft and glowing, and fill rate is the cost. */
+const GL_RESOLUTION = 0.75;
+
 export type ThreeLayerContext = { width: number; height: number };
 
 const RegistryContext = createContext<ThreeRegistry | null>(null);
@@ -59,7 +62,7 @@ export function ThreeLayerProvider({
         registry,
         post,
         backdrop: backdrop?.(),
-        pixelRatio: devicePixelRatio() * scaleRef.current,
+        pixelRatio: devicePixelRatio() * scaleRef.current * GL_RESOLUTION,
       });
       hostRef.current = created;
       const draw = (frame: Parameters<ThreeHost["render"]>[0]) => {
@@ -80,7 +83,7 @@ export function ThreeLayerProvider({
 
   useEffect(() => {
     scaleRef.current = scale;
-    hostRef.current?.setPixelRatio(devicePixelRatio() * scale);
+    hostRef.current?.setPixelRatio(devicePixelRatio() * scale * GL_RESOLUTION);
   }, [scale]);
 
   return (

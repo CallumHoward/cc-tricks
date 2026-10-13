@@ -95,6 +95,7 @@ export function createThreeHost({
     size.height = hdr.height;
   };
   setPixelRatio(pixelRatio);
+  if (backdrop) precompile(renderer, backdrop.scene, backdrop.camera);
 
   registry.bind({ attach: (o) => scene.add(o), detach: (o) => scene.remove(o) });
 
@@ -132,4 +133,19 @@ export function createThreeHost({
       renderer.dispose();
     },
   };
+}
+
+/**
+ * Compiles every material in `scene` up front, so a mesh that first shows mid-transition can't
+ * stall a frame.
+ */
+function precompile(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+  const hidden: THREE.Object3D[] = [];
+  scene.traverse((object) => {
+    if (object.visible) return;
+    hidden.push(object);
+    object.visible = true;
+  });
+  renderer.compile(scene, camera);
+  for (const object of hidden) object.visible = false;
 }
