@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { NOTES } from "#/talk/notes";
 import { SCRIPT, scriptFor, type ScriptCard, type StopScript } from "#/talk/script";
 import { STOPS } from "#/talk/timeline-data";
 
@@ -49,11 +50,6 @@ describe("talk script", () => {
       .filter(([, script]) => onScreenRegions(script).length + script.code.length === 0)
       .map(([id]) => id);
     expect(empty).toEqual([]);
-  });
-
-  it("should give every stop speaker notes", () => {
-    const silent = entries.filter(([, script]) => script.notes.length === 0).map(([id]) => id);
-    expect(silent).toEqual([]);
   });
 
   it(`should keep every on-screen region within ${MAX_WORDS} words`, () => {
@@ -151,7 +147,7 @@ describe("talk script", () => {
       .filter(([, script]) => onScreenRegions(script).join("\n").includes("Perplexity"))
       .map(([id]) => id);
     expect(onStage).toEqual([]);
-    expect(JSON.stringify(SCRIPT["t8-cache"].notes)).toContain("Perplexity");
+    expect(NOTES.get("t8-cache")).toContain("Perplexity");
   });
 
   it("should mark the 18x claim anecdotal", () => {
@@ -171,12 +167,5 @@ describe("talk script", () => {
       "Cloud sessions credit",
       "Artifact usage promotion",
     ]);
-  });
-
-  it("should keep the author's prose verbatim in the foreword and afterword notes", () => {
-    expect(SCRIPT["fw-taste"].notes[0]).toMatchObject({ kind: "verbatim" });
-    expect(SCRIPT["fw-invest"].notes.every((note) => note.kind === "verbatim")).toBe(true);
-    expect(SCRIPT["aft-limits"].notes[0].text).toMatch(/^I thought of sharing my strategy/);
-    expect(SCRIPT["aft-wanted"].notes[0].text).toMatch(/^Now defaulting to these new 5\.5/);
   });
 });

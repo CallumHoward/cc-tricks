@@ -1,3 +1,4 @@
+import { INITIAL_KEY_STATE, reduceKey } from "#/engine/input/keys";
 import type { Stage } from "#/engine/stage/stage";
 import type { NavAction } from "#/engine/types";
 
@@ -17,6 +18,8 @@ export type StateMessage = {
 export type PresenterMessage =
   | StateMessage
   | { type: "nav"; action: NavAction }
+  /** A key pressed in the presenter window, replayed on the stage */
+  | { type: "key"; key: string }
   | { type: "hello" }
   | { type: "reset-timer" };
 
@@ -42,6 +45,8 @@ export function isPresenterMessage(data: unknown): data is PresenterMessage {
       const action = (data as { action?: { type?: unknown } }).action;
       return typeof action?.type === "string" && NAV_TYPES.has(action.type);
     }
+    case "key":
+      return "key" in data && typeof data.key === "string";
     default:
       return false;
   }
@@ -53,7 +58,7 @@ export function openPort(): Port | undefined {
     : new BroadcastChannel(PRESENTER_CHANNEL);
 }
 
-/** Publishes stage state and applies console navigation; returns a disposer. */
+/** Publishes stage state and applies console navigation and keys; returns a disposer. */
 export function bridgeStage(
   stage: Stage,
   port: Port,
@@ -70,12 +75,21 @@ export function bridgeStage(
   const markStarted = () => {
     startedAt ??= now();
   };
+  // From body, like a real press, so the overview's capturing window handler can still swallow it
+  const replayKey = (key: string) => {
+    if (reduceKey(INITIAL_KEY_STATE, { key }).intent?.type === "nav") markStarted();
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
+    );
+  };
   const onMessage = (event: MessageEvent) => {
     const data: unknown = event.data;
     if (!isPresenterMessage(data)) return;
     if (data.type === "nav") {
       markStarted();
       stage.dispatch(data.action);
+    } else if (data.type === "key") {
+      replayKey(data.key);
     } else if (data.type === "reset-timer") {
       startedAt = now();
     }

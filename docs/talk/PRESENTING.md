@@ -31,6 +31,9 @@ The outro QR and the show notes link point at the Notion show notes. To point th
 | `F`                    | Fullscreen                                                    |
 | `P`                    | Presenter window (notes, current/next, timer)                 |
 
+The same keys work in the presenter window, which forwards them to the stage; there `F` fullscreens the presenter
+window itself.
+
 In the overview the live stage zooms out into its cell. Arrows move the selection and `Enter` or a click cuts
 straight to that stop. `M`, `O` or `Esc` zooms back into the current stop. Cells are numbered like digits + `Enter`.
 

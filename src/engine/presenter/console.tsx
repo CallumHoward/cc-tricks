@@ -1,9 +1,16 @@
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import type { NavAction } from "#/engine/types";
 
-import { isPresenterMessage, openPort, type Port, type StateMessage } from "./channel";
-import { formatClock, pace } from "./console-model";
+import {
+  isPresenterMessage,
+  openPort,
+  type Port,
+  type PresenterMessage,
+  type StateMessage,
+} from "./channel";
+import { formatClock, pace, presenterKeyAction } from "./console-model";
+import { NotesMarkdown } from "./notes-markdown";
 
 export type ConsoleStop = {
   id: string;
@@ -39,7 +46,7 @@ function createStateStore(port: Port, now: () => number = Date.now) {
       };
     },
     getSnapshot: () => received,
-    send: (message: { type: "nav"; action: NavAction } | { type: "reset-timer" }) =>
+    send: (message: Extract<PresenterMessage, { type: "nav" | "key" | "reset-timer" }>) =>
       port.postMessage(message),
   };
 }
@@ -126,6 +133,26 @@ function ConsoleNav({ store }: { store: Store }) {
   );
 }
 
+function toggleFullscreen(): void {
+  if (document.fullscreenElement) void document.exitFullscreen();
+  else void document.documentElement.requestFullscreen();
+}
+
+/** Drives the stage with the talk's keys from this window; fullscreen can't cross windows. */
+function useForwardKeys(store: Store): void {
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const action = presenterKeyAction(event);
+      if (!action) return;
+      event.preventDefault();
+      if (action === "fullscreen") toggleFullscreen();
+      else store.send({ type: "key", key: event.key });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [store]);
+}
+
 /** Talk time since the first navigation; zero before the talk starts or the tick runs. */
 const elapsedSince = (startedAt: number | null, now: number) =>
   startedAt === null || now === 0 ? 0 : now - startedAt;
@@ -143,9 +170,9 @@ function StopPanels({
   const next = stops.find((s) => s.id === nextId);
   return (
     <>
-      <section aria-label="Current stop" className="presenter-current">
+      <section key={state.stopId} aria-label="Current stop" className="presenter-current">
         <h1 className="presenter-title">{current?.title ?? state.stopId}</h1>
-        <p className="presenter-notes">{current?.notes ?? ""}</p>
+        <NotesMarkdown text={current?.notes ?? ""} />
       </section>
       <section aria-label="Next stop" className="presenter-next">
         <h2 className="type-label">Next: {next?.title ?? nextId ?? "end"}</h2>
@@ -169,6 +196,7 @@ function ConsoleView({
     store.getSnapshot,
   );
   const now = useSyncExternalStore(subscribeTick, getTick, getTick);
+  useForwardKeys(store);
   if (!state)
     return <p className="presenter-waiting">Waiting for the stage… (open / in another window)</p>;
 

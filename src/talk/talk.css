@@ -170,14 +170,100 @@
 
 .presenter-notes {
   max-width: 70ch;
-  margin: 0;
   color: var(--cc-soft);
-  font: 400 26px/1.45 var(--font-display);
+  font: 400 26px/1.5 var(--font-display);
+}
+
+.presenter-notes :is(p, ol, ul, pre) {
+  margin: 0 0 0.5em;
+}
+
+.presenter-notes :is(h2, h3, h4) {
+  margin: 1.1em 0 0.4em;
+  color: var(--cc-clay);
+  font: 500 18px/1.2 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.presenter-notes > :first-child {
+  margin-top: 0;
+}
+
+.presenter-notes :is(ol, ul) {
+  padding-inline-start: 1.4em;
+}
+
+/* Tailwind's preflight strips list markers */
+.presenter-notes ol {
+  list-style: decimal;
+}
+
+.presenter-notes ul {
+  list-style: disc;
+}
+
+.presenter-notes ul ul {
+  list-style-type: circle;
+}
+
+.presenter-notes li + li {
+  margin-top: 0.2em;
+}
+
+.presenter-notes li > :is(ol, ul, p, pre) {
+  margin: 0.2em 0 0.4em;
+}
+
+.presenter-notes li::marker {
+  color: var(--cc-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.presenter-notes strong {
+  color: var(--cc-text);
+  font-weight: 600;
+}
+
+.presenter-notes code {
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+  color: var(--cc-text);
+  background: var(--cc-raised);
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+}
+
+.presenter-notes pre {
+  padding: 12px 16px;
+  border: 1px solid var(--cc-hairline);
+  border-radius: 8px;
+  background: var(--cc-raised);
+  font: 400 19px/1.45 var(--font-mono);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.presenter-notes pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+/* Keeps adjacent links apart, like Notion's link chips */
+.presenter-notes a {
+  margin-inline: 0.15em;
+  color: var(--cc-text);
+}
+
+.presenter-notes__image {
+  color: var(--cc-muted);
 }
 
 .presenter-current {
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .presenter-next {

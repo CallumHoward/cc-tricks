@@ -1,4 +1,4 @@
-import { scriptFor, type StopScript } from "#/talk/script";
+import { NOTES } from "#/talk/notes";
 import { SHOWNOTES, type ShownoteTip } from "#/talk/shownotes-data";
 import { STOPS } from "#/talk/timeline-data";
 
@@ -26,13 +26,6 @@ export type TalkContent = {
   shownotes: readonly ShownoteSection[];
 };
 
-const NOTE_PREFIX = { verbatim: "", point: "• ", say: "› ", careful: "⚠ " } as const;
-
-/** Presenter notes: verbatim prose as written, prompts as bullets. */
-function notesText(script: Pick<StopScript, "notes">): string {
-  return script.notes.map((note) => `${NOTE_PREFIX[note.kind]}${note.text}`).join("\n\n");
-}
-
 function tipSection(tip: ShownoteTip): ShownoteSection {
   return {
     id: tip.id,
@@ -53,7 +46,7 @@ export const content: TalkContent = {
     ...STOPS.map((stop) => ({
       id: stop.id,
       title: stop.title,
-      notes: notesText(scriptFor(stop.id)),
+      notes: NOTES.get(stop.id),
       target: stop.speakSeconds,
     })),
   ],

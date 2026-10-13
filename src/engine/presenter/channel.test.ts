@@ -1,6 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { createClock } from "#/engine/clock/clock";
+import { useNavKeys } from "#/engine/input/use-nav-keys";
 import { createStage } from "#/engine/stage/stage";
 import type { Stop } from "#/engine/types";
 
@@ -29,10 +31,21 @@ describe("presenter channel", () => {
     vi.useRealTimers();
   });
 
+  /** Keys reaching the stage window's own bubbling keydown handlers, as useNavKeys listens. */
+  function stageKeys() {
+    const keys: string[] = [];
+    const onKey = (event: KeyboardEvent) => keys.push(event.key);
+    window.addEventListener("keydown", onKey);
+    onTestFinished(() => window.removeEventListener("keydown", onKey));
+    return keys;
+  }
+
   it("should accept known messages and reject anything else", () => {
     expect(isPresenterMessage({ type: "nav", action: { type: "next" } })).toBe(true);
     expect(isPresenterMessage({ type: "nav", action: { type: "explode" } })).toBe(false);
     expect(isPresenterMessage({ type: "hello" })).toBe(true);
+    expect(isPresenterMessage({ type: "key", key: "m" })).toBe(true);
+    expect(isPresenterMessage({ type: "key", key: 3 })).toBe(false);
     expect(isPresenterMessage("next")).toBe(false);
     expect(isPresenterMessage(null)).toBe(false);
   });
@@ -72,5 +85,37 @@ describe("presenter channel", () => {
     dispose();
 
     expect(listeners.size).toBe(0);
+  });
+
+  it("should replay console keys on the stage window and start the timer on navigation keys", () => {
+    const { sent, receive } = setup();
+    const keys = stageKeys();
+
+    receive({ type: "key", key: "b" });
+    const afterBlackout = sent.at(-1);
+    receive({ type: "key", key: "ArrowRight" });
+
+    expect(keys).toEqual(["b", "ArrowRight"]);
+    expect(afterBlackout).toMatchObject({ type: "state", startedAt: null });
+    expect(sent.at(-1)).toMatchObject({ type: "state", startedAt: 1234 });
+  });
+
+  it("should navigate the stage through its own key handling when the console forwards a key", () => {
+    const { stage, receive } = setup();
+    renderHook(() => useNavKeys(stage));
+
+    receive({ type: "key", key: "ArrowRight" });
+
+    expect(stage.getSnapshot().stopId).toBe("b");
+  });
+
+  it("should ignore malformed key messages", () => {
+    const { receive } = setup();
+    const keys = stageKeys();
+
+    receive({ type: "key", key: 3 });
+    receive({ type: "key" });
+
+    expect(keys).toEqual([]);
   });
 });
