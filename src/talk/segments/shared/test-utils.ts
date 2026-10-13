@@ -10,6 +10,13 @@ export const getRise = (text: string) =>
       el.textContent?.replace(/\s+/g, "") === text.replace(/\s+/g, ""),
   );
 
+/** Highlighted code splits a line into token spans, so match the innermost element holding it all. */
+export const getCode = (line: string) =>
+  screen.getByText(
+    (_, el) =>
+      el?.textContent === line && ![...el.children].some((child) => child.textContent === line),
+  );
+
 /** Largest dock or bot offset from the home shot at either edge of a tip's window. */
 export const homeDrift = (
   win: { start: number; end: number },

@@ -1,5 +1,3 @@
-import { Fragment } from "react";
-
 import { inOutCubic, outExpo, prog } from "#/engine/motion/ease";
 import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
@@ -18,16 +16,7 @@ import {
 } from "#/talk/segments/tip-06-cli-agents/boundary";
 import { placeAt, type PlaceKey } from "#/talk/segments/tip-06-cli-agents/timing";
 
-import {
-  BASE,
-  BLOCK,
-  ccTower,
-  counterPlaces,
-  cursorTower,
-  flapCounter,
-  flapRows,
-  TIP8,
-} from "./timing";
+import { BASE, BLOCK, ccTower, cursorTower, flapRows, quotaLeft, TIP8 } from "./timing";
 
 const D = TIP8;
 const cache = scriptFor("t8-cache");
@@ -39,16 +28,11 @@ const BOARD_ROWS = TABLE.rows.map(([l = "", r = ""]) => flapRows(l, r, 24));
 const COL_X = [200, 980] as const;
 const HEAD_Y = 372;
 const FLAP_ROW_Y = [446, 566, 686] as const;
-/** The ↓ counter anchors the lower half under the CC column. */
-const COUNTER = { top: 812, size: 64 };
+/** One quota bar under each column: the same plan, drained at Cursor's rate and at CC's. */
+const QUOTA = { top: 852, width: 560, height: 14 };
 const FLOOR = 860;
 const TOWER_X = [1272, 1432] as const;
 const TOWER_W = 138;
-
-/** The 18× headline, broken so each line holds one idea. */
-const X18_TITLE = (x18.headline ?? "")
-  .replace(" Fable", "\nFable")
-  .replace(" for the", "\nfor the");
 
 /** The tower's label block: the H says "CC", and "Claude Code" does not fit a 138 px tower. */
 const CC_LABEL = "CC";
@@ -61,59 +45,52 @@ const tileFade = (tau: number, row: number) =>
 const boardFold = (tau: number, row: number) =>
   prog(tau, D.board.foldStart + row * 0.06, D.board.foldStart + row * 0.06 + 0.4, inOutCubic);
 
-/** The counter drifts down and out before the tower bases rise through its row. */
-const counterFold = (tau: number) =>
+/** The quota bars drift down and out before the tower bases rise through their row. */
+const quotaFold = (tau: number) =>
   prog(tau, D.cache.at + D.cache.hold - 0.1, D.cache.at + D.cache.hold + 0.3, inOutCubic);
 
-function FlapCounter() {
-  const digits = 6;
-  const fx =
-    (place: number) =>
-    (frame: Frame): StyleMap => {
-      const v = flapCounter(frame.tau);
-      // The ones flap keeps ticking on ambient time, so the stop reads as slo-mo, not a freeze
-      const tick = ambientTime(frame) * 0.62;
-      const ones = (Math.floor(v) + Math.floor(tick)) % 10;
-      const digit = place === 0 ? ones : Math.floor(v / 10 ** place) % 10;
-      const phase = place === 0 ? tick - Math.floor(tick) : 0;
-      const flipping = phase > 0.02 && phase < 0.98;
-      return {
-        "--d": `"${digit}"`,
-        "--n": `"${(digit + 1) % 10}"`,
-        "--flip": flipping ? `${(-phase * 180).toFixed(1)}deg` : "-90deg",
-      };
-    };
+const QUOTA_BARS = [
+  { speed: 1, tone: "var(--muted)" },
+  { speed: 1 / 18, tone: "var(--clay)" },
+] as const;
+
+function QuotaBars() {
+  const grow = (frame: Frame) =>
+    prog(frame.tau, D.rows[2] - 0.1, D.rows[2] + 0.4, outExpo).toFixed(4);
   return (
-    <div
-      className="tui type-code t8-counter"
-      style={{
-        position: "absolute",
-        left: COL_X[1],
-        top: COUNTER.top,
-        fontSize: COUNTER.size,
-        display: "flex",
-        gap: 3,
-        alignItems: "center",
-      }}
-    >
-      <span style={{ color: "var(--muted)", marginRight: "0.3em" }}>↓</span>
-      {counterPlaces(digits).map(({ place, comma }) => (
-        <Fragment key={place}>
-          <Fx fx={fx(place)} className="t8-digit" style={{ position: "relative" }} />
-          {comma && <span className="t8-sep">,</span>}
-        </Fragment>
+    <>
+      {QUOTA_BARS.map(({ speed, tone }, i) => (
+        <Fx
+          key={tone}
+          fx={(frame) => ({ transform: `scaleX(${grow(frame)})` })}
+          style={{
+            left: COL_X[i],
+            top: QUOTA.top,
+            width: QUOTA.width,
+            height: QUOTA.height,
+            borderRadius: QUOTA.height / 2,
+            overflow: "hidden",
+            background: "var(--hairline)",
+            transformOrigin: "0 50%",
+            transform: "scaleX(0)",
+          }}
+        >
+          <Fx
+            fx={(frame) => ({
+              "clip-path": `inset(0 ${((1 - quotaLeft(frame.tau, speed)) * 100).toFixed(2)}% 0 0 round ${QUOTA.height / 2}px)`,
+              // Stripes stream toward the drained end on ambient time, so the hold keeps flowing
+              "background-position": `${px(-ambientTime(frame) * 80 * speed)} 0`,
+            })}
+            style={{
+              inset: 0,
+              background: `repeating-linear-gradient(115deg, ${tone} 0 18px, color-mix(in srgb, ${tone} 72%, transparent) 18px 30px)`,
+            }}
+          />
+        </Fx>
       ))}
-      <style>{DIGIT_CSS}</style>
-    </div>
+    </>
   );
 }
-
-const DIGIT_CSS = `
-.t8-sep{width:0.42em;height:1.5em;line-height:1.5em;color:var(--soft);text-align:center}
-.t8-digit{width:0.95em;height:1.5em;border-radius:4px;background:var(--panel);color:var(--text);font-weight:600;perspective:300px;overflow:visible}
-.t8-digit::before{content:var(--d);position:absolute;inset:0;display:grid;place-items:center;line-height:1.5em}
-.t8-digit::after{content:var(--n);position:absolute;left:0;right:0;top:0;height:50%;overflow:hidden;display:grid;place-items:start center;line-height:1.5em;background:#2c2b28;border-radius:4px 4px 0 0;transform-origin:50% 100%;transform:rotateX(var(--flip));backface-visibility:hidden}
-`;
 
 function Board() {
   const head =
@@ -276,6 +253,25 @@ function Towers() {
         tone="var(--clay)"
         glowing
       />
+      <Fx
+        fx={(frame) => {
+          const u = prog(frame.tau, D.towers.ccSettle - 0.4, D.towers.ccSettle, outExpo);
+          return {
+            transform: `translate3d(${px(-24 * (1 - u))}, 0, 0)`,
+            opacity: u.toFixed(3),
+          };
+        }}
+        className="type-code"
+        style={{
+          left: TOWER_X[1] + TOWER_W + 20,
+          top: FLOOR - BASE - 18 * BLOCK - 4,
+          fontSize: 44,
+          color: "var(--clay)",
+          opacity: 0,
+        }}
+      >
+        ~18×
+      </Fx>
     </>
   );
 }
@@ -296,17 +292,17 @@ function Plate() {
       <TipTitle text={cache.headline ?? ""} settleBy={D.title} exit={D.board.foldStart} />
       <Fx
         fx={(frame) => {
-          const u = counterFold(frame.tau);
+          const u = quotaFold(frame.tau);
           return { transform: `translate3d(0, ${px(40 * u)}, 0)`, opacity: (1 - u).toFixed(3) };
         }}
-        style={{ inset: 0, transformOrigin: `0 ${COUNTER.top + COUNTER.size * 0.75}px` }}
+        style={{ inset: 0 }}
       >
-        <FlapCounter />
+        <QuotaBars />
       </Fx>
       <Board />
       <Towers />
-      <div style={{ position: "absolute", left: 200, top: 250 }}>
-        <RuleRise text={X18_TITLE} settleBy={D.headline} />
+      <div style={{ position: "absolute", left: 200, top: 380 }}>
+        <RuleRise text={x18.headline ?? ""} settleBy={D.headline} />
       </div>
     </Fx>
   );
@@ -324,8 +320,8 @@ const homeFx = (frame: Frame): StyleMap => {
   };
 };
 
-/** Where the bot stands for t8-cache: under the Cursor column, balancing the counter. */
-const CACHE_SPOT = { x: -1000, y: 370, scale: 0.7 };
+/** Where the bot stands for t8-cache: past the end of the CC quota bar, holding up the coin. */
+const CACHE_SPOT = { x: 220, y: 330, scale: 0.7 };
 
 const PLACES: readonly PlaceKey[] = [
   { at: 210.9, x: 0, y: 0, scale: 1 },

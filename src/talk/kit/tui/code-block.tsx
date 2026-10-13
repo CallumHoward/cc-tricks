@@ -3,6 +3,8 @@ import "./tui.css";
 import type { CSSProperties } from "react";
 
 import { outExpo, prog } from "#/engine/motion/ease";
+import type { CodeLang } from "#/engine/text/highlight";
+import { HighlightedLine } from "#/engine/text/highlighted-line";
 import type { Frame } from "#/engine/types";
 
 import { setStyle, useFrameRef } from "./use-frame-ref";
@@ -16,6 +18,8 @@ export type CodeBlockProps = {
   stagger?: number;
   /** Clay wash wiping left → right behind one line (0-based) */
   highlight?: { line: number; at: number; dur?: number };
+  /** Syntax-highlights the lines in this language */
+  lang?: CodeLang;
   className?: string;
   style?: CSSProperties;
 };
@@ -37,6 +41,7 @@ export function CodeBlock({
   at,
   stagger = 0.08,
   highlight,
+  lang,
   className,
   style,
 }: CodeBlockProps) {
@@ -70,7 +75,7 @@ export function CodeBlock({
           // oxlint-disable-next-line react/no-array-index-key -- lines are positional and may repeat
           <div key={i} className="tui-code-line">
             {highlight?.line === i ? <div className="tui-code-mark" /> : null}
-            <span>{line || " "}</span>
+            <span>{line ? <HighlightedLine line={line} lang={lang} /> : " "}</span>
           </div>
         ))}
       </div>

@@ -6,11 +6,12 @@ import type { Frame } from "#/engine/types";
 import { RingTimer } from "#/talk/kit/data/ring-timer";
 import { ExtLink } from "#/talk/kit/ext-link";
 import { RuleRise } from "#/talk/kit/motion";
-import { AgentRow, ReadToolRow, StaticGlyph } from "#/talk/kit/tui";
+import { AgentRow, CodeBlock, ReadToolRow, StaticGlyph } from "#/talk/kit/tui";
 import { setStyle, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import { LINKS, scriptFor } from "#/talk/script";
 import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "#/talk/segments/shared/tip-title";
 
+import { SPOTS } from "./bot";
 import { Anchor, During, Leave, Rise, Typed } from "./parts";
 import { CARD_LEFT, cardAt, CHROME, highlightAt, onCard, REGIONS, SHOT } from "./price-card";
 import {
@@ -31,7 +32,7 @@ import {
   STAIR_X0,
   STAIR_Y0,
 } from "./scene";
-import { holdEnd, IDLE, KV, STATELESS, T, TTL } from "./timing";
+import { AGENT_TTL, holdEnd, IDLE, KV, STATELESS, T, TTL } from "./timing";
 
 const LEFT = 200;
 
@@ -396,6 +397,7 @@ export function TtlPlate() {
           text={codeA?.code ?? ""}
           at={typed(0.1)}
           cps={CODE_CPS}
+          lang={codeA?.lang}
           className="type-code t2-code"
           style={{ left: 260, top: 664 }}
         />
@@ -403,9 +405,75 @@ export function TtlPlate() {
           text={codeB?.code ?? ""}
           at={typed(0.3)}
           cps={CODE_CPS}
+          lang={codeB?.lang}
           className="type-code t2-code"
           style={{ left: 260, top: 732 }}
         />
+      </Leave>
+    </During>
+  );
+}
+
+// ── t2-agent-ttl ─────────────────────────────────────────────────────────────────────────────
+
+/** The panel's top edge sits under the iced bot's feet; the label rides above it. */
+const FILE = { left: LEFT, labelGap: 54 };
+const FILE_TILT = 1.1;
+const CACHE_TTL_LINE = /^\s*cacheTtl:/;
+
+/** Tilts up flat from below on entry, then pushes in slowly about the bot's feet. */
+function FileCard({ children }: { children: ReactNode }) {
+  const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
+    const u = outCubic(prog(frame.tau, T.fileIn, T.fileIn + FILE_TILT));
+    const push = 1 + 0.012 * Math.max(0, ambientTime(frame) - (AGENT_TTL.at - 1));
+    setStyle(
+      el,
+      "transform",
+      `perspective(1600px) translate3d(0, ${(90 * (1 - u)).toFixed(1)}px, 0) rotateX(${(28 * (1 - u)).toFixed(2)}deg) scale(${push.toFixed(4)})`,
+    );
+    setStyle(el, "opacity", Math.min(1, u * 2.5).toFixed(3));
+  });
+  return (
+    <div
+      ref={ref}
+      className="t2-file"
+      style={{
+        position: "absolute",
+        left: FILE.left,
+        top: SPOTS.strip.y - FILE.labelGap,
+        transformOrigin: `${SPOTS.strip.x - FILE.left}px ${FILE.labelGap}px`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function AgentTtlPlate() {
+  const s = scriptFor("t2-agent-ttl");
+  const out = holdEnd(AGENT_TTL);
+  const [file] = s.code;
+  const lines = file?.code.split("\n") ?? [];
+  const mark = lines.findIndex((l) => CACHE_TTL_LINE.test(l));
+  return (
+    <During from={T.fileIn} to={out + 0.4}>
+      <RuleRise
+        text={s.headline ?? ""}
+        settleBy={T.fileMark}
+        exit={out}
+        style={{ position: "absolute", left: LEFT, top: 72 }}
+      />
+      <Leave at={out}>
+        <FileCard>
+          <CodeBlock
+            lines={lines}
+            label={file?.label}
+            lang={file?.lang}
+            at={T.fileLines}
+            stagger={0.12}
+            highlight={mark >= 0 ? { line: mark, at: T.fileMark, dur: 0.6 } : undefined}
+          />
+        </FileCard>
       </Leave>
     </During>
   );
@@ -422,7 +490,8 @@ function Clock() {
   const ref = useFrameRef<SVGSVGElement>((el, frame: Frame) => {
     const sweep = inOutCubic(prog(frame.tau, T.clock, T.clockEnd));
     const lap =
-      0.06 * outCubic(prog(frame.tau, 118.6, IDLE.at)) + 0.008 * Math.max(0, frame.tau - IDLE.at);
+      0.06 * outCubic(prog(frame.tau, T.notice, IDLE.at)) +
+      0.008 * Math.max(0, frame.tau - IDLE.at);
     const minutes = (sweep + lap) * 360;
     const hand = el.querySelector(".t2-clock__minute");
     const pop = outExpo(prog(frame.tau, T.idleIn, T.idleIn + 0.5));
@@ -470,7 +539,7 @@ export function IdlePlate() {
     <During from={T.crack} to={out + 0.6}>
       <RuleRise
         text={s.headline ?? ""}
-        settleBy={118.6}
+        settleBy={T.notice}
         exit={out}
         style={{ position: "absolute", left: LEFT, top: 92 }}
       />

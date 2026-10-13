@@ -1,11 +1,23 @@
+import { repeatedLines } from "#/engine/presenter/notes-repeats";
+import { FAVICON_HOSTS } from "#/talk/favicon-hosts";
 import { NOTES } from "#/talk/notes";
 import { SHOWNOTES, type ShownoteTip } from "#/talk/shownotes-data";
 import { STOPS } from "#/talk/timeline-data";
 
 export type Link = { label: string; href: string };
 
-/** Speaker-facing data for one stage stop (ids match the timeline's stops). */
-export type StopContent = { id: string; title: string; notes?: string; target?: number };
+/**
+ * Speaker-facing data for one stage stop (ids match the timeline's stops). `repeated` holds the
+ * notes lines an earlier stop already said; `interactive` hints at what to demo on the slide.
+ */
+export type StopContent = {
+  id: string;
+  title: string;
+  notes?: string;
+  target?: number;
+  repeated?: ReadonlySet<string>;
+  interactive?: string;
+};
 
 /** One section of the static show notes page. */
 export type ShownoteSection = {
@@ -26,6 +38,27 @@ export type TalkContent = {
   shownotes: readonly ShownoteSection[];
 };
 
+/** Stops whose slide has something to play with live (widgets, not plain links). */
+const INTERACTIVE: Readonly<Record<string, string>> = {
+  "t3-aa": "click a model's point",
+  "t5-chain": "drag the pins, toggle routines",
+};
+
+/** A notes link's favicon from public/talk/favicons (fetched by `pnpm favicons`). */
+export function faviconFor(href: string): string | undefined {
+  const host = URL.canParse(href) ? new URL(href).host : undefined;
+  return host && FAVICON_HOSTS.has(host) ? `/talk/favicons/${host}.png` : undefined;
+}
+
+function withNotesContext(stops: readonly StopContent[]): StopContent[] {
+  const repeated = repeatedLines(stops.map((stop) => stop.notes));
+  return stops.map((stop, i) => ({
+    ...stop,
+    repeated: repeated[i],
+    interactive: INTERACTIVE[stop.id],
+  }));
+}
+
 function tipSection(tip: ShownoteTip): ShownoteSection {
   return {
     id: tip.id,
@@ -41,7 +74,7 @@ export const content: TalkContent = {
   subtitle: SHOWNOTES.byline,
   speaker: "Callum Howard",
   budget: 20 * 60,
-  stops: [
+  stops: withNotesContext([
     { id: "start", title: "Ready", notes: "Press → to play the cold open." },
     ...STOPS.map((stop) => ({
       id: stop.id,
@@ -49,7 +82,7 @@ export const content: TalkContent = {
       notes: NOTES.get(stop.id),
       target: stop.speakSeconds,
     })),
-  ],
+  ]),
   shownotes: [
     { id: "spoiler", heading: "Spoiler", body: [SHOWNOTES.spoiler] },
     {

@@ -61,18 +61,12 @@ export function flapRows(left: string, right: string, max: number): [string[], s
   return [a, b];
 }
 
-/** Decorative ↓ counter on the board: rolls up fast, then ticks ≤ 1 flap per τ-s. */
-export function flapCounter(tau: number): number {
+/**
+ * Share of one plan's quota left after the same work, where `speed` scales the drain: Cursor runs
+ * at 1, CC at 1/18. Drains as the board lands, then trickles ≤ 0.03 per τ-s through the hold.
+ */
+export function quotaLeft(tau: number, speed: number): number {
   const { rows, cache } = TIP8;
-  const start = rows[0];
-  const settle = cache.at - 0.8;
-  return 140_000 * outCubic(prog(tau, start, settle)) + Math.max(0, tau - settle) * 0.62;
-}
-
-/** Digit places of a `digits`-wide counter, most significant first, flagging where "," follows. */
-export function counterPlaces(digits: number): { place: number; comma: boolean }[] {
-  return Array.from({ length: digits }, (_, i) => {
-    const place = digits - 1 - i;
-    return { place, comma: place > 0 && place % 3 === 0 };
-  });
+  const used = 0.86 * outCubic(prog(tau, rows[2] + 0.3, cache.at - 0.2));
+  return Math.max(0, 1 - speed * (used + Math.max(0, tau - cache.at + 0.2) * 0.03));
 }

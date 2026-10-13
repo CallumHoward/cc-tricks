@@ -10,7 +10,15 @@ import { HOME_ZONES, HomeRest } from "#/talk/segments/shared/home";
 
 import { Bot } from "./bot";
 import { During, Pan } from "./parts";
-import { IdlePlate, KvPlate, PricePlate, StatelessPlate, SwitchPlate, TtlPlate } from "./plates";
+import {
+  AgentTtlPlate,
+  IdlePlate,
+  KvPlate,
+  PricePlate,
+  StatelessPlate,
+  SwitchPlate,
+  TtlPlate,
+} from "./plates";
 import { TapeLayer } from "./tape-layer";
 import { T, WINDOW } from "./timing";
 
@@ -143,6 +151,7 @@ export default function Tip02CacheSegment() {
         <KvPlate />
         <PricePlate />
         <TtlPlate />
+        <AgentTtlPlate />
         <IdlePlate />
         <SwitchPlate />
       </Fold>

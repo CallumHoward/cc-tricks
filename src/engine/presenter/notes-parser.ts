@@ -7,13 +7,20 @@ export type NoteInline =
   | { type: "link"; href: string; children: NoteInline[] }
   | { type: "break" };
 
+/** A line an earlier stop's notes already said, so it can be de-emphasised. */
+type Repeatable = { repeated?: true };
+
 /** `value` is the author's number on an ordered item; `blocks` are its tab-indented children. */
-export type NoteListItem = { value?: number; children: NoteInline[]; blocks: NoteBlock[] };
+export type NoteListItem = Repeatable & {
+  value?: number;
+  children: NoteInline[];
+  blocks: NoteBlock[];
+};
 
 export type NoteBlock =
   /** `level` counts the hashes, 1 to 3 */
-  | { type: "heading"; level: number; children: NoteInline[] }
-  | { type: "paragraph"; children: NoteInline[] }
+  | (Repeatable & { type: "heading"; level: number; children: NoteInline[] })
+  | (Repeatable & { type: "paragraph"; children: NoteInline[] })
   | { type: "image"; caption: NoteInline[] }
   | { type: "code"; lang: string; text: string }
   | { type: "list"; ordered: boolean; items: NoteListItem[] };
@@ -31,12 +38,13 @@ const IMAGE = /^!\[(.*?)\]\(.*\)$/;
 
 /**
  * Parses the Notion-flavored markdown subset the notes use. One block per line, leading tabs nest
- * under the previous shallower list item, and anything unrecognised stays plain text.
+ * under the previous shallower list item, and anything unrecognised stays plain text. Lines in
+ * `repeated` (as `noteSourceLines` keys them) are marked `repeated`.
  */
-export function parseNotes(md: string): NoteBlock[] {
+export function parseNotes(md: string, repeated?: ReadonlySet<string>): NoteBlock[] {
   const root: NoteBlock[] = [];
   const open: { depth: number; item: NoteListItem }[] = [];
-  for (const line of noteLines(md)) {
+  for (const line of noteLines(md, repeated)) {
     while ((open.at(-1)?.depth ?? -1) >= line.depth) open.pop();
     const parent = open.at(-1)?.item.blocks ?? root;
     if (line.kind === "block") parent.push(line.block);
@@ -52,26 +60,49 @@ function appendItem(parent: NoteBlock[], ordered: boolean, item: NoteListItem): 
   return item;
 }
 
+type Row = { depth: number; text: string; fence?: { lang: string; body: string } };
+
 /** Notion exports a fence's body unindented, so a fence runs to the next bare ``` line. */
-function noteLines(md: string): Line[] {
+function noteRows(md: string): Row[] {
   const rows = md.split(/\r?\n/);
-  const lines: Line[] = [];
+  const out: Row[] = [];
   let at = 0;
   while (at < rows.length) {
     const row = rows[at];
-    const fence = FENCE.exec(row.trim());
+    const text = row.trim();
+    const fence = FENCE.exec(text);
     const end = fence ? closingFence(rows, at + 1) : at;
-    if (fence) {
-      const text = rows.slice(at + 1, end).join("\n");
-      lines.push({
+    const body = rows.slice(at + 1, end).join("\n");
+    if (text)
+      out.push({
         depth: depthOf(row),
-        kind: "block",
-        block: { type: "code", lang: fence[1].trim(), text },
+        text,
+        fence: fence ? { lang: fence[1].trim(), body } : undefined,
       });
-    } else if (row.trim()) lines.push(classify(depthOf(row), row.trim()));
     at = end + 1;
   }
-  return lines;
+  return out;
+}
+
+/** Each non-blank line outside code fences, trimmed: the keys `parseNotes` matches `repeated` on. */
+export const noteSourceLines = (md: string): string[] =>
+  noteRows(md).flatMap((row) => (row.fence ? [] : [row.text]));
+
+function noteLines(md: string, repeated?: ReadonlySet<string>): Line[] {
+  return noteRows(md).map(({ depth, text, fence }) =>
+    fence
+      ? { depth, kind: "block", block: { type: "code", lang: fence.lang, text: fence.body } }
+      : markRepeated(classify(depth, text), repeated?.has(text) ?? false),
+  );
+}
+
+function markRepeated(line: Line, repeated: boolean): Line {
+  if (!repeated) return line;
+  if (line.kind === "item") line.item.repeated = true;
+  else if (line.block.type === "heading" || line.block.type === "paragraph") {
+    line.block.repeated = true;
+  }
+  return line;
 }
 
 function closingFence(rows: readonly string[], from: number): number {

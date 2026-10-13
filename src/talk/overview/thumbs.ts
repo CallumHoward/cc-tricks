@@ -17,6 +17,7 @@ export const THUMBS: ReadonlySet<string> = new Set([
   "t1-model-effort",
   "t10-offers",
   "t10-resets",
+  "t2-agent-ttl",
   "t2-idle",
   "t2-kv",
   "t2-price",

@@ -131,6 +131,7 @@ function KiroPane() {
           start={typeEnd(i)}
           cps={D.kiroType.cps}
           className="type-code"
+          lang="sh"
           top={SPLIT_Y + 32 + i * 46}
         />
       ))}
@@ -151,7 +152,6 @@ function KiroPane() {
 /** One subagent pane: rises into place, its command typed in with the CLI name in clay. */
 function OtherPane({ i, lines }: { i: number; lines: string[] }) {
   const top = paneY(i);
-  const name = lines[0]?.split(" ")[0] ?? "";
   const at = D.rows[i] ?? 0;
   const fx = (frame: Frame): StyleMap => {
     const u = springFrom(frame.tau, at - 0.05, SPRINGS.LAND);
@@ -183,30 +183,18 @@ function OtherPane({ i, lines }: { i: number; lines: string[] }) {
         opacity: 0,
       }}
     >
-      {lines.map((line, k) => {
-        const text =
-          k === 0 ? `${" ".repeat(Array.from(name).length)}${line.slice(name.length)}` : line;
-        return (
-          <Typed
-            key={line}
-            text={text}
-            start={starts[k] ?? 0}
-            cps={90}
-            className="type-label"
-            top={22 + k * 42}
-            left={84}
-          />
-        );
-      })}
-      <Typed
-        text={name}
-        start={starts[0] ?? 0}
-        cps={90}
-        className="type-label"
-        color="var(--clay)"
-        top={22}
-        left={84}
-      />
+      {lines.map((line, k) => (
+        <Typed
+          key={line}
+          text={line}
+          start={starts[k] ?? 0}
+          cps={90}
+          className="type-label"
+          top={22 + k * 42}
+          left={84}
+          lang="sh"
+        />
+      ))}
     </Fx>
   );
 }

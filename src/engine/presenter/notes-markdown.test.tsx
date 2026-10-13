@@ -84,6 +84,40 @@ describe("NotesMarkdown", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
+  it("should mute a repeated line but not the new lines nested under it", () => {
+    const repeated = new Set(["2. Keep the cache warm", "# Foreword"]);
+    render(<NotesMarkdown text={NOTES} repeated={repeated} />);
+
+    const [outer, middle] = screen.getAllByRole("listitem");
+
+    expect(screen.getByText("Keep the cache warm")).toHaveClass("presenter-notes__repeated");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveClass("presenter-notes__repeated");
+    expect(outer).toHaveAttribute("data-repeated");
+    expect(middle).not.toHaveAttribute("data-repeated");
+    expect(screen.getByText("Tip: Change 5m TTL subagent")).not.toHaveClass(
+      "presenter-notes__repeated",
+    );
+  });
+
+  it("should highlight a fenced block in its language", () => {
+    render(<NotesMarkdown text={NOTES} />);
+
+    expect(screen.getByText('"env"')).toHaveClass("hl-key");
+  });
+
+  it("should prefix links with their favicon and keep the full title and URL in the tooltip", () => {
+    const faviconFor = (href: string) =>
+      href.startsWith("https://a.example") ? "/icons/a.png" : undefined;
+    render(<NotesMarkdown text={NOTES} faviconFor={faviconFor} />);
+
+    const [one, two] = screen.getAllByRole("link");
+
+    expect(one).toHaveAttribute("title", "One\nhttps://a.example/");
+    expect(one).toHaveAccessibleName("One");
+    expect(within(one).getByRole("presentation")).toHaveAttribute("src", "/icons/a.png");
+    expect(within(two).queryByRole("presentation")).not.toBeInTheDocument();
+  });
+
   it("should render the notes without accessibility violations", async () => {
     const { container } = render(<NotesMarkdown text={NOTES} />);
 

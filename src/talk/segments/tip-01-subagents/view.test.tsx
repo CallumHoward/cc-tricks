@@ -27,6 +27,12 @@ describe("tip 1 segment", () => {
     for (const label of s.labels) expect(screen.queryByText(label)).not.toBeInTheDocument();
   });
 
+  it("should syntax-highlight the agent frontmatter as YAML at t1-model-effort", () => {
+    renderAt(57.5, <Tip01SubagentsSegment />);
+    expect(screen.getByText("model")).toHaveClass("hl-key");
+    expect(screen.getByText("effort")).toHaveClass("hl-key");
+  });
+
   it("should link the advisor command to its docs and leave the prose off screen at t1-advisor", () => {
     renderAt(66, <Tip01SubagentsSegment />);
     const s = scriptFor("t1-advisor");

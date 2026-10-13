@@ -4,14 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 import { renderAt as renderStageAt } from "#/engine/stage/render-at";
 import { LINKS, scriptFor } from "#/talk/script";
 
-import { IDLE, KV, PRICE, STATELESS, SWITCH, TTL } from "./timing";
+import { AGENT_TTL, IDLE, KV, PRICE, STATELESS, SWITCH, TTL } from "./timing";
 import Tip02CacheSegment from "./view";
 
 vi.mock("#/engine/gl/three-layer", () => ({ useThreeLayer: () => {} }));
 vi.mock("#/talk/mascot/stage-mascot", () => ({ StageMascot: () => null }));
 
 const renderAt = (tau: number) => renderStageAt(tau, <Tip02CacheSegment />);
-const STOPS = [STATELESS, KV, PRICE, TTL, IDLE, SWITCH];
+const STOPS = [STATELESS, KV, PRICE, TTL, AGENT_TTL, IDLE, SWITCH];
 
 describe("tip 2 segment", () => {
   it("should show the real pricing screenshot at the price stop", () => {
@@ -27,6 +27,17 @@ describe("tip 2 segment", () => {
   it("should link the settings read to the settings reference at the ttl stop", () => {
     renderAt(TTL.at);
     expect(screen.getByRole("link")).toHaveAttribute("href", LINKS.settings);
+  });
+
+  it("should highlight the settings key as JSON at the ttl stop", () => {
+    renderAt(TTL.at);
+    expect(screen.getByText('"subagentPromptCacheTtl"')).toHaveClass("hl-key");
+  });
+
+  it("should show the agent frontmatter with its cacheTtl key at the agent ttl stop", () => {
+    renderAt(AGENT_TTL.at);
+    expect(screen.getByText(".claude/agents/repo-auditor.md")).toBeVisible();
+    expect(screen.getByText("cacheTtl")).toHaveClass("hl-key");
   });
 
   it("should link cachebeat to its repo at the idle stop", () => {

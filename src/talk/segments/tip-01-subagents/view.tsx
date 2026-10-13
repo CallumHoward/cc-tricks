@@ -253,7 +253,13 @@ function ModelPlate() {
       <Gate from={54.85} to={CARD_CLOSE.end}>
         <CardFloat>
           <Drive fn={cardTrack} style={{ ...abs(CARD.left, CARD.top), width: CARD.width }}>
-            <CodeBlock lines={YAML} label={S2.code[0]?.label} at={YAML_AT} stagger={0.08} />
+            <CodeBlock
+              lines={YAML}
+              label={S2.code[0]?.label}
+              at={YAML_AT}
+              stagger={0.08}
+              lang={S2.code[0]?.lang}
+            />
           </Drive>
           <Drive fn={cardTrack} style={{ inset: 0 }}>
             {CHIPS.map((c, i) => (

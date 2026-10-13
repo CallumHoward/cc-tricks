@@ -13,9 +13,9 @@ import {
   suffixFront,
   viewAt,
 } from "./scene";
-import { IDLE, KV, PRICE, STATELESS, SWITCH, T, TTL, WINDOW } from "./timing";
+import { AGENT_TTL, IDLE, KV, PRICE, STATELESS, SWITCH, T, TTL, WINDOW } from "./timing";
 
-const STOPS = [STATELESS, KV, PRICE, TTL, IDLE, SWITCH];
+const STOPS = [STATELESS, KV, PRICE, TTL, AGENT_TTL, IDLE, SWITCH];
 
 describe("tip 2 scene", () => {
   it("should map staircase indices onto rows that each add three blocks", () => {

@@ -64,6 +64,22 @@ describe("PresenterConsole", () => {
     expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Caching");
   });
 
+  it("should flag a stop with something interactive to demo, with a hint", () => {
+    const { port, receive } = fakeConsolePort();
+    const stops = [{ ...STOPS[0], interactive: "drag the pins" }, STOPS[1]];
+    render(<PresenterConsole stops={stops} budget={1200} port={port} />);
+
+    receive(state(0));
+
+    expect(screen.getByTitle("Interactive: drag the pins")).toBeVisible();
+  });
+
+  it("should not flag a stop without anything interactive", () => {
+    renderOnFirstStop();
+
+    expect(screen.queryByTitle(/^Interactive/)).not.toBeInTheDocument();
+  });
+
   it("should send navigation to the stage from the buttons", async () => {
     const { user, sent } = renderOnFirstStop();
 

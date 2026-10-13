@@ -580,7 +580,7 @@ Anyway, you're here for a CC tips listicle, not to hear me wax philosophical, no
 **On screen**
 
 - H (7w): 8. Fable in CC ≠ Fable in Cursor
-- Column "Cursor" (3 labels): `5m cache only` (3w) · `writes 1.25× input` (3w) · `billed at API list price` (4w)
+- Column "Cursor" (3 labels): `5m cache only` (3w) · `writes 1.25× input` (3w) · `Cursor pays API token pricing` (4w); column "Claude Code, subscription" ends `flat-rate plan, subsidized` (4w)
 - Column "Claude Code, subscription" (3 labels): `1h cache, main session` (4w) · `writes 2× input` (3w) · `flat-rate plan` (2w)
 
 **Notes** his points: "Cache is not the same (1.25x vs 2x write)"; "Only cache TTL 5m is available"; "Cursor pays API token pricing"
@@ -589,14 +589,14 @@ Anyway, you're here for a CC tips listicle, not to hear me wax philosophical, no
 - Say: Cursor refreshes the 5 minutes on every hit, so it only hurts when you step away.
 - Say: same idea for Perplexity and other API-priced tools [unchecked: nobody verified Perplexity's pricing; cut or keep as his aside].
 
-**Δ** "Only cache TTL 5m" scoped to Cursor (it's wrong for Claude Code). "Cursor pays API token pricing" → "billed at API list price" (your included pool is charged at list price). "Perplexity, etc." moved to speech. Forum citation switched to the post that actually states 1.25×/2×.
+**Δ** "Only cache TTL 5m" scoped to Cursor (it's wrong for Claude Code). Callum (13 Oct) restored "Cursor pays API token pricing" against "flat-rate plan, subsidized": the point is that Fable in Cursor drains the same plan far faster than in CC. "Perplexity, etc." moved to speech. Forum citation switched to the post that actually states 1.25×/2×.
 **Sources** https://forum.cursor.com/t/anthropic-models-prompt-cache/171871/5 · https://forum.cursor.com/t/understanding-write-cache/156915/5 · https://cursor.com/docs/models-and-pricing
 
 ### S29 · ~18×
 
 **On screen**
 
-- H (12w): Up to ~18× more Fable tokens in CC for the same price
+- H (4w): More tokens per $ (Callum, 13 Oct; the ~18× sits on the CC tower)
 - Label (1w): [anecdotal]
 - Foot (12w): Fable 5.1 on the API: $10 in, $50 out per million tokens
 

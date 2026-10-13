@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { inOutCubic, outExpo, prog } from "#/engine/motion/ease";
+import type { CodeLang } from "#/engine/text/highlight";
+import { HighlightedLine } from "#/engine/text/highlighted-line";
 import type { Frame } from "#/engine/types";
 import { ContextBar } from "#/talk/kit/motion";
 import {
@@ -257,6 +259,7 @@ export function Typed({
   top,
   left = 200,
   color,
+  lang,
 }: {
   text: string;
   start: number;
@@ -265,6 +268,7 @@ export function Typed({
   top: number;
   left?: number;
   color?: string;
+  lang?: CodeLang;
 }) {
   const length = Array.from(text).length;
   const ref = useFx<HTMLDivElement>((frame) => {
@@ -286,7 +290,7 @@ export function Typed({
         clipPath: "inset(0 100% 0 0)",
       }}
     >
-      {text}
+      <HighlightedLine line={text} lang={lang} />
     </div>
   );
 }

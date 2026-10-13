@@ -2,6 +2,8 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { inOutCubic, inQuad, outExpo, prog } from "#/engine/motion/ease";
 import { ambientTime } from "#/engine/stage/stage";
+import type { CodeLang } from "#/engine/text/highlight";
+import { HighlightedLine } from "#/engine/text/highlighted-line";
 import type { Frame } from "#/engine/types";
 import { setStyle, typeClip, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 
@@ -111,12 +113,13 @@ export function Rise({
   );
 }
 
-/** Text typed on τ in whole monospace cells. */
+/** Text typed on τ in whole monospace cells, syntax-highlighted when given a `lang`. */
 export function Typed({
   text,
   at,
   cps = 50,
   out,
+  lang,
   className = "type-label",
   style,
 }: {
@@ -124,6 +127,7 @@ export function Typed({
   at: number;
   cps?: number;
   out?: number;
+  lang?: CodeLang;
   className?: string;
   style?: CSSProperties;
 }) {
@@ -140,7 +144,7 @@ export function Typed({
       className={className}
       style={{ position: "absolute", whiteSpace: "pre", visibility: "hidden", ...style }}
     >
-      {text}
+      {lang ? <HighlightedLine line={text} lang={lang} /> : text}
     </div>
   );
 }

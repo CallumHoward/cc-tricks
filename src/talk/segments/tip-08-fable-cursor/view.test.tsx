@@ -23,7 +23,7 @@ describe("tip 8 segment", () => {
     );
   });
 
-  it("should show the 18x headline with no stamp or price footnote at t8-18x", () => {
+  it("should show the headline with no stamp or price footnote at t8-18x", () => {
     renderAt(219.5, <Tip08FableCursorSegment />, 1);
     const copy = scriptFor("t8-18x");
     expect(getRise(copy.headline ?? "")).toBeVisible();

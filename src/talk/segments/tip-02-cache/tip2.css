@@ -202,3 +202,16 @@
   border-color: var(--muted);
   color: var(--soft);
 }
+
+.t2-file .tui-code-panel {
+  border: 2px solid var(--hairline);
+  box-shadow: 0 40px 90px -20px rgb(0 0 0 / 60%);
+}
+
+.t2-file .tui-code-mark {
+  right: auto;
+  left: calc(2ch - 14px);
+  width: calc(12ch + 28px);
+  border-left: 3px solid var(--clay);
+  background: color-mix(in srgb, var(--clay) 18%, transparent);
+}

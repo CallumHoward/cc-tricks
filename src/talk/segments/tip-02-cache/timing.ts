@@ -10,6 +10,7 @@ export const STATELESS = stop("t2-stateless");
 export const KV = stop("t2-kv");
 export const PRICE = stop("t2-price");
 export const TTL = stop("t2-ttl");
+export const AGENT_TTL = stop("t2-agent-ttl");
 export const IDLE = stop("t2-idle");
 export const SWITCH = stop("t2-switch");
 
@@ -60,18 +61,21 @@ export const T = Object.freeze({
   subRow: 109.6,
   freeze: 110.3,
   fix: 110.5,
-  // idle
-  crack: 115.6,
-  /** The ttl plate has wiped out by now, so nothing of the idle plate lands before it. */
-  idleIn: 115.85,
-  clock: 116.1,
-  clockEnd: 117.2,
-  spike: 117.3,
-  idleCopy: 117.7,
-  notice: 118.6,
-  pulse: 119.0,
-  pulseEnd: 120.3,
-  pulse2: 120.9,
+  // agent ttl: the file card tilts up under the iced bot, lines rise, then cacheTtl is marked
+  fileIn: 114.2,
+  fileLines: 114.55,
+  fileMark: 115.75,
+  // idle: the per-agent TTL thaws the bot as the file card wipes out
+  crack: 118.05,
+  /** The agent ttl plate has wiped out by now, so nothing of the idle plate lands before it. */
+  idleIn: 118.35,
+  clock: 118.45,
+  clockEnd: 119.25,
+  spike: 119.35,
+  notice: 119.8,
+  pulse: 120.0,
+  pulseEnd: 120.8,
+  pulse2: 121.1,
   // switch
   pitch: 123.6,
   fork: 124.7,

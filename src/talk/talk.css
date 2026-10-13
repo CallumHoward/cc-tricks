@@ -139,6 +139,8 @@
 
 /* Presenter console (laptop screen, not the 1080 stage) */
 .presenter {
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+
   display: grid;
   grid-template-rows: auto 1fr auto auto;
   gap: 24px;
@@ -168,10 +170,29 @@
   font-variation-settings: "opsz" 72;
 }
 
+.presenter-interactive {
+  display: inline-flex;
+  gap: 0.4em;
+  align-items: center;
+  margin-inline-start: 20px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in oklab, var(--cc-clay) 55%, transparent);
+  border-radius: 999px;
+  vertical-align: middle;
+  color: var(--cc-clay-hi);
+  font: 500 17px/1 var(--font-sans);
+  white-space: nowrap;
+}
+
 .presenter-notes {
   max-width: 70ch;
   color: var(--cc-soft);
-  font: 400 26px/1.5 var(--font-display);
+  font: 400 24px/1.5 var(--font-sans);
+}
+
+.presenter-notes__repeated,
+.presenter-notes li[data-repeated]::marker {
+  color: color-mix(in oklab, var(--cc-muted) 70%, transparent);
 }
 
 .presenter-notes :is(p, ol, ul, pre) {
@@ -250,10 +271,46 @@
   font-size: inherit;
 }
 
-/* Keeps adjacent links apart, like Notion's link chips */
-.presenter-notes a {
+/* One line per link, like Notion's link chips: favicon, then the title cut to fit */
+.presenter-link {
+  display: inline-flex;
+  gap: 0.35em;
+  align-items: center;
+  max-width: min(100%, 30ch);
   margin-inline: 0.15em;
+  vertical-align: bottom;
   color: var(--cc-text);
+  white-space: nowrap;
+}
+
+.presenter-link__icon {
+  flex: none;
+  width: 0.8em;
+  height: 0.8em;
+  border-radius: 3px;
+  font-size: 0.8em;
+  line-height: 1;
+}
+
+/* Flex items are atomic, so the underline moves from the link to its text */
+.presenter-link__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in oklab, currentcolor 30%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+.presenter-link:hover .presenter-link__text {
+  text-decoration-color: currentcolor;
+}
+
+.presenter-notes__repeated :is(.presenter-link, strong, code) {
+  color: inherit;
+}
+
+.presenter-notes__repeated .presenter-link__icon {
+  opacity: 0.6;
 }
 
 .presenter-notes__image {
@@ -309,4 +366,35 @@
 
 .talk-link:hover {
   text-decoration-color: currentcolor;
+}
+
+/* Code highlight tokens (slides and presenter notes) */
+.hl-key {
+  color: var(--cc-clay-hi);
+}
+
+.hl-string {
+  color: #b6c79a;
+}
+
+.hl-number,
+.hl-literal {
+  color: #dcae72;
+}
+
+.hl-punct {
+  color: var(--cc-muted);
+}
+
+.hl-comment {
+  color: #7d7b73;
+  font-style: italic;
+}
+
+.hl-command {
+  color: var(--cc-clay);
+}
+
+.hl-flag {
+  color: #a7bccb;
 }

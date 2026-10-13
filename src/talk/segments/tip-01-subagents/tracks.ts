@@ -190,7 +190,7 @@ export const ADV = Object.freeze({
   typeAt: 60.15,
   cps: 32,
   line1: "Get a second opinion:",
-  line2: "/advisor opus",
+  line2: "/advisor fable",
   starIn: 61.2,
   scan: { start: 61.4, end: 62.4 },
   rowsAt: 62.55,

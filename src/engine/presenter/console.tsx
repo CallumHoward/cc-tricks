@@ -10,7 +10,7 @@ import {
   type StateMessage,
 } from "./channel";
 import { formatClock, pace, presenterKeyAction } from "./console-model";
-import { NotesMarkdown } from "./notes-markdown";
+import { NotesMarkdown, type FaviconFor } from "./notes-markdown";
 
 export type ConsoleStop = {
   id: string;
@@ -18,6 +18,10 @@ export type ConsoleStop = {
   notes?: string;
   /** Speaking target for this stop, in seconds */
   target?: number;
+  /** Notes lines an earlier stop already said, shown muted */
+  repeated?: ReadonlySet<string>;
+  /** What the audience can play with on this slide */
+  interactive?: string;
 };
 
 type Received = { state: StateMessage | null; stopSince: number };
@@ -67,11 +71,13 @@ const getTick = () => tickNow;
 export function PresenterConsole({
   stops,
   budget,
+  faviconFor,
   port: injected,
 }: {
   stops: readonly ConsoleStop[];
   /** Seconds */
   budget: number;
+  faviconFor?: FaviconFor;
   port?: Port;
 }) {
   const [store] = useState<Store | null>(() => {
@@ -79,7 +85,7 @@ export function PresenterConsole({
     return port ? createStateStore(port) : null;
   });
   if (!store) return <p className="presenter-waiting">BroadcastChannel is unavailable.</p>;
-  return <ConsoleView store={store} stops={stops} budget={budget} />;
+  return <ConsoleView store={store} stops={stops} budget={budget} faviconFor={faviconFor} />;
 }
 
 function ConsoleClock({
@@ -157,23 +163,52 @@ function useForwardKeys(store: Store): void {
 const elapsedSince = (startedAt: number | null, now: number) =>
   startedAt === null || now === 0 ? 0 : now - startedAt;
 
+function CurrentStop({
+  stop,
+  fallbackTitle,
+  faviconFor,
+}: {
+  stop: ConsoleStop | undefined;
+  fallbackTitle: string;
+  faviconFor?: FaviconFor;
+}) {
+  const { title = fallbackTitle, notes = "", repeated, interactive } = stop ?? {};
+  return (
+    <section aria-label="Current stop" className="presenter-current">
+      <h1 className="presenter-title">
+        {title}
+        {interactive && (
+          <span className="presenter-interactive" title={`Interactive: ${interactive}`}>
+            <span aria-hidden>☝</span> {interactive}
+          </span>
+        )}
+      </h1>
+      <NotesMarkdown text={notes} repeated={repeated} faviconFor={faviconFor} />
+    </section>
+  );
+}
+
 function StopPanels({
   state,
   current,
   stops,
+  faviconFor,
 }: {
   state: StateMessage;
   current: ConsoleStop | undefined;
   stops: readonly ConsoleStop[];
+  faviconFor?: FaviconFor;
 }) {
   const nextId: string | undefined = state.stopIds[state.target + 1];
   const next = stops.find((s) => s.id === nextId);
   return (
     <>
-      <section key={state.stopId} aria-label="Current stop" className="presenter-current">
-        <h1 className="presenter-title">{current?.title ?? state.stopId}</h1>
-        <NotesMarkdown text={current?.notes ?? ""} />
-      </section>
+      <CurrentStop
+        key={state.stopId}
+        stop={current}
+        fallbackTitle={state.stopId}
+        faviconFor={faviconFor}
+      />
       <section aria-label="Next stop" className="presenter-next">
         <h2 className="type-label">Next: {next?.title ?? nextId ?? "end"}</h2>
       </section>
@@ -185,10 +220,12 @@ function ConsoleView({
   store,
   stops,
   budget,
+  faviconFor,
 }: {
   store: Store;
   stops: readonly ConsoleStop[];
   budget: number;
+  faviconFor?: FaviconFor;
 }) {
   const { state, stopSince } = useSyncExternalStore(
     store.subscribe,
@@ -212,7 +249,7 @@ function ConsoleView({
         current={current}
         state={state}
       />
-      <StopPanels state={state} current={current} stops={stops} />
+      <StopPanels state={state} current={current} stops={stops} faviconFor={faviconFor} />
       <ConsoleNav store={store} />
     </div>
   );

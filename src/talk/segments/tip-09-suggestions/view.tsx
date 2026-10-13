@@ -42,7 +42,8 @@ import {
 const SCRIPT = scriptFor("t9-suggestions");
 const TITLE = SCRIPT.headline ?? GHOST_TEXT;
 const GHOST = SCRIPT.ui[0] ?? GHOST_TEXT;
-const CODE = SCRIPT.code[0]?.code ?? "";
+const SNIPPET = SCRIPT.code[0];
+const CODE = SNIPPET?.code ?? "";
 
 const PROMPT_Y = HOME.promptTop + HOME.promptHeight / 2;
 /** One mono cell at code size (JetBrains Mono advance 0.6 em × 34 px). */
@@ -214,7 +215,7 @@ function FoldingPlate() {
           <ReadToolRow
             tool="Update"
             arg="settings.json"
-            output={[{ text: CODE, kind: "add" }]}
+            output={[{ text: CODE, kind: "add", lang: SNIPPET?.lang }]}
             at={T9.updateAt}
             outputAt={T9.updateOutAt}
           />

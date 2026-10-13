@@ -2,7 +2,7 @@ import { hdr, linear, type Rgb } from "#/engine/gl/palette";
 import { CAMERA_FOV, pxCameraDistance } from "#/engine/gl/three-host";
 import { clamp, inOutCubic, lerp, outCubic, outExpo, prog, smoothstep } from "#/engine/motion/ease";
 
-import { T } from "./timing";
+import { AGENT_TTL, holdEnd, T } from "./timing";
 
 /** Pure model of Tip 2's GL tape: every block, the monolith, drawer and skip as f(τ). */
 
@@ -104,8 +104,8 @@ const VIEWS: readonly ViewKey[] = [
   { at: 84.4, v: { ax: 0.3, ay: 0.3, px: 850, py: 650, zoom: 1 } },
   { at: 94.5, v: { ax: 0.3, ay: 0.34, px: 850, py: 650, zoom: 1 } },
   { at: 95.8, v: { ax: 0, ay: 0, px: 960, py: 700, zoom: 1 } },
-  { at: 115.5, v: { ax: 0, ay: 0, px: 960, py: 700, zoom: 1 } },
-  { at: 115.6, v: { ax: 0.34, ay: -0.2, px: 800, py: 640, zoom: 1 } },
+  { at: holdEnd(AGENT_TTL), v: { ax: 0, ay: 0, px: 960, py: 700, zoom: 1 } },
+  { at: T.crack, v: { ax: 0.34, ay: -0.2, px: 800, py: 640, zoom: 1 } },
   { at: 123.5, v: { ax: 0.34, ay: -0.18, px: 800, py: 640, zoom: 1 } },
   { at: 124.3, v: { ax: -1.05, ay: 0.22, px: ROAD_X, py: 930, zoom: 1 } },
   { at: 132.5, v: { ax: -1.04, ay: 0.24, px: ROAD_X, py: 930, zoom: 1 } },

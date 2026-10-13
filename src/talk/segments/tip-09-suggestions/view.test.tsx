@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { renderAt } from "#/engine/stage/render-at";
 import { LINKS } from "#/talk/script";
+import { getCode } from "#/talk/segments/shared/test-utils";
 
 import { T9 } from "./tracks";
 import Tip09SuggestionsSegment from "./view";
@@ -12,8 +13,14 @@ const SETTING = '"promptSuggestionEnabled": false';
 describe("tip 9 view", () => {
   it("should show the setting under the title at the stop", () => {
     renderAt(T9.at, <Tip09SuggestionsSegment />);
-    expect(screen.getByText(SETTING)).toBeVisible();
+    expect(getCode(SETTING)).toBeVisible();
     expect(screen.getByText("Update")).toBeVisible();
+  });
+
+  it("should syntax-highlight the setting as JSON", () => {
+    renderAt(T9.at, <Tip09SuggestionsSegment />);
+    expect(screen.getByText('"promptSuggestionEnabled"')).toHaveClass("hl-key");
+    expect(screen.getByText("false")).toHaveClass("hl-literal");
   });
 
   it("should link the settings edit to the settings reference", () => {
@@ -33,6 +40,6 @@ describe("tip 9 view", () => {
 
   it("should render nothing outside its window", () => {
     renderAt(T9.end + 0.5, <Tip09SuggestionsSegment />);
-    expect(screen.getByText(SETTING)).not.toBeVisible();
+    expect(getCode(SETTING)).not.toBeVisible();
   });
 });

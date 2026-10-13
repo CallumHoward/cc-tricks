@@ -3,12 +3,16 @@ import "./tui.css";
 import type { CSSProperties } from "react";
 
 import { outExpo, prog } from "#/engine/motion/ease";
+import type { CodeLang } from "#/engine/text/highlight";
+import { HighlightedLine } from "#/engine/text/highlighted-line";
 import type { Frame } from "#/engine/types";
 
 import { ToolDot } from "./icons";
 import { setStyle, useFrameRef } from "./use-frame-ref";
 
-export type ToolOutputLine = string | { text: string; kind?: "plain" | "add" | "del" };
+export type ToolOutputLine =
+  | string
+  | { text: string; kind?: "plain" | "add" | "del"; lang?: CodeLang };
 
 export type ReadToolRowProps = {
   /** `Read`, `Bash`, `Update`, … */
@@ -93,7 +97,7 @@ export function ReadToolRow({
                     : "tui-dim"
               }
             >
-              {line.text}
+              <HighlightedLine line={line.text} lang={line.lang} />
             </span>
           </span>
         </div>

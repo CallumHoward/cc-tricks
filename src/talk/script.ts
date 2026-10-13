@@ -89,7 +89,6 @@ const agentTtl: CodeBlock = {
   lang: "yaml",
   label: ".claude/agents/repo-auditor.md",
   caption: "Needs v2.1.248+",
-  onStage: false,
   code: [
     "---",
     "name: repo-auditor",
@@ -185,7 +184,7 @@ export const SCRIPT = {
   }),
 
   "t1-advisor": stop({
-    headline: "Get a second opinion: /advisor opus",
+    headline: "Get a second opinion: /advisor fable",
     lines: [
       'Or ask: "consult the advisor before you continue"',
       "Hand off to subagents: images, exploring, large logs",
@@ -233,12 +232,12 @@ export const SCRIPT = {
   "t2-ttl": stop({
     headline: "Main session: 1h cache. Subagents: 5m.",
     lines: ["Cold is 25–80× the price of warm."],
-    code: [ttlSetting, ttlEnv, agentTtl],
+    code: [ttlSetting, ttlEnv],
     footnotes: [
       "5m or 1h write ÷ hit · Opus/Sonnet 5.5 25–40× · Fable 5.1 50–80× · Haiku 5.5 12.5–20×",
       "Needs Claude Code v2.1.243+",
     ],
-    ui: ["subagentPromptCacheTtl", "agent experimental.cacheTtl", "ENABLE_PROMPT_CACHING_1H"],
+    ui: ["subagentPromptCacheTtl", "ENABLE_PROMPT_CACHING_1H"],
     sources: [
       LINKS.promptCaching,
       LINKS.settings,
@@ -246,6 +245,12 @@ export const SCRIPT = {
       "https://www.reddit.com/r/ClaudeCode/comments/1wkpm2i/claude_code_subagents_have_a_5m_prompt_cache_long/",
       "https://www.reddit.com/r/ClaudeAI/comments/1wj4gs0/subagents_burning_your_claude_code_5hour_window/",
     ],
+  }),
+
+  "t2-agent-ttl": stop({
+    headline: "Per-agent cache TTL",
+    code: [agentTtl],
+    sources: [LINKS.subAgents],
   }),
 
   "t2-idle": stop({
@@ -446,7 +451,7 @@ export const SCRIPT = {
         rows: [
           ["5m cache only", "1h cache, main session"],
           ["writes 1.25× input", "writes 2× input"],
-          ["billed at API list price", "flat-rate plan"],
+          ["Cursor pays API token pricing", "flat-rate plan, subsidized"],
         ],
       },
     ],
@@ -458,7 +463,7 @@ export const SCRIPT = {
   }),
 
   "t8-18x": stop({
-    headline: "Up to ~18× more Fable tokens in CC for the same price",
+    headline: "More tokens per $",
     stamps: ["ANECDOTAL"],
     footnotes: ["Fable 5.1 on the API: $10 in, $50 out per million tokens"],
     sources: [LINKS.pricing],
@@ -598,7 +603,7 @@ export const SCRIPT = {
   }),
 
   "outro-qr": stop({
-    lines: ["Shownotes, links and every source"],
+    lines: ["Shownotes, links and sources"],
     ui: ["✻ Cooked for {elapsed} · ↓ ≈3k tokens", "/shownotes"],
     refs: [
       { label: "How I use Claude Code subagents · Andrea Grandi", href: LINKS.grandi },

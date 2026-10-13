@@ -71,6 +71,10 @@ Anyway, you’re here for a CC tips listicle, not to hear me wax philosophical, 
 }
 			```
 		3. This can apply to `cbdev` tests and static checks that may run longer than 5m on the monorepo
+
+<!-- stop: t2-agent-ttl -->
+2. Keep the cache warm
+	3. Tip: Change 5m TTL subagent
 		4. If different cache TTLs are often needed, set up agents with different `cacheTtl` in `.claude/agents/<name>.md` and give it frontmatter like
 			```yaml
 ---

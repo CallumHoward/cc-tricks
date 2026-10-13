@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests",
     "test:cov": "vitest run --coverage --passWithNoTests",
     "test:e2e": "playwright test",
+    "favicons": "node --experimental-strip-types scripts/fetch-favicons.ts",
     "stills": "node --experimental-strip-types scripts/stills.ts",
     "overview:thumbs": "node --experimental-strip-types scripts/overview-thumbs.ts",
     "lint": "oxlint --type-aware",
