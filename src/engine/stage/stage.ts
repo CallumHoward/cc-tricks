@@ -109,6 +109,25 @@ export function ambientRate(v: number): number {
   return v < 0 ? v : Math.max(v, AMBIENT_FLOOR);
 }
 
+/** Below this playhead speed the stage is holding at a stop. */
+const HOLDING_SPEED = 0.2;
+/** How fast (per second) ambient time eases back onto story time while travelling. */
+const REANCHOR = 2.5;
+
+/**
+ * Ambient time for the next frame. It runs ahead of story time only while holding, then eases back
+ * onto it in transit (never reversing), so drift that keys off it stays bounded by one hold.
+ */
+function nextAmbient(prev: Frame, tau: number, v: number, dt: number): number {
+  const rho = ambientTime(prev) + ambientRate(v) * dt;
+  if (Math.abs(v) < HOLDING_SPEED) return rho;
+  const eased = tau + (ambientTime(prev) - prev.tau) * Math.exp(-REANCHOR * dt);
+  const minStep = 0.5 * v * dt;
+  return v > 0
+    ? Math.max(eased, ambientTime(prev) + minStep)
+    : Math.min(eased, ambientTime(prev) + minStep);
+}
+
 /** Ambient ramped time for a frame (`tau` when the producer predates `rho`). */
 export function ambientTime(frame: Frame): number {
   return frame.rho ?? frame.tau;
@@ -176,7 +195,7 @@ export function createStage({
     const w = wall();
     const { tau, v } = clock.sample(w);
     const dt = Math.max(0, w - last.w);
-    render({ tau, v, w, dt, rho: (last.rho ?? last.tau) + ambientRate(v) * dt });
+    render({ tau, v, w, dt, rho: nextAmbient(last, tau, v, dt) });
     raf = scheduler.request(tick);
   };
 

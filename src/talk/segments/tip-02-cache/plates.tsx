@@ -419,13 +419,18 @@ export function TtlPlate() {
 /** The panel's top edge sits under the iced bot's feet; the label rides above it. */
 const FILE = { left: LEFT, labelGap: 54 };
 const FILE_TILT = 1.1;
+/** The kit's 34 px code panel at 80%, in step with the other tip 2 snippets. */
+const FILE_SCALE = 0.8;
+/** Most the hold's slow push-in may add. */
+const FILE_PUSH_MAX = 0.06;
 const CACHE_TTL_LINE = /^\s*cacheTtl:/;
 
-/** Tilts up flat from below on entry, then pushes in slowly about the bot's feet. */
+/** Tilts up flat from below on entry, then pushes in slowly from its left edge under the bot. */
 function FileCard({ children }: { children: ReactNode }) {
   const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
     const u = outCubic(prog(frame.tau, T.fileIn, T.fileIn + FILE_TILT));
-    const push = 1 + 0.012 * Math.max(0, ambientTime(frame) - (AGENT_TTL.at - 1));
+    const creep = 0.012 * Math.max(0, ambientTime(frame) - (AGENT_TTL.at - 1));
+    const push = FILE_SCALE * (1 + Math.min(FILE_PUSH_MAX, creep));
     setStyle(
       el,
       "transform",
@@ -441,7 +446,7 @@ function FileCard({ children }: { children: ReactNode }) {
         position: "absolute",
         left: FILE.left,
         top: SPOTS.strip.y - FILE.labelGap,
-        transformOrigin: `${SPOTS.strip.x - FILE.left}px ${FILE.labelGap}px`,
+        transformOrigin: `0 ${FILE.labelGap}px`,
       }}
     >
       {children}

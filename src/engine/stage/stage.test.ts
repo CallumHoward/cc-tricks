@@ -249,6 +249,28 @@ describe("createStage", () => {
     expect(ambientTime(after) - ambientTime(before)).toBeCloseTo(AMBIENT_FLOOR * 2, 6);
   });
 
+  it("should ease ambient time back onto story time while travelling after a long hold", () => {
+    const { stage, advance } = setup();
+    stage.start();
+    advance(60);
+    const held = stage.frame();
+    expect(ambientTime(held) - held.tau).toBeGreaterThan(1);
+
+    stage.dispatch({ type: "next" });
+    let previous = ambientTime(stage.frame());
+    for (let i = 0; i < 240; i++) {
+      advance(1 / 60);
+      const rho = ambientTime(stage.frame());
+      expect(rho).toBeGreaterThanOrEqual(previous);
+      previous = rho;
+    }
+
+    const arrived = stage.frame();
+    expect(Math.abs(ambientTime(arrived) - arrived.tau)).toBeLessThan(
+      0.4 * (ambientTime(held) - held.tau),
+    );
+  });
+
   it("should run ambient time at playhead speed when travelling and back when rewinding", () => {
     const { stage, advance } = setup();
     stage.start();
