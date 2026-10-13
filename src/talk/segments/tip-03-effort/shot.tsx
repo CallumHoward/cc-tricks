@@ -34,8 +34,8 @@ export function onShot(box: ShotBox, pose: ShotPose, q: Pt): Pt {
 }
 
 /**
- * A real screenshot (its own window chrome and shadow are in the image) floating on the stage. The
- * pose is a function of τ and ambient time ρ, so it keeps drifting in slow motion at a stop.
+ * A real screenshot floating on the stage. The pose is a function of τ and ambient time ρ, so it
+ * keeps drifting in slow motion at a stop.
  */
 export function Shot({
   src,
@@ -43,6 +43,7 @@ export function Shot({
   box,
   pose,
   dim = 1,
+  card = false,
   children,
 }: {
   src: string;
@@ -51,6 +52,8 @@ export function Shot({
   pose: (tau: number, rho: number) => ShotPose;
   /** Brightness multiplier (below 1 dims the screenshot) */
   dim?: number;
+  /** Frame it as a rounded card with a shadow (for images without their own window chrome) */
+  card?: boolean;
   children?: ReactNode;
 }) {
   const ref = useTrack((tau: number, frame: Frame) => {
@@ -63,7 +66,7 @@ export function Shot({
       className="seg-abs seg-shot"
       style={{ left: box.x, top: box.y, width: box.w, height: box.h }}
     >
-      <div className="seg-shot__tilt">
+      <div className={card ? "seg-shot__tilt seg-shot__tilt--card" : "seg-shot__tilt"}>
         <img
           src={src}
           alt={alt}

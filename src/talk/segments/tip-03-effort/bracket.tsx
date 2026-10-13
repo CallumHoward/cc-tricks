@@ -5,6 +5,7 @@ import "./seg.css";
 import { clamp, inOutCubic, outCubic, prog } from "#/engine/motion/ease";
 import type { StyleValues } from "#/engine/stage/applier";
 import { useTrack } from "#/engine/stage/react";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
 import { ContextBar } from "#/talk/kit/motion";
 import {
@@ -118,7 +119,8 @@ export function Wiped({
   );
 }
 
-export type BotPath = (tau: number) => { x: number; y: number; scale: number };
+/** Feet and scale of the bot at story time τ and ambient time ρ (for paths that ride drifting art). */
+export type BotPath = (tau: number, rho: number) => { x: number; y: number; scale: number };
 
 /** The segment's own bot: feet at (x, y) in stage px, scaled about its feet. */
 export function Bot({
@@ -132,8 +134,8 @@ export function Bot({
   from: number;
   to: number;
 }) {
-  const ref = useTrack((tau: number) => {
-    const p = path(tau);
+  const ref = useTrack((tau: number, frame: Frame) => {
+    const p = path(tau, ambientTime(frame));
     const box = botBox(p.x, p.y);
     return { x: box.left, y: box.top, scale: p.scale };
   });

@@ -40,7 +40,6 @@ export type TalkContent = {
 
 /** Stops whose slide has something to play with live (widgets, not plain links). */
 const INTERACTIVE: Readonly<Record<string, string>> = {
-  "t3-aa": "click a model's point",
   "t5-chain": "drag the pins, toggle routines",
 };
 

@@ -14,10 +14,6 @@ export const timeOf = (frame: { tau: number; w: number }, clock: VizClock): numb
 export const dataSpring = (t: number, from: number, to: number, cfg: SpringCfg = SPRINGS.COUNT) =>
   springAt(t, cfg.zeta < 1 ? { ...cfg, zeta: 1 } : cfg, from, to);
 
-export function linScale(d0: number, d1: number, r0: number, r1: number) {
-  return (x: number) => r0 + ((x - d0) / (d1 - d0)) * (r1 - r0);
-}
-
 export function logScale(d0: number, d1: number, r0: number, r1: number) {
   const l0 = Math.log10(d0);
   const l1 = Math.log10(d1);
@@ -178,7 +174,7 @@ export function segmentHitsRect(s: Segment, r: Rect): boolean {
 }
 
 /** Point on a rect's edge nearest to (x, y), for leader lines. */
-export function nearestEdge(r: Rect, x: number, y: number): { x: number; y: number } {
+function nearestEdge(r: Rect, x: number, y: number): { x: number; y: number } {
   return { x: Math.min(r.x + r.w, Math.max(r.x, x)), y: Math.min(r.y + r.h, Math.max(r.y, y)) };
 }
 

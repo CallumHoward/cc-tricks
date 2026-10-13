@@ -15,7 +15,6 @@ import {
   ringLeft,
   segmentHitsRect,
 } from "./logic";
-import { DEFAULT_CALLOUTS, scatterLayout } from "./scatter-layout";
 
 describe("data kit logic", () => {
   it("should map log-scale ticks evenly", () => {
@@ -82,24 +81,6 @@ describe("data kit logic", () => {
     expect(fmtUSD(3.459)).toBe("$3.46");
     expect(fmtTokens(197_430)).toBe("197k");
     expect(fmtTokens(1_000_000)).toBe("1M");
-  });
-
-  it("should place every default AA callout away from markers, labels and leaders", () => {
-    const layout = scatterLayout(AA_POINTS, 1400, 760, DEFAULT_CALLOUTS);
-    expect(layout.labels.map((l) => l.slug)).toEqual([...DEFAULT_CALLOUTS]);
-    for (const [i, a] of layout.labels.entries()) {
-      for (const b of layout.labels.slice(i + 1)) {
-        expect(overlaps(a.rect, b.rect)).toBe(false);
-      }
-    }
-    const leaders = layout.labels.flatMap((l) =>
-      l.leader ? [{ slug: l.slug, leader: l.leader }] : [],
-    );
-    for (const { slug, leader } of leaders) {
-      for (const other of layout.labels.filter((l) => l.slug !== slug)) {
-        expect(segmentHitsRect(leader, other.rect)).toBe(false);
-      }
-    }
   });
 
   it("should detect a leader line crossing a label", () => {

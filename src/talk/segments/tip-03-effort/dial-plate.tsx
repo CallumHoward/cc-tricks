@@ -10,16 +10,8 @@ import { scriptFor } from "#/talk/script";
 import { TipTitle } from "#/talk/segments/shared/tip-title";
 
 import { Layer, Live, Wiped } from "./bracket";
-import {
-  DIAL,
-  DIAL_SEATS,
-  EFFORT_GLYPHS,
-  EFFORTS,
-  glyphSize,
-  OPUS_TARGETS,
-  SPIN_AT,
-  T3,
-} from "./timing";
+import { CHART_LAND, dotAt } from "./chart-plate";
+import { DIAL, DIAL_SEATS, EFFORT_GLYPHS, EFFORTS, glyphSize, SPIN_AT, T3 } from "./timing";
 import { arcPoint, dialAngle, inCubic } from "./tracks";
 
 const script = scriptFor("t3-then");
@@ -34,22 +26,25 @@ export function needleSeat(tau: number): number {
   return land + Math.max(0, tau - SETTLE) * (2.5 / 35);
 }
 
+/** τ glyph `i` lands in its Opus dot (low first), after the screenshot has settled flat. */
+export const glyphLandAt = (i: number) => CHART_LAND + 0.05 + i * 0.14;
+
 /**
- * One effort glyph: unrolls from the spinner onto its dial seat, then floats to its Opus point. It
- * keeps turning on ambient time `rho`, so the frozen stop still reads as slow motion.
+ * One effort glyph: unrolls from the spinner onto its dial seat, then floats into its Opus dot on
+ * the screenshot. It keeps turning on ambient time `rho`, so the frozen stop still reads as slow
+ * motion.
  */
 export function glyphAt(i: number, tau: number, rho = tau): StyleValues {
   const seat = DIAL_SEATS[i] ?? SPIN_AT;
-  const target = OPUS_TARGETS[i] ?? seat;
   const size = glyphSize(i);
   const s1 = T3.leave + i * 0.07;
   const u1 = prog(tau, s1, s1 + 0.8, outCubic);
   const s2 = T3.aa.chartStart + i * 0.05;
-  const e2 = target.drop + 0.08;
+  const e2 = glyphLandAt(i);
   const u2 = prog(tau, s2, e2, inOutCubic);
   const gone = prog(tau, e2, e2 + 0.16, inCubic);
-  const p = u2 > 0 ? arcPoint(seat, target, u2, 140) : arcPoint(SPIN_AT, seat, u1, 190);
-  const px = u2 > 0 ? size + (40 - size) * u2 : 36 + (size - 36) * u1;
+  const p = u2 > 0 ? arcPoint(seat, dotAt(i, tau, rho), u2, 140) : arcPoint(SPIN_AT, seat, u1, 190);
+  const px = u2 > 0 ? size + (24 - size) * u2 : 36 + (size - 36) * u1;
   const shown = tau >= T3.leave ? 1 : 0;
   return {
     x: p.x - 50,

@@ -13,9 +13,7 @@ import { PriceColumns } from "#/talk/kit/data/price-columns";
 import { ProbBars } from "#/talk/kit/data/prob-bars";
 import { QrGrow } from "#/talk/kit/data/qr-grow";
 import { RingTimer } from "#/talk/kit/data/ring-timer";
-import { ScatterChart } from "#/talk/kit/data/scatter-chart";
 import { WeeklyBars } from "#/talk/kit/data/weekly-bars";
-import { EffortPicker } from "#/talk/widgets/effort-picker";
 import { IdleTtl } from "#/talk/widgets/idle-ttl";
 import { PingChain } from "#/talk/widgets/ping-chain";
 import { PredictReveal } from "#/talk/widgets/predict-reveal";
@@ -183,9 +181,6 @@ function KitDataGallery() {
             ))}
           </div>
         </Panel>
-        <Panel title="ScatterChart · start 1">
-          <ScatterChart start={1} />
-        </Panel>
         <Panel title="DayRuler · start 1">
           <DayRuler start={1} pins={ROUTINES.map((r) => r.at)} />
         </Panel>
@@ -203,9 +198,6 @@ function KitDataGallery() {
         </Panel>
         <Panel title="W2 IdleTtl">
           <IdleTtl />
-        </Panel>
-        <Panel title="W3 EffortPicker">
-          <EffortPicker start={1} />
         </Panel>
         <Panel title="W4 PingChain">
           <PingChain start={1} />

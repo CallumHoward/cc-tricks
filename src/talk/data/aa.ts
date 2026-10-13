@@ -130,6 +130,3 @@ export function aaLabel(p: AaPoint): string {
   const name = p.model.replace(/^Claude /, "");
   return p.model.startsWith("Claude ") ? `${name} ${p.effort}` : name;
 }
-
-export const aaFamily = (p: AaPoint): "opus" | "sonnet" | "other" =>
-  p.model.includes("Opus") ? "opus" : p.model.includes("Sonnet") ? "sonnet" : "other";

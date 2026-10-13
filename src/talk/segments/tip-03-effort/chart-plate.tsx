@@ -1,175 +1,69 @@
-import { useState } from "react";
-
-import { outCubic, prog } from "#/engine/motion/ease";
-import { AA_POINTS, aaLabel } from "#/talk/data/aa";
-import { fmtTokens, fmtUSD } from "#/talk/kit/data/logic";
-import { ScatterChart } from "#/talk/kit/data/scatter-chart";
-import { effortGlyph } from "#/talk/kit/data/scatter-layout";
+import { clamp, outCubic, prog } from "#/engine/motion/ease";
 import { ExtLink } from "#/talk/kit/ext-link";
-import { LINKS, scriptFor } from "#/talk/script";
-import { WidgetShell } from "#/talk/widgets/widget-shell";
+import { LINKS } from "#/talk/script";
 
-import { Layer, Live, Wiped } from "./bracket";
-import { CHART, T3 } from "./timing";
+import { Live, Wiped } from "./bracket";
+import { onShot, Shot, shotBox, type ShotPose } from "./shot";
+import { T3 } from "./timing";
+import type { Pt } from "./tracks";
 
-const script = scriptFor("t3-aa");
-const [CALLOUT_A = "", CALLOUT_B = ""] = script.labels;
-const [AA_FOOT = ""] = script.footnotes;
-const SETTLE = T3.aa.at - 0.8;
-/** Left edge of the key and callout column beside the chart. */
-const SIDE_X = CHART.x + CHART.w + 80;
-/** The callout cards name the points, so the chart itself carries no labels. */
-const CHART_CALLOUTS: readonly string[] = [];
-const family = (ui: string | undefined) => (ui ?? "").replace(/ low$/, "");
-/** The chart's key: model by colour, effort by glyph. */
-const KEY = [
-  { label: family(script.ui[0]), stroke: "var(--clay)", width: 6 },
-  { label: family(script.ui[5]), stroke: "var(--text)", width: 3.5 },
-  { label: script.ui[10] ?? "", stroke: null, width: 0 },
+export const AA_SHOT = Object.freeze({
+  src: "/talk/refs/aa-chart.webp",
+  alt: "Artificial Analysis chart of Intelligence Index against cost per task for Claude Opus 5.5 and Sonnet 5.5 at each effort level",
+  size: { w: 2306, h: 948 },
+});
+const SOURCE = "Artificial Analysis";
+
+const AA_BOX = shotBox(80, 176, 1760, AA_SHOT.size);
+const K = AA_BOX.w / AA_SHOT.size.w;
+
+/** Centres of the Opus 5.5 dots in the screenshot (image px), low → max. */
+export const OPUS_DOTS = [
+  { x: 496.1, y: 548.0 },
+  { x: 1028.9, y: 353.9 },
+  { x: 1215.5, y: 302.9 },
+  { x: 1600.9, y: 250.8 },
+  { x: 1930.2, y: 215.1 },
 ] as const;
-/** "✢ low" → "low" (the glyph is drawn, not set in the mono face). */
-const effortWord = (ui: string | undefined) => (ui ?? "").replace(/^\S+ /, "");
-const [EFFORT_LOW, , , , EFFORT_MAX] = scriptFor("t3-then").ui;
 
-function EffortMark({ effort }: { effort: "low" | "max" }) {
-  return (
-    <svg viewBox="-20 -20 40 40" width={40} height={40} aria-hidden>
-      <path
-        d={effortGlyph(effort, 16)}
-        stroke="var(--soft)"
-        strokeWidth={3.5}
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+/** The card lies flat from here on, so `onShot` (which ignores tilt) is exact for the dots. */
+export const CHART_LAND = 142.35;
+
+/**
+ * The card swings down from above as the dial sinks (the camera tilting up), lands flat, floats on
+ * ambient time and pushes in through the hold.
+ */
+export function chartPose(tau: number, rho: number): ShotPose {
+  const u = prog(tau, CHART_LAND - 1, CHART_LAND, outCubic);
+  const float = prog(tau, CHART_LAND, CHART_LAND + 1.2);
+  const push = clamp((tau - T3.aa.at) / 2.5);
+  return {
+    x: float * 4 * Math.sin(rho * 0.45 + 1),
+    y: (u - 1) * 260 + float * 5 * Math.sin(rho * 0.8),
+    scale: (0.9 + 0.1 * u) * (1 + 0.015 * push),
+    opacity: clamp(u * 2),
+    rx: (u - 1) * 12,
+    ry: 0,
+  };
 }
 
-/** "A · B · C" → ["A", "B · C"] so the long source line breaks at its first dot. */
-function splitFirst(text: string, sep: string): [string, string] {
-  const i = text.indexOf(sep);
-  return i < 0 ? [text, ""] : [text.slice(0, i), text.slice(i + sep.length)];
+/** Centre of Opus dot `i` (low → max) on stage at (τ, ρ); the bot's feet and the glyphs land here. */
+export function dotAt(i: number, tau: number, rho: number): Pt {
+  const q = OPUS_DOTS[i] ?? OPUS_DOTS[0];
+  return onShot(AA_BOX, chartPose(tau, rho), { x: AA_BOX.x + q.x * K, y: AA_BOX.y + q.y * K });
 }
 
-/** "Opus 5.5 high 54 · $1.82 beats Sonnet 5.5 xhigh" → the claim and its comparison. */
-export function splitCallout(text: string): [string, string] {
-  if (text.includes(" | ")) return splitFirst(text, " | ");
-  const i = text.indexOf(" beats ");
-  return i < 0 ? [text, ""] : [text.slice(0, i), text.slice(i + 1)];
-}
-
-function Callout({ text, at, top }: { text: string; at: number; top: number }) {
-  const [a, b] = splitCallout(text);
-  return (
-    <Wiped
-      at={at}
-      dur={0.5}
-      className="seg-card type-label"
-      style={{ left: SIDE_X, top, width: 520, display: "grid", gap: 6 }}
-    >
-      <span className="seg-hi" aria-label={text}>
-        {a}
-      </span>
-      <span className="seg-soft">{b}</span>
-    </Wiped>
-  );
-}
-
-/** The chart's ticks have no entrance of their own: wipe the chart up as its axes draw. */
-const reveal = (tau: number) => {
-  const u = prog(tau, T3.aa.chartStart + 0.2, T3.aa.chartStart + 0.75, outCubic);
-  return { clipTop: (1 - u) * 100 };
-};
-
-function ChartKey() {
-  return (
-    <div className="t3-key type-label">
-      {KEY.map(({ label, stroke, width }) => (
-        <div key={label} className="t3-key__row">
-          <svg viewBox="-20 -20 40 40" width={40} height={40} aria-hidden>
-            {stroke ? (
-              <path
-                d={effortGlyph("xhigh", 16)}
-                stroke={stroke}
-                strokeWidth={width}
-                strokeLinecap="round"
-              />
-            ) : (
-              <circle r={9} fill="var(--muted)" />
-            )}
-          </svg>
-          <span className={stroke ? "seg-text" : "seg-soft"}>{label}</span>
-        </div>
-      ))}
-      <div className="t3-key__row seg-soft">
-        <EffortMark effort="low" />
-        <span>{effortWord(EFFORT_LOW)}</span>
-        <span className="seg-muted">→</span>
-        <EffortMark effort="max" />
-        <span>{effortWord(EFFORT_MAX)}</span>
-      </div>
-    </div>
-  );
-}
-
-/** W3 with the film's entrance: the τ-driven ScatterChart plus a wall-clock readout. */
-function Picker() {
-  const [slug, setSlug] = useState<string | null>(null);
-  const point = AA_POINTS.find((p) => p.slug === slug);
-  return (
-    <WidgetShell label="Effort picker" className="seg-fill">
-      <Layer track={reveal}>
-        <div className="seg-abs" style={{ left: CHART.x, top: CHART.y }}>
-          <ScatterChart
-            start={T3.aa.chartStart}
-            frontier={T3.aa.frontier}
-            callouts={CHART_CALLOUTS}
-            selected={slug}
-            onSelect={setSlug}
-            width={CHART.w}
-            height={CHART.h}
-          />
-        </div>
-      </Layer>
-      <Wiped
-        at={SETTLE - 0.6}
-        className="seg-abs"
-        style={{ left: SIDE_X, top: CHART.y, width: 520 }}
-      >
-        {point ? (
-          <div className="wg-card wg-readout type-label" aria-live="polite">
-            <div style={{ display: "grid", gap: 6 }}>
-              <b>{aaLabel(point)}</b>
-              <span>
-                Index <b>{point.intelligenceIndex.toFixed(1)}</b> ·{" "}
-                <b>{fmtUSD(point.costPerTaskUSD)}</b>
-              </span>
-              <span>
-                <b className="wg-hot">{fmtTokens(point.outputTokens)}</b> output tokens
-              </span>
-            </div>
-          </div>
-        ) : (
-          <ChartKey />
-        )}
-      </Wiped>
-    </WidgetShell>
-  );
-}
-
-/** T3-aa: the dial's glyphs become the current-gen points; the bot walks the frontier. */
+/** T3-aa: the real Artificial Analysis chart floats in, dimmed, and the dial's glyphs land in it. */
 export function ChartPlate() {
-  const [source] = splitFirst(AA_FOOT, " · ");
   return (
-    <Live from={T3.aa.chartStart - 0.1} to={T3.winEnd}>
-      <Picker />
-      <Callout text={CALLOUT_A} at={145.0} top={CHART.y + 260} />
-      <Callout text={CALLOUT_B} at={145.25} top={CHART.y + 408} />
+    <Live from={CHART_LAND - 1} to={T3.aa.holdEnd + 0.6}>
+      <Shot src={AA_SHOT.src} alt={AA_SHOT.alt} box={AA_BOX} pose={chartPose} dim={0.82} card />
       <Wiped
-        at={145.4}
-        className="type-label seg-muted seg-abs"
-        style={{ left: SIDE_X, top: CHART.y + 560, width: 520 }}
+        at={CHART_LAND}
+        className="type-label seg-soft seg-abs"
+        style={{ left: AA_BOX.x + 8, top: AA_BOX.y + AA_BOX.h + 26 }}
       >
-        <ExtLink href={LINKS.aa}>{source}</ExtLink>
+        <ExtLink href={LINKS.aa}>{SOURCE}</ExtLink>
       </Wiped>
     </Live>
   );

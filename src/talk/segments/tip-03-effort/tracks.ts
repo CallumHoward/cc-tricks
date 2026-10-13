@@ -25,44 +25,10 @@ export const botBox = (x: number, y: number) => ({ left: x - 120, top: y - 180 }
 
 export type Pt = { x: number; y: number };
 
-const lerpPt = (a: Pt, b: Pt, u: number): Pt => ({
+export const lerpPt = (a: Pt, b: Pt, u: number): Pt => ({
   x: a.x + (b.x - a.x) * u,
   y: a.y + (b.y - a.y) * u,
 });
-
-/** Cumulative arc length at each vertex of a polyline. */
-function arcLengths(points: readonly Pt[]): number[] {
-  const out = [0];
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1] as Pt;
-    const b = points[i] as Pt;
-    out.push((out[i - 1] as number) + Math.hypot(b.x - a.x, b.y - a.y));
-  }
-  return out;
-}
-
-/** Point at arc length `s` along a polyline (clamped to its ends). */
-export function pointAlong(points: readonly Pt[], s: number): Pt {
-  const lens = arcLengths(points);
-  const total = lens.at(-1) ?? 0;
-  const d = clamp(s, 0, total);
-  for (let i = 1; i < points.length; i++) {
-    const l1 = lens[i] as number;
-    if (d <= l1) {
-      const l0 = lens[i - 1] as number;
-      return lerpPt(points[i - 1] as Pt, points[i] as Pt, l1 === l0 ? 0 : (d - l0) / (l1 - l0));
-    }
-  }
-  return points.at(-1) ?? { x: 0, y: 0 };
-}
-
-/** Arc length of the point `u` of the way from vertex `i` to vertex `i + 1`. */
-export function arcAt(points: readonly Pt[], i: number, u: number): number {
-  const lens = arcLengths(points);
-  const a = lens[i] ?? 0;
-  const b = lens[i + 1] ?? a;
-  return a + (b - a) * u;
-}
 
 /** Quadratic arc between two points, bulging `lift` px upward at the middle. */
 export function arcPoint(a: Pt, b: Pt, u: number, lift: number): Pt {

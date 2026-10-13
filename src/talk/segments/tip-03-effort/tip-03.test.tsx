@@ -2,14 +2,24 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderAt } from "#/engine/stage/render-at";
+import { AA_POINTS, type AaEffort } from "#/talk/data/aa";
+import { HOP } from "#/talk/mascot/actions";
 import { LINKS, scriptFor } from "#/talk/script";
 
 import { foldAt, lineLift } from "./bracket";
-import { splitCallout } from "./chart-plate";
-import { glyphAt, needleSeat } from "./dial-plate";
-import { BOT_ARC_AT, FRONTIER, OPUS_TARGETS, T3 } from "./timing";
-import { arcAt, pointAlong, typedCount } from "./tracks";
-import Tip03EffortSegment, { frontierArc } from "./view";
+import { AA_SHOT, chartPose, dotAt, OPUS_DOTS } from "./chart-plate";
+import { glyphAt, glyphLandAt, needleSeat } from "./dial-plate";
+import { EFFORTS, T3 } from "./timing";
+import { typedCount, type Pt } from "./tracks";
+import Tip03EffortSegment, { botPath, hopAt, landAt } from "./view";
+
+const gap = (a: Pt, b: Pt) => Math.hypot(a.x - b.x, a.y - b.y);
+
+function opus(effort: AaEffort) {
+  const p = AA_POINTS.find((q) => q.model === "Claude Opus 5.5" && q.effort === effort);
+  if (!p) throw new Error(`No Opus 5.5 ${effort} point`);
+  return { x: Math.log10(p.costPerTaskUSD), y: p.intelligenceIndex };
+}
 
 describe("tip 3 effort", () => {
   it("should type whole characters and never past the end", () => {
@@ -18,33 +28,10 @@ describe("tip 3 effort", () => {
     expect(typedCount(9, 1, 10, 5)).toBe(5);
   });
 
-  it("should walk a polyline by arc length", () => {
-    const line = [
-      { x: 0, y: 0 },
-      { x: 10, y: 0 },
-      { x: 10, y: 10 },
-    ];
-    expect(pointAlong(line, 15)).toEqual({ x: 10, y: 5 });
-    expect(arcAt(line, 1, 0.5)).toBe(15);
-  });
-
   it("should creep the dial needle no faster than 3 degrees per second in the hold", () => {
     const degPerSec = ((needleSeat(T3.lastGen.holdEnd) - needleSeat(T3.lastGen.at)) * 35) / 2.5;
     expect(degPerSec).toBeGreaterThan(0);
     expect(degPerSec).toBeLessThanOrEqual(3);
-  });
-
-  it("should park the bot between Opus high and xhigh at the stop", () => {
-    expect(frontierArc(T3.aa.at)).toBeCloseTo(BOT_ARC_AT, 6);
-    expect(pointAlong(FRONTIER, BOT_ARC_AT).x).toBeGreaterThan(OPUS_TARGETS[2]?.x ?? 0);
-    expect(pointAlong(FRONTIER, BOT_ARC_AT).x).toBeLessThan(OPUS_TARGETS[3]?.x ?? 0);
-  });
-
-  it("should split callouts into the claim and its comparison", () => {
-    expect(splitCallout("Opus 5.5 high 54 · $1.82 beats Sonnet 5.5 xhigh")).toEqual([
-      "Opus 5.5 high 54 · $1.82",
-      "beats Sonnet 5.5 xhigh",
-    ]);
   });
 
   it("should label the dial with every effort level when frozen at t3-then", () => {
@@ -57,16 +44,75 @@ describe("tip 3 effort", () => {
     expect(glyphAt(2, at, at + 1).rotate).not.toBe(glyphAt(2, at, at).rotate);
   });
 
-  it("should key the chart's models instead of an empty readout when frozen at t3-aa", () => {
+  it("should place every measured Opus dot where the chart's log cost and index axes put it", () => {
+    const [high, max] = [opus("high"), opus("max")];
+    const [pxHigh, pxMax] = [OPUS_DOTS[2], OPUS_DOTS[4]];
+    const sx = (pxMax.x - pxHigh.x) / (max.x - high.x);
+    const sy = (pxMax.y - pxHigh.y) / (max.y - high.y);
+    EFFORTS.forEach((effort, i) => {
+      const p = opus(effort);
+      const fit = { x: pxHigh.x + sx * (p.x - high.x), y: pxHigh.y + sy * (p.y - high.y) };
+      expect(gap(fit, OPUS_DOTS[i] ?? pxHigh)).toBeLessThan(3);
+    });
+  });
+
+  it("should drop each dial glyph into its Opus dot on the screenshot", () => {
+    EFFORTS.forEach((_, i) => {
+      const at = glyphLandAt(i);
+      const g = glyphAt(i, at, at + 0.3);
+      expect(gap({ x: (g.x ?? 0) + 50, y: (g.y ?? 0) + 50 }, dotAt(i, at, at + 0.3))).toBeLessThan(
+        0.5,
+      );
+      expect(glyphAt(i, at + 0.16).scale).toBe(0);
+    });
+  });
+
+  it("should hold the screenshot flat whenever the bot stands on it", () => {
+    for (let tau = hopAt(0) - 0.3; tau <= T3.aa.holdEnd; tau += 0.05) {
+      const pose = chartPose(tau, tau * 1.7);
+      expect(Math.hypot(pose.rx, pose.ry)).toBe(0);
+    }
+  });
+
+  it("should take off from and touch down on consecutive Opus dots on every hop", () => {
+    for (let k = 0; k < OPUS_DOTS.length - 1; k++) {
+      const off = hopAt(k) + HOP.anticipation;
+      expect(gap(botPath(off, off + 2), dotAt(k, off, off + 2))).toBeLessThan(0.5);
+      expect(gap(botPath(landAt(k), 9), dotAt(k + 1, landAt(k), 9))).toBeLessThan(0.5);
+    }
+  });
+
+  it("should carry the bot's feet through every hop without jumping", () => {
+    const step = 0.002;
+    for (let tau = 143.0; tau < T3.aa.holdEnd; tau += step) {
+      expect(gap(botPath(tau, tau), botPath(tau + step, tau + step))).toBeLessThan(5);
+    }
+  });
+
+  it("should stand the bot on Opus 5.5 max at the stop, having just landed there", () => {
+    const max = OPUS_DOTS.length - 1;
+    expect(landAt(max - 1)).toBeCloseTo(T3.aa.at, 9);
+    expect(gap(botPath(T3.aa.at, T3.aa.at), dotAt(max, T3.aa.at, T3.aa.at))).toBeLessThan(0.5);
+  });
+
+  it("should keep the bot's feet on its dot while the screenshot drifts in slow motion", () => {
+    const tau = T3.aa.at + 1;
+    const max = OPUS_DOTS.length - 1;
+    expect(gap(dotAt(max, tau, 150), dotAt(max, tau, 152))).toBeGreaterThan(1);
+    for (const rho of [150, 151, 152, 153]) {
+      expect(gap(botPath(tau, rho), dotAt(max, tau, rho))).toBeLessThan(0.5);
+    }
+  });
+
+  it("should show the real Artificial Analysis chart when frozen at t3-aa", () => {
     renderAt(T3.aa.at, <Tip03EffortSegment />);
-    expect(screen.getByText("GPT-6 Astra (max)")).toBeVisible();
-    expect(screen.queryByText("Pick a point")).toBeNull();
-    expect(screen.getByRole("region", { name: "Effort picker" })).toBeVisible();
+    expect(screen.getByRole("img", { name: AA_SHOT.alt })).toBeVisible();
   });
 
   it("should link the chart's source to Artificial Analysis when frozen at t3-aa", () => {
     renderAt(T3.aa.at, <Tip03EffortSegment />);
-    const link = screen.getByRole("link", { name: /Artificial Analysis/ });
+    const link = screen.getByRole("link");
+    expect(link).toBeVisible();
     expect(link).toHaveAttribute("href", LINKS.aa);
   });
 
