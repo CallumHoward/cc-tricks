@@ -24,7 +24,11 @@ export const Route = createRootRoute({
       { name: "color-scheme", content: "light dark" },
       { title: content.title },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+    ],
   }),
 
   notFoundComponent: NotFound,
