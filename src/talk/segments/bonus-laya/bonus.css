@@ -102,3 +102,44 @@
   border: 4px solid var(--clay);
   border-radius: 50%;
 }
+
+.b2-name {
+  transform: scale(0.8);
+  transform-origin: 0 0;
+}
+
+.b2-name__link {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.b2-name__mask {
+  display: inline-block;
+  overflow: hidden;
+  padding-bottom: 0.18em;
+  white-space: pre;
+}
+
+.b2-name__ch {
+  display: inline-block;
+}
+
+.b2-name__rule {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--clay);
+  box-shadow: 0 0 16px color-mix(in oklab, var(--clay) 70%, transparent);
+  transform-origin: 0 50%;
+}
+
+.b1-cover {
+  position: absolute;
+  border-radius: 4px 10px 10px 4px;
+  box-shadow:
+    0 30px 60px rgb(0 0 0 / 55%),
+    0 0 0 1px rgb(255 255 255 / 6%);
+}

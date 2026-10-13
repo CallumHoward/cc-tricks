@@ -33,7 +33,7 @@ export type Tuning = {
 };
 
 export const DEFAULT_TUNING: Tuning = {
-  holdSpeed: 0.035,
+  holdSpeed: 0.07,
   cruise: 1,
   rampUp: 0.6,
   brake: 0.75,

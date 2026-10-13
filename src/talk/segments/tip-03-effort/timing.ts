@@ -24,12 +24,12 @@ export const EFFORT_GLYPHS = ["✢", "✳", "✶", "✻", "✽"] as const;
 /** Where the live spinner glyph sits in the home shot (stage px). */
 export const SPIN_AT: Pt = { x: 218, y: 500 };
 
-export const DIAL = Object.freeze({ center: { x: 1370, y: 730 }, radius: 270 });
+export const DIAL = Object.freeze({ center: { x: 1180, y: 790 }, radius: 330 });
 export const DIAL_SEATS = dialSeats(DIAL.center, DIAL.radius);
 export const glyphSize = (i: number) => 64 + i * 16;
 
 /** The chart's box on stage (the W3 picker's ScatterChart). */
-export const CHART = Object.freeze({ x: 300, y: 380, w: 900, h: 520 });
+export const CHART = Object.freeze({ x: 180, y: 230, w: 1060, h: 640 });
 
 const layout = scatterLayout(AA_POINTS, CHART.w, CHART.h, DEFAULT_CALLOUTS);
 

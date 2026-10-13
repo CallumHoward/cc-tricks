@@ -5,8 +5,8 @@ import { AA_POINTS, aaLabel } from "#/talk/data/aa";
 import { fmtTokens, fmtUSD } from "#/talk/kit/data/logic";
 import { ScatterChart } from "#/talk/kit/data/scatter-chart";
 import { effortGlyph } from "#/talk/kit/data/scatter-layout";
-import { RuleRise } from "#/talk/kit/motion";
-import { scriptFor } from "#/talk/script";
+import { ExtLink } from "#/talk/kit/ext-link";
+import { LINKS, scriptFor } from "#/talk/script";
 import { WidgetShell } from "#/talk/widgets/widget-shell";
 
 import { Layer, Live, Wiped } from "./bracket";
@@ -14,8 +14,10 @@ import { CHART, T3 } from "./timing";
 
 const script = scriptFor("t3-aa");
 const [CALLOUT_A = "", CALLOUT_B = ""] = script.labels;
-const [AA_FOOT = "", DEADPAN = ""] = script.footnotes;
+const [AA_FOOT = ""] = script.footnotes;
 const SETTLE = T3.aa.at - 0.8;
+/** Left edge of the key and callout column beside the chart. */
+const SIDE_X = CHART.x + CHART.w + 80;
 /** The callout cards name the points, so the chart itself carries no labels. */
 const CHART_CALLOUTS: readonly string[] = [];
 const family = (ui: string | undefined) => (ui ?? "").replace(/ low$/, "");
@@ -62,7 +64,7 @@ function Callout({ text, at, top }: { text: string; at: number; top: number }) {
       at={at}
       dur={0.5}
       className="seg-card type-label"
-      style={{ left: 1240, top, width: 520, display: "grid", gap: 6 }}
+      style={{ left: SIDE_X, top, width: 520, display: "grid", gap: 6 }}
     >
       <span className="seg-hi" aria-label={text}>
         {a}
@@ -128,7 +130,11 @@ function Picker() {
           />
         </div>
       </Layer>
-      <Wiped at={SETTLE - 0.6} className="seg-abs" style={{ left: 1240, top: 196, width: 520 }}>
+      <Wiped
+        at={SETTLE - 0.6}
+        className="seg-abs"
+        style={{ left: SIDE_X, top: CHART.y, width: 520 }}
+      >
         {point ? (
           <div className="wg-card wg-readout type-label" aria-live="polite">
             <div style={{ display: "grid", gap: 6 }}>
@@ -152,29 +158,18 @@ function Picker() {
 
 /** T3-aa: the dial's glyphs become the current-gen points; the bot walks the frontier. */
 export function ChartPlate() {
-  const [src1, src2] = splitFirst(AA_FOOT, " · ");
+  const [source] = splitFirst(AA_FOOT, " · ");
   return (
     <Live from={T3.aa.chartStart - 0.1} to={T3.winEnd}>
-      <div className="seg-abs" style={{ left: 160, top: 196, scale: 0.62, transformOrigin: "0 0" }}>
-        <RuleRise text={"Check the current gen\ncrossover benchmark charts"} settleBy={142.9} />
-      </div>
       <Picker />
-      <Callout text={CALLOUT_A} at={145.0} top={420} />
-      <Callout text={CALLOUT_B} at={145.25} top={568} />
-      <Wiped
-        at={145.5}
-        className="type-label seg-text seg-abs"
-        style={{ left: 1240, top: 724, width: 520 }}
-      >
-        {DEADPAN}
-      </Wiped>
+      <Callout text={CALLOUT_A} at={145.0} top={CHART.y + 260} />
+      <Callout text={CALLOUT_B} at={145.25} top={CHART.y + 408} />
       <Wiped
         at={145.4}
         className="type-label seg-muted seg-abs"
-        style={{ left: CHART.x + 96, top: 924 }}
+        style={{ left: SIDE_X, top: CHART.y + 560, width: 520 }}
       >
-        <div>{src1}</div>
-        <div>{src2}</div>
+        <ExtLink href={LINKS.aa}>{source}</ExtLink>
       </Wiped>
     </Live>
   );

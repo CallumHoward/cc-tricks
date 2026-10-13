@@ -45,12 +45,15 @@ export const T = Object.freeze({
   wallBack: 90.0,
   // price
   plan: 94.6,
-  columns: 95.7,
-  priceCopy: 97.6,
-  // ttl
-  cut: 103.0,
-  irisStart: 105.2,
-  irisEnd: 106.0,
+  cardIn: 95.3,
+  cardLand: 96.6,
+  dim: 97.4,
+  outline: 97.7,
+  // ttl: the camera pushes into the write columns, then the card drops away under the rings
+  narrow: 103.2,
+  pushEnd: 105.6,
+  cardOut: 105.9,
+  cardGone: 106.7,
   rings: 106.4,
   ringsLand: 107.0,
   ttlHead: 107.6,
@@ -81,7 +84,6 @@ export const T = Object.freeze({
   fold: 132.5,
   foldEnd: 132.85,
   pocket: 132.95,
-  whip: 133.25,
-  whipDur: 0.45,
+  track: 133.2,
   home: 133.72,
 });

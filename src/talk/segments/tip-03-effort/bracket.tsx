@@ -2,7 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import "./seg.css";
 
-import { clamp, outCubic, prog } from "#/engine/motion/ease";
+import { clamp, inOutCubic, outCubic, prog } from "#/engine/motion/ease";
 import type { StyleValues } from "#/engine/stage/applier";
 import { useTrack } from "#/engine/stage/react";
 import type { Frame } from "#/engine/types";
@@ -12,7 +12,6 @@ import {
   HOME,
   Pile,
   PromptBox,
-  ScrollbackWhip,
   Turn,
   type CountSource,
   type TurnIn,
@@ -22,9 +21,10 @@ import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { DisplayWindow } from "#/talk/segments/shared/display-window";
 import { BOT_HOME, HOME_ZONES, HomeRest } from "#/talk/segments/shared/home";
 
-import { botBox, homeLeave, inCubic, typedCount, wipe } from "./tracks";
+import { botBox, homeLeave, typedCount, wipe } from "./tracks";
 
-const FILL: CSSProperties = { position: "absolute", inset: 0 };
+/** Full-frame wrappers never take the pointer; links and widget controls opt back in (seg.css). */
+const FILL: CSSProperties = { position: "absolute", inset: 0, pointerEvents: "none" };
 
 /**
  * Rendered only while from ≤ τ < to. Uses `display`, not `visibility`: kit children (Pile tiles)
@@ -199,32 +199,38 @@ export type OutroSpec = {
 };
 
 /** Exit timings relative to the last hold's end (all within the 1.4 s exit tail). */
-export function outroTimes(holdEnd: number) {
+function outroTimes(holdEnd: number) {
   return {
-    rise: holdEnd,
-    riseEnd: holdEnd + 0.4,
-    line: holdEnd + 0.22,
+    rise: holdEnd + 0.25,
+    riseEnd: holdEnd + 0.85,
+    line: holdEnd + 0.3,
     pocket: holdEnd + 0.5,
-    whip: holdEnd + 0.92,
-    whipEnd: holdEnd + 1.3,
+    lift: holdEnd + 0.88,
+    rest: holdEnd + 1.3,
   };
 }
 
+/** The completion line drifts up into the scrollback as it fades. */
+export function lineLift(tau: number, from: number, to: number): StyleValues {
+  const u = prog(tau, from, to, inOutCubic);
+  return { y: -96 * u, opacity: 1 - u };
+}
+
 /**
- * Window end: the home rules rise back under the folding plate, the completion line types, the bot
- * pockets a token, and the camera whips up the scrollback onto HomeRest with the new pile.
+ * Window end: the home furniture cranes back up under the receding plate, the completion line
+ * types, the bot pockets a token, and the line drifts up into the scrollback onto HomeRest.
  */
 export function HomeOutro({ holdEnd, winEnd, pastVerb, duration, pile, pileAfter }: OutroSpec) {
   const t = outroTimes(holdEnd);
   const rise = (tau: number) => {
     const u = prog(tau, t.rise, t.riseEnd, outCubic);
-    return { y: (1 - u) * 420, opacity: clamp(u * 2) };
+    return { y: (1 - u) * 180, opacity: clamp(u * 1.6) };
   };
   const promptStyle: CSSProperties = { position: "absolute", left: HOME.left, top: HOME.promptTop };
   return (
     <>
-      <Live from={holdEnd} to={t.whipEnd}>
-        <ScrollbackWhip at={t.whip} dur={t.whipEnd - t.whip} distance={1080}>
+      <Live from={holdEnd} to={t.rest}>
+        <Layer track={(tau) => lineLift(tau, t.lift, t.rest)}>
           <CompletionLine
             className="type-label"
             style={{
@@ -237,20 +243,15 @@ export function HomeOutro({ holdEnd, winEnd, pastVerb, duration, pile, pileAfter
             duration={duration}
             at={t.line}
           />
-          <Layer track={rise}>
-            <PromptBox style={promptStyle} />
-            <ContextBar zones={HOME_ZONES} />
-            <Pile count={pile} x={HOME.pileX} y={HOME.pileY} />
-          </Layer>
-          <div style={{ ...FILL, transform: "translateY(-1080px)" }}>
-            <PromptBox style={promptStyle} />
-            <ContextBar zones={HOME_ZONES} />
-            <Pile count={pileAfter} x={HOME.pileX} y={HOME.pileY} />
-          </div>
-        </ScrollbackWhip>
+        </Layer>
+        <Layer track={rise}>
+          <PromptBox className="type-code" style={promptStyle} />
+          <ContextBar zones={HOME_ZONES} />
+          <Pile count={pile} x={HOME.pileX} y={HOME.pileY} />
+        </Layer>
       </Live>
-      <Live from={t.whipEnd} to={winEnd}>
-        <HomeRest pile={pileAfter} from={t.whipEnd} to={winEnd} />
+      <Live from={t.rest} to={winEnd}>
+        <HomeRest pile={pileAfter} from={t.rest} to={winEnd} />
       </Live>
     </>
   );
@@ -262,8 +263,15 @@ export const BOT_FEET = Object.freeze({
   y: BOT_HOME.top + BOT_HOME.height * 0.9,
 });
 
-/** Plate fold into the completion line: collapses toward y = 500 over the first 0.36 s of the exit. */
+/**
+ * The plate dollies back over the first 0.55 s of the exit, clearing (0.45 s) before the home shot
+ * rises.
+ */
 export function foldAt(tau: number, holdEnd: number): StyleValues {
-  const u = prog(tau, holdEnd, holdEnd + 0.36, inCubic);
-  return { scaleY: Math.max(0.004, 1 - u), opacity: 1 - prog(tau, holdEnd + 0.22, holdEnd + 0.36) };
+  const u = prog(tau, holdEnd, holdEnd + 0.55, inOutCubic);
+  return {
+    scale: 1 - 0.1 * u,
+    y: -70 * u,
+    opacity: 1 - prog(tau, holdEnd, holdEnd + 0.45, outCubic),
+  };
 }

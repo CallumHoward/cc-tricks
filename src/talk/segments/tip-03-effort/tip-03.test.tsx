@@ -2,10 +2,11 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderAt } from "#/engine/stage/render-at";
-import { scriptFor } from "#/talk/script";
+import { LINKS, scriptFor } from "#/talk/script";
 
+import { foldAt, lineLift } from "./bracket";
 import { splitCallout } from "./chart-plate";
-import { needleSeat } from "./dial-plate";
+import { glyphAt, needleSeat } from "./dial-plate";
 import { BOT_ARC_AT, FRONTIER, OPUS_TARGETS, T3 } from "./timing";
 import { arcAt, pointAlong, typedCount } from "./tracks";
 import Tip03EffortSegment, { frontierArc } from "./view";
@@ -46,26 +47,33 @@ describe("tip 3 effort", () => {
     ]);
   });
 
-  it("should show the last-gen claim when frozen at t3-then", () => {
+  it("should label the dial with every effort level when frozen at t3-then", () => {
     renderAt(T3.lastGen.at, <Tip03EffortSegment />);
-    expect(screen.getByText(scriptFor("t3-then").lines[0] ?? "")).toBeVisible();
-    expect(screen.getByText(scriptFor("t3-then").stamps[0] ?? "")).toBeVisible();
+    for (const label of scriptFor("t3-then").ui) expect(screen.getByLabelText(label)).toBeVisible();
   });
 
-  it("should show the output-token footnote when frozen at t3-then", () => {
-    renderAt(T3.lastGen.at, <Tip03EffortSegment />);
-    expect(screen.getByText(scriptFor("t3-then").footnotes[0] ?? "")).toBeVisible();
+  it("should keep the seated glyphs turning on ambient time while the story is held", () => {
+    const at = T3.lastGen.at;
+    expect(glyphAt(2, at, at + 1).rotate).not.toBe(glyphAt(2, at, at).rotate);
   });
 
   it("should key the chart's models instead of an empty readout when frozen at t3-aa", () => {
     renderAt(T3.aa.at, <Tip03EffortSegment />);
     expect(screen.getByText("GPT-6 Astra (max)")).toBeVisible();
     expect(screen.queryByText("Pick a point")).toBeNull();
+    expect(screen.getByRole("region", { name: "Effort picker" })).toBeVisible();
   });
 
-  it("should show the deadpan footnote when frozen at t3-aa", () => {
+  it("should link the chart's source to Artificial Analysis when frozen at t3-aa", () => {
     renderAt(T3.aa.at, <Tip03EffortSegment />);
-    expect(screen.getByText(scriptFor("t3-aa").footnotes[1] ?? "")).toBeVisible();
-    expect(screen.getByRole("region", { name: "Effort picker" })).toBeVisible();
+    const link = screen.getByRole("link", { name: /Artificial Analysis/ });
+    expect(link).toHaveAttribute("href", LINKS.aa);
+  });
+
+  it("should take at least 0.35 seconds to clear the plate and the completion line", () => {
+    const end = T3.aa.holdEnd;
+    expect(foldAt(end + 0.35, end).opacity).toBeGreaterThan(0);
+    expect(foldAt(end + 0.45, end).opacity).toBe(0);
+    expect(lineLift(end + 1.2, end + 0.88, end + 1.3).opacity).toBeGreaterThan(0);
   });
 });

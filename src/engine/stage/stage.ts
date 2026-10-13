@@ -8,7 +8,6 @@ export const PRIORITY = Object.freeze({
   three: 20,
   shaders: 30,
   overlay: 40,
-  audio: 50,
 });
 
 /** Story seconds a segment stays mounted before and after its window. */
@@ -25,7 +24,7 @@ export type StageSnapshot = {
 export type StageCommand =
   | { type: "blackout" }
   | { type: "fullscreen" }
-  | { type: "mute" }
+  | { type: "overview" }
   | { type: "presenter" };
 
 type Scheduler = {
@@ -102,6 +101,19 @@ const defaultFontsReady = () =>
     ? Promise.resolve()
     : document.fonts.ready;
 
+/** Slowest rate ambient time ever runs forward: stops read as slo-mo, never as a freeze. */
+export const AMBIENT_FLOOR = 0.08;
+
+/** Ambient time rate for a playhead velocity: follows rewinds, floors forward motion. */
+export function ambientRate(v: number): number {
+  return v < 0 ? v : Math.max(v, AMBIENT_FLOOR);
+}
+
+/** Ambient ramped time for a frame (`tau` when the producer predates `rho`). */
+export function ambientTime(frame: Frame): number {
+  return frame.rho ?? frame.tau;
+}
+
 export function createStage({
   clock,
   stops = [],
@@ -163,7 +175,8 @@ export function createStage({
     if (!running) return;
     const w = wall();
     const { tau, v } = clock.sample(w);
-    render({ tau, v, w, dt: Math.max(0, w - last.w) });
+    const dt = Math.max(0, w - last.w);
+    render({ tau, v, w, dt, rho: (last.rho ?? last.tau) + ambientRate(v) * dt });
     raf = scheduler.request(tick);
   };
 
@@ -204,7 +217,7 @@ export function createStage({
       stop();
       frozen = true;
       const token = ++freezeToken;
-      const frame = { tau, v: 0, w, dt: 0 };
+      const frame = { tau, v: 0, w, dt: 0, rho: tau };
       render(frame);
       void (async () => {
         await fontsReady();

@@ -1,77 +1,94 @@
 import { describe, expect, it } from "vitest";
 
 import { sampleKeys } from "#/engine/motion/track";
+import { toScreen } from "#/talk/kit/motion";
+import { maxStep, sampleSpan } from "#/talk/segments/shared/test-utils";
 
 import {
   AFT,
-  BOT_WIDTH,
-  botStretch,
-  captionWords,
-  homeY,
+  BOT_STAND,
+  BOT_X,
+  CARD_TILT,
+  columnScale,
+  columnY,
+  emberAt,
+  FABLE,
+  letterAt,
   limitsCamera,
-  POSTER_ROTATE,
-  posterCurl,
-  SQUEEZE,
-  terminalY,
-  WEEKLY,
-  wordLines,
+  onCard,
 } from "./tracks";
 
-const used = (tau: number) => WEEKLY.map((bar) => Math.round(sampleKeys(bar.used, tau) * 100));
+const REST = { x: 960, y: 540, zoom: 1, roll: 0, tilt: 0 };
 
 describe("afterword tracks", () => {
-  it("should show the weekly bars at 88% and 95% when the limits stop lands", () => {
-    expect(used(AFT.limitsAt - 0.8)).toEqual([88, 95]);
-  });
-
-  it("should drain the bars behind the poster", () => {
-    expect(used(AFT.wantedAt)).toEqual([21, 1]);
-  });
-
-  it("should wedge the bot into the gap and widen it back", () => {
-    expect(sampleKeys(BOT_WIDTH, AFT.limitsAt)).toBeCloseTo(SQUEEZE, 6);
-    expect(botStretch(SQUEEZE)).toBeGreaterThan(1);
-    expect(sampleKeys(BOT_WIDTH, AFT.wantedAt)).toBeCloseTo(1, 6);
-  });
-
-  it("should finish typing the caption before the stop", () => {
-    expect(captionWords(AFT.captionAt - 0.1, 16)).toBe(0);
-    expect(captionWords(AFT.limitsAt - 0.8, 16)).toBe(16);
-  });
-
-  it("should only creep the poster during the hold", () => {
-    const curl = posterCurl(AFT.wantedAt) - posterCurl(AFT.yank);
-    expect(posterCurl(AFT.cut - 0.01)).toBe(0);
-    expect(curl).toBeGreaterThan(0);
-    expect(curl / (AFT.yank - AFT.wantedAt)).toBeLessThanOrEqual(30);
-    const swing = sampleKeys(POSTER_ROTATE, AFT.yank) - sampleKeys(POSTER_ROTATE, AFT.wantedAt);
-    expect(Math.abs(swing) / (AFT.yank - AFT.wantedAt)).toBeLessThanOrEqual(2);
-  });
-
-  it("should push in on the gauges by the stop and creep no more than 3% in the hold", () => {
-    const settled = limitsCamera(AFT.limitsAt - 0.8).zoom;
-    expect(settled).toBeGreaterThan(1.1);
-    expect(limitsCamera(AFT.cut - 0.01).zoom / settled).toBeLessThanOrEqual(1.03);
-  });
-
-  it("should cut the camera back to the home framing with the poster", () => {
-    expect(limitsCamera(AFT.cut)).toEqual({ x: 960, y: 540, zoom: 1, roll: 0, tilt: 0 });
-  });
-
-  it("should break copy into lines of the given word counts", () => {
-    expect(wordLines("On the 5.5 models, I'm nowhere near my quota.", [4, 3])).toBe(
-      "On the 5.5 models,\nI'm nowhere near\nmy quota.",
-    );
-  });
-
   it("should open on the home shot at identity", () => {
-    expect(Math.abs(terminalY(AFT.start))).toBe(0);
-    expect(Math.abs(terminalY(AFT.whipIn))).toBe(0);
+    for (const tau of [AFT.start, AFT.craneIn]) {
+      expect(columnY(tau)).toBe(0);
+      expect(columnScale(tau)).toBe(1);
+    }
   });
 
   it("should settle the home shot at identity well before the match cut", () => {
-    const rest = AFT.whipOut + AFT.whipOutDur;
-    expect(AFT.end - rest).toBeGreaterThanOrEqual(0.3);
-    for (const tau of [rest, AFT.end - 0.05, AFT.end]) expect(homeY(tau)).toBe(0);
+    const rest = AFT.craneOut + AFT.craneOutDur;
+    expect(AFT.end - rest).toBeGreaterThanOrEqual(0.2);
+    for (const tau of [rest, AFT.end - 0.05, AFT.end]) {
+      expect(columnY(tau)).toBe(0);
+      expect(columnScale(tau)).toBe(1);
+    }
+  });
+
+  it("should crane between the screens over at least 0.35 s without jumping", () => {
+    expect(AFT.craneDur).toBeGreaterThanOrEqual(0.35);
+    const ys = sampleSpan(columnY, AFT.craneIn, AFT.craneDur);
+    expect(maxStep(ys)).toBeLessThan(1080 / 20);
+    expect(ys.at(-1)).toBe(-1080);
+  });
+
+  it("should lay the card flat and land the title before the limits stop", () => {
+    const settle = AFT.limitsAt - 0.8;
+    expect(sampleKeys(CARD_TILT, settle)).toBe(0);
+    for (let i = 0; i < 9; i++) expect(letterAt(settle, i)).toEqual({ lift: 0, spread: 0 });
+  });
+
+  it("should walk the bot into the last 5% of the Fable bar by the settle time", () => {
+    const box = sampleKeys(BOT_X, AFT.limitsAt - 0.8);
+    const fill = onCard(FABLE.fillEnd, FABLE.barY).x;
+    const track = onCard(FABLE.trackEnd, FABLE.barY).x;
+    expect(box + 120).toBe(BOT_STAND.x);
+    expect(BOT_STAND.x).toBeGreaterThan(fill);
+    expect(BOT_STAND.x).toBeLessThan(track);
+  });
+
+  it("should creep the camera no more than 3% through either hold", () => {
+    const holds = [
+      [AFT.limitsAt, AFT.limitsAt + 2],
+      [AFT.wantedAt, AFT.pullFrom],
+    ] as const;
+    for (const [from, to] of holds)
+      expect(limitsCamera(to).zoom / limitsCamera(from).zoom).toBeLessThanOrEqual(1.03);
+  });
+
+  it("should keep the bot and the 95% readout in frame at the wanted stop", () => {
+    const cam = limitsCamera(AFT.wantedAt);
+    expect(cam.zoom).toBeGreaterThan(1.3);
+    const used = toScreen(cam, onCard(1925, FABLE.barY));
+    const bot = toScreen(cam, { x: BOT_STAND.x, y: BOT_STAND.ground - 70 });
+    for (const p of [used, bot]) {
+      expect(p.x).toBeGreaterThan(0);
+      expect(p.x).toBeLessThan(1920);
+      expect(p.y).toBeGreaterThan(0);
+      expect(p.y).toBeLessThan(1080);
+    }
+  });
+
+  it("should pull the camera back to the home framing before the exit crane", () => {
+    expect(limitsCamera(AFT.craneOut + 0.2)).toMatchObject(REST);
+  });
+
+  it("should keep the embers rising at the stop as ambient time advances", () => {
+    const a = emberAt(3, 100, AFT.limitsAt);
+    const b = emberAt(3, 100.1, AFT.limitsAt);
+    expect(b.y).toBeLessThan(a.y);
+    expect(emberAt(3, 100, AFT.glowFrom - 0.1).size).toBe(0);
   });
 });

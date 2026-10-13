@@ -1,24 +1,22 @@
 import { inOutCubic, lerp, outCubic, prog } from "#/engine/motion/ease";
-import { SPRINGS } from "#/engine/motion/spring";
+import { springAt, SPRINGS } from "#/engine/motion/spring";
 import { keys, sampleKeys, type Key } from "#/engine/motion/track";
 import type { Shot } from "#/talk/kit/motion";
 import { formatElapsed } from "#/talk/kit/tui";
-import { pileTiles, whipOffset } from "#/talk/kit/tui/tui-math";
+import { pileTiles } from "#/talk/kit/tui/tui-math";
 import type { Act } from "#/talk/mascot/actions";
 
 /** Outro story times (absolute τ); window [280.9, 299.5), stops at 285.5 and 293.5. */
 export const OUT = Object.freeze({
   start: 280.9,
-  whip: 281.1,
-  whipDur: 0.4,
-  recapAt: 281.5,
-  recapDur: 1.5,
+  craneIn: 281.1,
+  craneInDur: 0.6,
+  recapAt: 281.75,
+  recapDur: 1.25,
   wipeFrom: 283.3,
-  wipeTo: 284,
+  wipeDur: 0.9,
   craneTo: 284.6,
-  thesisBy: 284.7,
   thesisAt: 285.5,
-  thesisExit: 287.55,
   collapseFrom: 287.5,
   collapseTo: 287.95,
   rulesTo: 288.8,
@@ -32,22 +30,22 @@ export const OUT = Object.freeze({
   flyFirst: 291,
   flyDur: 0.6,
   flyStagger: 0.1,
-  l1At: 290.7,
-  urlAt: 291.2,
-  refsAt: 291.4,
+  labelAt: 291.5,
   qrAt: 293.5,
   end: 299.5,
 });
 
-/** Screen y of the opening home shot: at rest through the match cut, then whips up the scrollback. */
-export const homeY = (tau: number): number => whipOffset(tau, OUT.whip, OUT.whipDur, 1080);
+/** A smooth vertical crane: eased travel with a slight dolly out mid-move, no blur. */
+function crane(tau: number, at: number, dur: number, distance: number) {
+  const u = prog(tau, at, at + dur);
+  return { y: distance * inOutCubic(u), scale: 1 - 0.06 * Math.sin(Math.PI * u) };
+}
 
-/** Bone plate's leading edge (px at mid-height): sweeps left → right, uncovering the bar in place. */
-export const revealEdge = (tau: number): number =>
-  lerp(-REVEAL_SLANT, 1920 + REVEAL_SLANT, inOutCubic(prog(tau, OUT.wipeFrom, OUT.wipeTo)));
+/** The home shot: at rest through the match cut, then the camera cranes up the scrollback. */
+export const homeCrane = (tau: number) => crane(tau, OUT.craneIn, OUT.craneInDur, 1080);
 
-/** Horizontal lean of the reveal edge between mid-height and the top or bottom (px, 12°). */
-export const REVEAL_SLANT = Math.round(540 * Math.tan((12 * Math.PI) / 180));
+/** The camera keeps craning up past the top of the scrollback onto the short, clean bar. */
+export const plateCrane = (tau: number) => crane(tau, OUT.wipeFrom, OUT.wipeDur, 1080);
 
 /** Every completion line of the talk, tip 1 → bonus (storyboard §4.2). */
 export const RECAP = [
@@ -67,7 +65,7 @@ export const RECAP = [
 /** The recap as the scrollback holds it: newest just above the prompt, tip 1 at the top. */
 export const SCROLLBACK = [...RECAP].reverse();
 
-/** The short, clean context bar (bone plate): x, bottom edge, scale. */
+/** The short, clean context bar: x, bottom edge, scale. */
 export const BAR = Object.freeze({ x: 200, y: 800, width: 1520, capacity: 100, height: 72 });
 
 const shrink = (long: number, short: number, creep = short): readonly Key[] =>
@@ -89,18 +87,18 @@ export const BAR_KEYS = {
   height: keys([OUT.collapseFrom, BAR.height], [OUT.collapseTo, 4, inOutCubic]),
 };
 
-/** Crane: from close on the bar back to the full plate, a slow push in the hold, then level. */
+/**
+ * Crane: from close on the bar back to a framing centred on it, a slow push in the hold, then
+ * level.
+ */
 export const CRANE: readonly Shot[] = [
-  { at: OUT.wipeFrom, x: 470, y: 770, zoom: 1.75 },
-  { at: OUT.craneTo, x: 960, y: 540, zoom: 1, ease: outCubic },
-  { at: OUT.collapseFrom, zoom: 1.02 },
-  { at: OUT.rulesTo, zoom: 1, ease: inOutCubic },
+  { at: OUT.wipeFrom, x: 620, y: 740, zoom: 1.45 },
+  { at: OUT.craneTo, x: 860, y: 690, zoom: 1.25, ease: outCubic },
+  { at: OUT.collapseFrom, zoom: 1.28 },
+  { at: OUT.rulesTo, x: 960, y: 540, zoom: 1, ease: inOutCubic },
 ];
 
-/**
- * Peak height (px) of a tile's hop; tiles skim the band under the references, then rise into the
- * QR.
- */
+/** Peak height (px) of a tile's hop; tiles skim the band under the label, then rise into the QR. */
 const TILE_HOP = 90;
 
 /** Flight fractions where a tile snaps from pile size to its module, and where it inks over. */
@@ -111,6 +109,13 @@ export const INK_FROM = 0.9;
 export const PLATE = Object.freeze({ left: 160, width: 1600, top: 300, bottom: 876 });
 
 export const QR = Object.freeze({ left: 214, top: 322, size: 540 });
+
+/** The show notes link beside the QR, vertically centred on it (one 56 px line). */
+export const LABEL = Object.freeze({ left: 840, top: QR.top + QR.size / 2 - 36 });
+
+/** Label word `i` lift through its mask (1 hidden below, 0 at rest), springing in word by word. */
+export const labelLift = (tau: number, i: number): number =>
+  1 - springAt(tau - (OUT.labelAt + i * 0.07), SPRINGS.LAND);
 
 export type RuleBox = { x: number; y: number; w: number };
 
@@ -209,7 +214,10 @@ export function tileAt(i: number, tau: number, held: readonly Module[], n: numbe
   };
 }
 
-/** Ivory fed out under the QR (px): nothing until it prints, then one row ahead of the print head. */
+/**
+ * QR card fed out under the print (px): nothing until it prints, then one row ahead of the print
+ * head.
+ */
 export function plateFed(tau: number, n: number): number {
   if (tau < OUT.qrFrom) return 0;
   return Math.min(QR.size, (prog(tau, OUT.qrFrom, OUT.qrTo) * n + 1) * (QR.size / n));
@@ -225,13 +233,6 @@ export const elapsedSeconds = (w: number): number => (w >= 600 ? w : ESTIMATED_W
 export function barWidthAt(tau: number): number {
   const units = SHORT_ZONES.reduce((sum, z) => sum + sampleKeys(z.size, tau), 0);
   return (units * BAR.width) / BAR.capacity;
-}
-
-/** Splits the thesis at its italic phrase: "It's basically all about" / "context management." */
-export function thesisLines(headline: string, emphasis: string): [string, string] {
-  const i = headline.indexOf(emphasis);
-  if (i < 0) return [headline, ""];
-  return [headline.slice(0, i).trim(), headline.slice(i)];
 }
 
 /** `✻ Cooked for {elapsed} · ↓ ≈3k tokens` with the elapsed time filled in. */

@@ -208,3 +208,19 @@
   color: var(--cc-soft);
   font: 400 22px/1.4 var(--font-mono);
 }
+
+:where(.talk-link) {
+  color: inherit;
+}
+
+.talk-link {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentcolor 30%, transparent);
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.talk-link:hover {
+  text-decoration-color: currentcolor;
+}

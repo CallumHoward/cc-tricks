@@ -1,10 +1,11 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { inOutCubic, inQuad, outExpo, prog } from "#/engine/motion/ease";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
 import { setStyle, typeClip, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 
-import { project, viewAt } from "./scene";
+import { ambientView, project, viewAt } from "./scene";
 
 const fmt = (n: number, d = 2) => n.toFixed(d);
 
@@ -30,6 +31,28 @@ export function During({
   );
 }
 
+/** A full-stage layer written from the eased progress `u` of `at → at + dur`. */
+function Eased({
+  at,
+  dur,
+  write,
+  children,
+}: {
+  at: number;
+  dur: number;
+  write: (el: HTMLDivElement, u: number) => void;
+  children: ReactNode;
+}) {
+  const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
+    write(el, inOutCubic(prog(frame.tau, at, at + dur)));
+  });
+  return (
+    <div ref={ref} style={{ position: "absolute", inset: 0 }}>
+      {children}
+    </div>
+  );
+}
+
 /** Exit for a whole plate body: lifts 24 px while a clip wipes it up over `at → at + dur`. */
 export function Leave({
   at,
@@ -40,16 +63,18 @@ export function Leave({
   dur?: number;
   children: ReactNode;
 }) {
-  const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
-    const u = inOutCubic(prog(frame.tau, at, at + dur));
-    setStyle(el, "transform", u > 0 ? `translateY(${fmt(-24 * u, 1)}px)` : "none");
-    setStyle(el, "clip-path", u > 0 ? `inset(0 0 ${fmt(u * 100, 1)}% 0)` : "none");
-    setStyle(el, "visibility", u >= 1 ? "hidden" : "visible");
-  });
   return (
-    <div ref={ref} style={{ position: "absolute", inset: 0 }}>
+    <Eased
+      at={at}
+      dur={dur}
+      write={(el, u) => {
+        setStyle(el, "transform", u > 0 ? `translateY(${fmt(-24 * u, 1)}px)` : "none");
+        setStyle(el, "clip-path", u > 0 ? `inset(0 0 ${fmt(u * 100, 1)}% 0)` : "none");
+        setStyle(el, "visibility", u >= 1 ? "hidden" : "visible");
+      }}
+    >
       {children}
-    </div>
+    </Eased>
   );
 }
 
@@ -139,12 +164,38 @@ export function Anchor({
   const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
     const px = typeof x === "function" ? x(frame.tau) : x;
     const pz = typeof z === "function" ? z(frame.tau) : z;
-    const p = project(viewAt(frame.tau), px, y, pz);
+    const view = ambientView(viewAt(frame.tau), frame.tau, ambientTime(frame));
+    const p = project(view, px, y, pz);
     setStyle(el, "transform", `translate3d(${fmt(p.x + dx, 1)}px, ${fmt(p.y + dy, 1)}px, 0)`);
   });
   return (
     <div ref={ref} style={{ position: "absolute", left: 0, top: 0 }}>
       {children}
     </div>
+  );
+}
+
+/** A camera track: eased vertical move over `at → at + dur`, no blur, landing exactly. */
+export function Pan({
+  at,
+  dur,
+  distance,
+  children,
+}: {
+  at: number;
+  dur: number;
+  distance: number;
+  children: ReactNode;
+}) {
+  return (
+    <Eased
+      at={at}
+      dur={dur}
+      write={(el, u) =>
+        setStyle(el, "transform", u > 0 ? `translate3d(0, ${fmt(distance * u, 1)}px, 0)` : "none")
+      }
+    >
+      {children}
+    </Eased>
   );
 }

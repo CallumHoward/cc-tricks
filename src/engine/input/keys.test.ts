@@ -23,7 +23,8 @@ describe("reduceKey", () => {
     ["B", "blackout"],
     [".", "blackout"],
     ["f", "fullscreen"],
-    ["m", "mute"],
+    ["m", "overview"],
+    ["O", "overview"],
     ["p", "presenter"],
   ])("should map %j to the %s command", (key, type) => {
     expect(press(key).intent).toEqual({ type });

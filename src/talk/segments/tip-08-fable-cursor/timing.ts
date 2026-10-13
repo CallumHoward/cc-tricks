@@ -1,6 +1,4 @@
 import { outCubic, prog } from "#/engine/motion/ease";
-import { settleTime, SPRINGS } from "#/engine/motion/spring";
-import { firstImpact } from "#/talk/segments/tip-06-cli-agents/cue-timing";
 
 export const TIP8 = {
   window: { start: 209.4, end: 222.9 },
@@ -8,7 +6,8 @@ export const TIP8 = {
   cps: 48,
   submitAt: 210.2,
   spinnerAt: 210.4,
-  dive: { start: 211.0, end: 212.2 },
+  /** The home shot dollies back as the board rolls in */
+  enter: { start: 211.0, end: 211.7 },
   /** The tip title lands as the board rolls */
   title: 212.8,
   rows: [211.4, 211.9, 212.4],
@@ -16,9 +15,6 @@ export const TIP8 = {
   board: { foldStart: 216.55, foldEnd: 217.1 },
   towers: { start: 216.7, cursorEnd: 217.3, ccSettle: 218.7 },
   headline: 218.5,
-  /** The ANECDOTAL stamp hits the paper on the storyboard's slam */
-  stampHit: 218.3,
-  foot: { start: 217.9, cps: 90 },
   x18: { at: 219.5, hold: 2 },
   exit: 221.5,
 } as const;
@@ -79,9 +75,4 @@ export function counterPlaces(digits: number): { place: number; comma: boolean }
     const place = digits - 1 - i;
     return { place, comma: place > 0 && place % 3 === 0 };
   });
-}
-
-/** `settleBy` for a kit `Stamp` whose first impact lands at `hit`. */
-export function stampSettleFor(hit: number): number {
-  return hit + settleTime(SPRINGS.SLAM) - firstImpact(0, SPRINGS.SLAM);
 }

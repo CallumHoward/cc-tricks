@@ -5,17 +5,9 @@ import { grainFrame } from "./css-bed";
 import { diveAt } from "./glyph-dive";
 import { SPIN_GLYPH } from "./glyphs";
 import { jitterAt } from "./rewind-overlay";
-import { ruleRiseAt } from "./rule-rise";
 import { stampAt } from "./stamp";
 
 describe("motion primitives", () => {
-  it("should rest every rule-rise word on the rule once settled", () => {
-    const s = ruleRiseAt(5, [1, 1.07, 1.14]);
-    expect(s.words).toEqual([0, 0, 0]);
-    expect(s.rule).toBe(1);
-    expect(ruleRiseAt(0, [1]).words[0]).toBe(1);
-  });
-
   it("should rest the stamp at scale 1 by settleBy and creep its ink slowly", () => {
     const at = stampAt(3, 3, -9);
     expect(at.scale).toBeCloseTo(1, 2);

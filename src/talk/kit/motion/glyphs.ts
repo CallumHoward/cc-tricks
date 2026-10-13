@@ -21,14 +21,6 @@ export const SPIN_GLYPH: Glyph = {
   focus: { x: 50, y: 50 },
 };
 
-/** `0` with its counter as a separate evenodd subpath. */
-export const ZERO_GLYPH: Glyph = {
-  d: "M50 6C25 6 14 26 14 50s11 44 36 44 36-20 36-44S75 6 50 6Zm0 14c13 0 18 13 18 30s-5 30-18 30-18-13-18-30 5-30 18-30Z",
-  box: 100,
-  focus: { x: 50, y: 50 },
-  rule: "evenodd",
-};
-
 /** Just the counter of `0`, for diving through the hole. */
 export const ZERO_COUNTER: Glyph = {
   d: "M50 20c13 0 18 13 18 30s-5 30-18 30-18-13-18-30 5-30 18-30Z",

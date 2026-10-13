@@ -3,9 +3,19 @@ import * as THREE from "three";
 import { hdr, linear, type Rgb } from "#/engine/gl/palette";
 import type { ThreeLayer } from "#/engine/gl/three-host";
 import { useThreeLayer } from "#/engine/gl/three-layer";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
 
-import { blockAt, MONOLITH, N_BLOCKS, propsAt, SKIP, viewAt, type View } from "./scene";
+import {
+  ambientView,
+  blockAt,
+  MONOLITH,
+  N_BLOCKS,
+  propsAt,
+  SKIP,
+  viewAt,
+  type View,
+} from "./scene";
 
 const color = (rgb: Rgb) =>
   new THREE.Color().setRGB(rgb[0], rgb[1], rgb[2], THREE.LinearSRGBColorSpace);
@@ -132,7 +142,7 @@ function createTapeLayer(): ThreeLayer {
     object: root,
     update(frame: Frame) {
       const { tau } = frame;
-      const view = viewAt(tau);
+      const view = ambientView(viewAt(tau), tau, ambientTime(frame));
       placeView(scene, view);
       for (let i = 0; i < N_BLOCKS; i++) {
         const b = blockAt(i, tau);

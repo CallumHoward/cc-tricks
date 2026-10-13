@@ -10,7 +10,7 @@ export { CssBed, GrainOverlay } from "./css-bed";
 export { ClayField, shakeAt } from "./clay-field";
 export { GlyphDive, diveAt } from "./glyph-dive";
 export type { DiveOpts } from "./glyph-dive";
-export { SPIN_GLYPH, ZERO_COUNTER, ZERO_GLYPH } from "./glyphs";
+export { SPIN_GLYPH, ZERO_COUNTER } from "./glyphs";
 export type { Glyph } from "./glyphs";
 export { BAR_POSES, ContextBar, poseAt } from "./context-bar";
 export type { BarPose, CostState, PoseKeys, Zone } from "./context-bar";

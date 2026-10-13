@@ -106,11 +106,9 @@ function StageSurface({
   children: ReactNode;
 }) {
   const { target, stopId } = useStageSnapshot();
-  const [surface, setSurface] = useState<HTMLElement | null>(null);
-  useNavKeys(stage, surface);
+  useNavKeys(stage);
   return (
     <main
-      ref={setSurface}
       className="stage-world"
       data-stage
       data-target={target}

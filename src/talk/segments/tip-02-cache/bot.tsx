@@ -5,7 +5,7 @@ import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { BOT_HOME } from "#/talk/segments/shared/home";
 
-import { hitSag, MONOLITH, PRICE_BASE, PRICE_X, COIN } from "./scene";
+import { MONOLITH } from "./scene";
 import { T } from "./timing";
 
 /** Feet sit this far below the bot box's top edge. */
@@ -17,7 +17,7 @@ export const SPOTS = Object.freeze({
   home: HOME_FEET,
   monolith: { x: MONOLITH.x, y: MONOLITH.y - MONOLITH.h / 2 },
   shelf: { x: 1520, y: 870 },
-  hit: { x: PRICE_X[3], y: PRICE_BASE - COIN },
+  card: { x: 1720, y: 1000 },
   strip: { x: 1090, y: 520 },
   clock: { x: 1480, y: 470 },
   road: { x: 1190, y: 958 },
@@ -30,14 +30,16 @@ type HopKey = { at: number; dur: number; to: Spot; height: number };
 const HOPS: readonly HopKey[] = [
   { at: 72.5, dur: 0.6, to: SPOTS.monolith, height: 140 },
   { at: 83.3, dur: 0.7, to: SPOTS.shelf, height: 120 },
-  { at: 96.6, dur: 0.7, to: SPOTS.hit, height: 140 },
+  { at: 96.6, dur: 0.7, to: SPOTS.card, height: 140 },
   { at: 106.2, dur: 0.6, to: SPOTS.strip, height: 160 },
   { at: 115.7, dur: 0.6, to: SPOTS.clock, height: 80 },
   { at: 123.6, dur: 0.7, to: SPOTS.road, height: 160 },
   { at: 132.6, dur: 0.6, to: SPOTS.home, height: 170 },
+  // A home-to-home hop rides the scrollback track, so the bot leads the camera up.
+  { at: T.track, dur: T.home - T.track, to: SPOTS.home, height: 90 },
 ];
 
-/** Feet position at τ: hops are parabolic arcs; the price hold adds the deadpan sag. */
+/** Feet position at τ: hops are parabolic arcs between spots. */
 export function botFeet(tau: number): Spot {
   let from: Spot = SPOTS.home;
   for (const hop of HOPS) {
@@ -52,7 +54,6 @@ export function botFeet(tau: number): Spot {
     }
     from = hop.to;
   }
-  if (from === SPOTS.hit) return { x: from.x, y: from.y + hitSag(tau) };
   return from;
 }
 
@@ -62,7 +63,7 @@ const ACTS: readonly Act[] = [
   { kind: "shrug", at: 76.4, dur: 0.8 },
   { kind: "push", at: 89.6, dur: 0.9, dir: -1 },
   { kind: "surprised", at: 98.4, dur: 0.6 },
-  { kind: "look", at: 99.2, dur: 4, x: 0, y: 1 },
+  { kind: "look", at: 99.2, dur: 4, x: -1, y: -0.3 },
   { kind: "surprised", at: 109.5, dur: 0.5 },
   { kind: "face", at: 110.3, dur: 5.3, expr: "closed" },
   { kind: "sleepy", at: 116.4, dur: 0.8 },

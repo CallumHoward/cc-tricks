@@ -2,12 +2,14 @@ import { inOutCubic, outCubic, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
 import type { StyleValues } from "#/engine/stage/applier";
 import { useTrack } from "#/engine/stage/react";
-import { RuleRise, Stamp } from "#/talk/kit/motion";
+import { ambientTime } from "#/engine/stage/stage";
+import type { Frame } from "#/engine/types";
 import { springFrom } from "#/talk/kit/motion/schedule";
 import { GLYPH_PATHS } from "#/talk/kit/tui";
 import { scriptFor } from "#/talk/script";
+import { TipTitle } from "#/talk/segments/shared/tip-title";
 
-import { Layer, Live, Typed, Wiped } from "./bracket";
+import { Layer, Live, Wiped } from "./bracket";
 import {
   DIAL,
   DIAL_SEATS,
@@ -21,11 +23,9 @@ import {
 import { arcPoint, dialAngle, inCubic } from "./tracks";
 
 const script = scriptFor("t3-then");
-const [FOOT = "", L1 = "", L2 = "", L3 = ""] = script.lines;
-const [TOKENS_FOOT = ""] = script.footnotes;
 const SETTLE = T3.lastGen.at - 0.8;
-/** Settles so the SLAM's first contact lands on the 137.3 slam cue. */
-const STAMP_SETTLE = 137.51;
+/** Ambient spin of the seated glyphs (deg per ambient second, alternating direction). */
+const SPIN = 26;
 const EXIT = T3.lastGen.holdEnd;
 
 /** Dial needle position in seats (0 = low … 4 = max): lands on medium, then creeps toward high. */
@@ -34,8 +34,11 @@ export function needleSeat(tau: number): number {
   return land + Math.max(0, tau - SETTLE) * (2.5 / 35);
 }
 
-/** One effort glyph: unrolls from the spinner onto its dial seat, then floats to its Opus point. */
-function glyphAt(i: number, tau: number): StyleValues {
+/**
+ * One effort glyph: unrolls from the spinner onto its dial seat, then floats to its Opus point. It
+ * keeps turning on ambient time `rho`, so the frozen stop still reads as slow motion.
+ */
+export function glyphAt(i: number, tau: number, rho = tau): StyleValues {
   const seat = DIAL_SEATS[i] ?? SPIN_AT;
   const target = OPUS_TARGETS[i] ?? seat;
   const size = glyphSize(i);
@@ -52,12 +55,12 @@ function glyphAt(i: number, tau: number): StyleValues {
     x: p.x - 50,
     y: p.y - 50,
     scale: (px / 100) * (1 - gone) * shown,
-    rotate: (1 - u1) * -270 + u2 * 180,
+    rotate: (1 - u1) * -270 + u2 * 180 + (i % 2 ? -SPIN : SPIN) * (rho - T3.leave),
   };
 }
 
 function DialGlyph({ i }: { i: number }) {
-  const ref = useTrack((tau: number) => glyphAt(i, tau));
+  const ref = useTrack((tau: number, frame: Frame) => glyphAt(i, tau, ambientTime(frame)));
   const glyph = EFFORT_GLYPHS[i] ?? "✳";
   return (
     <svg
@@ -171,48 +174,13 @@ function Dial() {
   );
 }
 
-/** T3-then: the spinner's glyph cycle unrolls into an effort dial beside the last-gen numbers. */
+/** T3-then: the spinner's glyph cycle unrolls into an effort dial under the tip title. */
 export function DialPlate() {
   return (
     <Live from={T3.leave} to={T3.aa.holdEnd}>
-      <div className="seg-abs" style={{ left: 160, top: 196 }}>
-        <RuleRise text={"3. Manage\neffort levels"} settleBy={SETTLE - 0.2} exit={EXIT} />
-      </div>
+      <TipTitle text={"3. Manage\neffort levels"} settleBy={SETTLE - 0.2} exit={EXIT} />
       <Layer track={sinkAt}>
         <Dial />
-        <Wiped at={136.45} className="type-label seg-muted seg-abs" style={{ left: 160, top: 486 }}>
-          {L1}
-        </Wiped>
-        <Typed
-          text={L2}
-          at={136.6}
-          cps={48}
-          className="type-code seg-hi seg-abs"
-          style={{ left: 160, top: 536 }}
-        />
-        <Typed
-          text={L3}
-          at={136.75}
-          cps={48}
-          className="type-code seg-text seg-abs"
-          style={{ left: 160, top: 590 }}
-        />
-        <Wiped
-          at={136.95}
-          dur={0.55}
-          className="type-body seg-text seg-abs"
-          style={{ left: 160, top: 668, width: 860 }}
-        >
-          {FOOT}
-        </Wiped>
-        <Wiped at={137.05} className="type-label seg-muted seg-abs" style={{ left: 160, top: 788 }}>
-          {TOKENS_FOOT}
-        </Wiped>
-        <Stamp
-          text={script.stamps[0] ?? ""}
-          settleBy={STAMP_SETTLE}
-          style={{ left: 760, top: 920 }}
-        />
       </Layer>
       {EFFORTS.map((effort, i) => (
         <DialGlyph key={effort} i={i} />

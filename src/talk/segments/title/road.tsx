@@ -4,8 +4,9 @@ import { clamp, inOutCubic, inOutQuad, inQuad, lerp, outExpo, prog } from "#/eng
 import { SPRINGS } from "#/engine/motion/spring";
 import { keys } from "#/engine/motion/track";
 import { useFrame } from "#/engine/stage/react";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
-import { BAR_POSES, BoneSwap, ContextBar, type Zone } from "#/talk/kit/motion";
+import { BAR_POSES, ContextBar, type Zone } from "#/talk/kit/motion";
 import { num, put } from "#/talk/kit/motion/dom";
 import { springFrom } from "#/talk/kit/motion/schedule";
 import { Counter, GLYPH_PATHS, HOME, PromptBox, punch } from "#/talk/kit/tui";
@@ -26,6 +27,7 @@ import {
   laneScroll,
   rayRotation,
   roadFraming,
+  spoilerPush,
 } from "./tracks";
 
 const title = scriptFor("title");
@@ -74,8 +76,8 @@ function roadPlace(tau: number) {
   const ty = lerp(ROAD.origin.y, ROAD.at.y, f) - s * ROAD.origin.y;
   const creep =
     -64 *
-    prog(tau, T.spoilerTypeAt + 0.6, T.exitBone) *
-    (1 - inOutCubic(prog(tau, T.exitBone, 22.7)));
+    prog(tau, T.spoilerTypeAt + 0.6, T.spoilerExit) *
+    (1 - inOutCubic(prog(tau, T.spoilerExit, 22.7)));
   return { x: tx + creep, y: ty, s };
 }
 
@@ -106,11 +108,9 @@ function Sun() {
     const d = springFrom(tau, T.diveEnd + 0.25, SPRINGS.SNAP);
     put(disc.current, "transform", `translate(-50%, -50%) scale(${num(d, 4)})`);
     const r = clamp(prog(tau, T.diveEnd + 0.3, T.roadEnd + 0.2, outExpo));
-    put(
-      rays.current,
-      "transform",
-      `rotate(${num(-rot * 0.6, 2)}deg) scale(${num(0.3 + 0.7 * r, 4)})`,
-    );
+    // Rays repeat every 30°, so ambient spin wraps seamlessly and keeps turning at the stop
+    const spin = (((ambientTime(frame) - tau) * 40) % 30) - rot * 0.6;
+    put(rays.current, "transform", `rotate(${num(spin, 2)}deg) scale(${num(0.3 + 0.7 * r, 4)})`);
     put(rays.current, "opacity", num(r * 0.55, 3));
   });
   return (
@@ -271,7 +271,7 @@ const SPOILER_BOT_X = 1000;
 
 function spoilerBotPlace(tau: number) {
   const enter = 1 - outExpo(prog(tau, 17.5, 17.95));
-  const walk = 90 * prog(tau, 18.3, T.exitBone);
+  const walk = 90 * prog(tau, 18.3, T.spoilerExit);
   const air = inOutQuad(prog(tau, T.exitHop + 0.16, T.exitHop + 0.58));
   const dx = lerp(SPOILER_BOT_X + walk - BOT_HOME.left, 0, air);
   const dy = lerp(BAR_TOP - 560, 0, air) + enter * 200;
@@ -282,7 +282,13 @@ function spoilerBotPlace(tau: number) {
   };
 }
 
-/** Everything after the dive: the road under the ✳ sun, the title, then the bone spoiler. */
+/** Spoiler framing with a slow sway that only advances on ambient time, so the stop reads as slo-mo. */
+function spoilerGroupPlace(tau: number, frame: Frame) {
+  const a = ambientTime(frame) - tau;
+  return spoilerPush(tau, 22 * Math.sin(a * 1.6));
+}
+
+/** Everything after the dive: the road under the ✳ sun, the title, then the labeled spoiler bar. */
 export function RoadPlate() {
   const sky = useRef<HTMLDivElement>(null);
   useFrame((frame: Frame) => {
@@ -293,56 +299,25 @@ export function RoadPlate() {
   });
   return (
     <Win from={T.diveStart} to={T.end}>
-      <BoneSwap
-        wipes={[
-          { start: T.boneStart, end: T.boneEnd, to: "bone", angle: 0 },
-          { start: T.exitBone, end: T.exitBoneEnd, to: "dark", angle: 0 },
-        ]}
-      >
-        <Win from={-1} to={T.craneEnd}>
-          <div ref={sky} className="so-sky" />
-          <Sun />
-          <Mover
-            place={(tau: number) => ({
-              y: HORIZON_Y + inQuad(prog(tau, T.titleHoldEnd, T.dollyEnd)) * 400,
-              sx: inOutCubic(prog(tau, T.diveEnd + 0.4, T.roadEnd + 0.3)),
-              x: 960 * (1 - inOutCubic(prog(tau, T.diveEnd + 0.4, T.roadEnd + 0.3))),
-              hidden: tau > T.dollyEnd,
-            })}
-            className="so-horizon"
-            style={{ width: 1920 }}
-          />
-        </Win>
+      <Win from={-1} to={T.craneEnd}>
+        <div ref={sky} className="so-sky" />
+        <Sun />
+        <Mover
+          place={(tau: number) => ({
+            y: HORIZON_Y + inQuad(prog(tau, T.titleHoldEnd, T.dollyEnd)) * 400,
+            sx: inOutCubic(prog(tau, T.diveEnd + 0.4, T.roadEnd + 0.3)),
+            x: 960 * (1 - inOutCubic(prog(tau, T.diveEnd + 0.4, T.roadEnd + 0.3))),
+            hidden: tau > T.dollyEnd,
+          })}
+          className="so-horizon"
+          style={{ width: 1920 }}
+        />
+      </Win>
+      <Mover place={spoilerGroupPlace} style={{ width: 1920, height: 1080 }}>
         <Mover place={roadPlace}>
           <ContextBar zones={ZONES} pose={BAR_POSES.flat} keys={BAR_KEYS} />
         </Mover>
-        <Win from={-1} to={T.craneEnd}>
-          <Blocks />
-          <Mover place={roadBotPlace} style={{ width: ROAD_BOT.width, height: ROAD_BOT.height }}>
-            <Rig acts={ROAD_BOT_ACTS} silhouette />
-          </Mover>
-          <TitleType />
-        </Win>
         <Win from={T.craneEnd} to={T.end}>
-          <Rise
-            text={"it's basically\nall about context management"}
-            emphasis={spoiler.emphasis}
-            lead={{
-              id: "spoiler",
-              node: (
-                <Typed
-                  text="Spoiler:"
-                  at={T.spoilerTypeAt}
-                  cps={30}
-                  className="so-spoiler-kicker"
-                />
-              ),
-            }}
-            settleBy={T.spoilerAt - 0.8}
-            stagger={0.09}
-            exit={T.exitBone}
-            style={{ position: "absolute", left: 200, top: 196 }}
-          />
           <Mover
             place={(tau: number) => ({
               clip: tau < 18 ? `inset(0 0 ${1080 - BAR_TOP}px 0)` : "none",
@@ -357,18 +332,25 @@ export function RoadPlate() {
             </Mover>
           </Mover>
         </Win>
-        <Win from={T.exitBone + 0.3} to={T.end}>
-          <Mover
-            place={(tau: number) => {
-              const u = 50 * (1 - inOutCubic(prog(tau, 22.45, 22.95)));
-              return { clip: `inset(-20px ${num(u, 2)}% -20px ${num(u, 2)}%)` };
-            }}
-            style={{ left: HOME.left, top: HOME.promptTop }}
-          >
-            <PromptBox className="type-code" />
-          </Mover>
-        </Win>
-      </BoneSwap>
+      </Mover>
+      <Win from={-1} to={T.craneEnd}>
+        <Blocks />
+        <Mover place={roadBotPlace} style={{ width: ROAD_BOT.width, height: ROAD_BOT.height }}>
+          <Rig acts={ROAD_BOT_ACTS} silhouette />
+        </Mover>
+        <TitleType />
+      </Win>
+      <Win from={T.spoilerExit + 0.3} to={T.end}>
+        <Mover
+          place={(tau: number) => {
+            const u = 50 * (1 - inOutCubic(prog(tau, 22.45, 22.95)));
+            return { clip: `inset(-20px ${num(u, 2)}% -20px ${num(u, 2)}%)` };
+          }}
+          style={{ left: HOME.left, top: HOME.promptTop }}
+        >
+          <PromptBox className="type-code" />
+        </Mover>
+      </Win>
     </Win>
   );
 }

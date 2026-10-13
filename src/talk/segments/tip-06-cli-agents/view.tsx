@@ -1,12 +1,16 @@
-import { inOutCubic, inQuad, outCubic, outExpo, prog } from "#/engine/motion/ease";
+import { clamp, inOutCubic, outCubic, outExpo, prog } from "#/engine/motion/ease";
+import { SPRINGS } from "#/engine/motion/spring";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
-import { RuleRise, SPIN_GLYPH } from "#/talk/kit/motion";
+import { ExtLink } from "#/talk/kit/ext-link";
+import { SPIN_GLYPH } from "#/talk/kit/motion";
+import { springFrom } from "#/talk/kit/motion/schedule";
 import { Counter, ReadToolRow, SpinnerGlyph } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
 import { scriptFor } from "#/talk/script";
 import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "#/talk/segments/shared/tip-title";
 
-import { Bot, Chip, Fx, px, Rule, SegmentRoot, TipFrame, Typed, type StyleMap } from "./boundary";
+import { Bot, Fx, px, Rule, SegmentRoot, TipFrame, Typed, type StyleMap } from "./boundary";
 import {
   arcPoint,
   batonProgress,
@@ -15,7 +19,6 @@ import {
   tip6StackDy,
   TIP6,
   wrapCommand,
-  wrapCard,
   type Point,
 } from "./timing";
 
@@ -23,26 +26,36 @@ const D = TIP6;
 const SPLIT_Y = 520;
 const BASH_Y = TIP_TITLE_TOP + 2 * TIP_TITLE_LINE + 32;
 const HANDS: Point = { x: 1470, y: 420 };
-const BATON_SLOT: Point = { x: 218, y: 664 };
-/** Three side-by-side "subagent" cards for t6-others */
-const CARD = { top: 548, width: 480, gap: 40, chars: 27 } as const;
-const cardX = (i: number) => 200 + i * (CARD.width + CARD.gap);
-/** Where each card's baton would land, just past its chip; it creeps toward it through the hold. */
-const BATON_END = [432, 432, 432] as const;
+const BATON_SLOT: Point = { x: 222, y: SPLIT_Y + 32 + 2 * 46 + 30 };
+/** Three stacked "subagent" panes for t6-others, each a two-line command behind its ✳ */
+const PANE = { top: 548, height: 118, gap: 18, left: 200, width: 1520, chars: 66 } as const;
+const paneY = (i: number) => PANE.top + i * (PANE.height + PANE.gap);
 
 const kiro = scriptFor("t6-kiro");
 const others = scriptFor("t6-others");
 export const KIRO_LINES = wrapCommand(documentedKiro(kiro.code[0]?.code ?? ""), 78);
-export const OTHER_LINES = others.code.map((block) => wrapCard(block.code, CARD.chars));
+export const OTHER_LINES = others.code.map((block) => wrapCommand(block.code, PANE.chars));
 const TIP_PROMPT = kiro.headline ?? "";
 /** The title breaks after the three CLIs so line one clears the bot. */
 const TITLE = TIP_PROMPT.replace(" as your", "\nas your");
+const PROMPT_MASTER = "https://github.com/nidhinjs/prompt-master";
 
 const lift = (tau: number) => prog(tau, D.lift.start, D.lift.end, inOutCubic);
+/** The home prompt stack sinks out of frame under the plate and rises back inside the exit. */
+const stackDrop = (tau: number) =>
+  720 * lift(tau) * (1 - prog(tau, D.exit + 0.15, D.exit + 0.6, inOutCubic));
 
-/** Blinds: element `i` of the plate drops shut (scaleY → 0) at the exit. */
-const blind = (tau: number, i: number) =>
-  prog(tau, D.exit + i * 0.05, D.exit + i * 0.05 + 0.22, inQuad);
+/** Plate exit: everything drifts up and fades over 0.4 τ-s, staggered by layer `i`. */
+const leave = (tau: number, i = 0) =>
+  prog(tau, D.exit + i * 0.05, D.exit + i * 0.05 + 0.4, inOutCubic);
+const leaveFx =
+  (i = 0) =>
+  (frame: Frame): StyleMap => {
+    const u = leave(frame.tau, i);
+    return u > 0
+      ? { transform: `translate3d(0, ${px(-48 * u)}, 0)`, opacity: (1 - u).toFixed(3) }
+      : { transform: "none", opacity: "1" };
+  };
 
 function BatonSvg({ size = 44 }: { size?: number }) {
   return (
@@ -52,7 +65,7 @@ function BatonSvg({ size = 44 }: { size?: number }) {
   );
 }
 
-/** A ✳ thrown along an arc; `progress(τ)` is its place on the arc, hidden outside [show, hide). */
+/** A ✳ thrown along a path; `progress(τ)` is its place on it, hidden outside [show, hide). */
 function Baton({
   from,
   to,
@@ -70,9 +83,9 @@ function Baton({
 }) {
   const fx = (frame: Frame): StyleMap => {
     const p = path(from, to, progress(frame.tau));
-    // Spins in flight, then turns ≤ 2°/τ-s once it has landed
+    // Spins in flight, then keeps turning slowly on ambient time so a stop never freezes it
     const flight = Math.min(frame.tau - show, 0.9);
-    const spin = flight * 540 + Math.max(0, frame.tau - show - 0.9) * 2;
+    const spin = flight * 540 + Math.max(0, ambientTime(frame) - show - 0.9) * 24;
     return {
       visibility: frame.tau >= show && frame.tau < hide ? "visible" : "hidden",
       transform: `translate3d(${px(p.x - 22)}, ${px(p.y - 22)}, 0) rotate(${spin.toFixed(1)}deg)`,
@@ -96,7 +109,6 @@ function KiroPane() {
   const typeEnd = (i: number) =>
     D.kiroType.start +
     KIRO_LINES.slice(0, i).reduce((sum, line) => sum + Array.from(line).length, 0) / D.kiroType.cps;
-  const [label1 = "", label2 = ""] = kiro.labels;
   const status = (frame: Frame): StyleMap => ({
     "clip-path":
       frame.tau < D.baton.land
@@ -105,6 +117,13 @@ function KiroPane() {
   });
   return (
     <>
+      <ReadToolRow
+        tool="Bash"
+        arg="kiro-cli …"
+        status="running"
+        at={D.split.start}
+        style={{ position: "absolute", left: 200, top: BASH_Y }}
+      />
       {KIRO_LINES.map((line, i) => (
         <Typed
           key={line}
@@ -125,33 +144,23 @@ function KiroPane() {
           <span>{" tokens"}</span>
         </div>
       </Fx>
-      <Typed
-        text={label1}
-        start={D.labelsType.start}
-        cps={D.labelsType.cps}
-        className="type-label"
-        top={BATON_SLOT.y + 70}
-      />
-      <Typed
-        text={label2}
-        start={D.labelsType.start + 0.12}
-        cps={D.labelsType.cps}
-        className="type-label text-muted"
-        top={BATON_SLOT.y + 120}
-      />
     </>
   );
 }
 
-function OtherCard({ i, lines }: { i: number; lines: string[] }) {
-  const left = cardX(i);
+/** One subagent pane: rises into place, its command typed in with the CLI name in clay. */
+function OtherPane({ i, lines }: { i: number; lines: string[] }) {
+  const top = paneY(i);
   const name = lines[0]?.split(" ")[0] ?? "";
   const at = D.rows[i] ?? 0;
   const fx = (frame: Frame): StyleMap => {
-    const u = prog(frame.tau, at - 0.05, at + 0.3, outExpo);
+    const u = springFrom(frame.tau, at - 0.05, SPRINGS.LAND);
+    const show = clamp(u * 1.6);
+    // Each pane bobs on ambient time so the stop never freezes
+    const bob = 3 * Math.sin(ambientTime(frame) * 0.9 + i * 1.7) * show;
     return {
-      "clip-path": `inset(0 0 ${((1 - u) * 100).toFixed(2)}% 0 round 12px)`,
-      transform: `scaleY(${(1 - blind(frame.tau, 2 + i)).toFixed(4)})`,
+      opacity: show.toFixed(3),
+      transform: `translate3d(0, ${px((1 - u) * 56 + bob)}, 0)`,
     };
   };
   const starts = lines.map(
@@ -163,40 +172,111 @@ function OtherCard({ i, lines }: { i: number; lines: string[] }) {
     <Fx
       fx={fx}
       style={{
-        left,
-        top: CARD.top,
-        width: CARD.width,
-        height: 248,
+        left: PANE.left,
+        top,
+        width: PANE.width,
+        height: PANE.height,
         border: "2px solid var(--hairline)",
-        borderRadius: 12,
-        background: "var(--bg)",
-        transformOrigin: "50% 0",
-        clipPath: "inset(0 0 100% 0)",
+        borderRadius: 14,
+        background: "color-mix(in srgb, var(--bg-deep) 82%, transparent)",
+        boxShadow: "0 18px 40px rgb(0 0 0 / 0.28)",
+        opacity: 0,
       }}
     >
-      <Chip text={name} at={at + 0.1} top={44} left={22} />
-      <div
-        style={{
-          position: "absolute",
-          left: 22,
-          top: 84,
-          transform: "scale(0.9)",
-          transformOrigin: "0 0",
-        }}
-      >
-        {lines.map((line, k) => (
+      {lines.map((line, k) => {
+        const text =
+          k === 0 ? `${" ".repeat(Array.from(name).length)}${line.slice(name.length)}` : line;
+        return (
           <Typed
             key={line}
-            text={line}
+            text={text}
             start={starts[k] ?? 0}
             cps={90}
             className="type-label"
-            top={k * 40}
-            left={0}
+            top={22 + k * 42}
+            left={84}
           />
-        ))}
-      </div>
+        );
+      })}
+      <Typed
+        text={name}
+        start={starts[0] ?? 0}
+        cps={90}
+        className="type-label"
+        color="var(--clay)"
+        top={22}
+        left={84}
+      />
     </Fx>
+  );
+}
+
+function CliAgentsPlate() {
+  const paneFx = (frame: Frame): StyleMap => {
+    const u = prog(frame.tau, D.split.start + 0.05, D.split.end + 0.05, outExpo);
+    return { "clip-path": `inset(0 0 ${px((1 - u) * (1080 - SPLIT_Y))} 0)` };
+  };
+  /** Kiro's Bash row and command drift up and out before the three panes rise. */
+  const kiroFx = (frame: Frame): StyleMap => {
+    const u = prog(frame.tau, D.collapse.start, D.collapse.end, inOutCubic);
+    return {
+      transform: `translate3d(0, ${px(-40 * u)}, 0)`,
+      opacity: (1 - u).toFixed(3),
+      visibility: u >= 1 ? "hidden" : "visible",
+    };
+  };
+  return (
+    <>
+      <Fx fx={leaveFx(0)} style={{ inset: 0 }}>
+        <TipTitle text={TITLE} settleBy={D.title} exit={D.exit} />
+      </Fx>
+      <Fx fx={kiroFx} style={{ inset: 0 }}>
+        <Fx fx={paneFx} style={{ inset: 0 }}>
+          <KiroPane />
+        </Fx>
+      </Fx>
+      {OTHER_LINES.map((lines, i) => (
+        <Fx key={lines[0]} fx={leaveFx(1 + i)} style={{ inset: 0 }}>
+          <OtherPane i={i} lines={lines} />
+        </Fx>
+      ))}
+      <Fx fx={leaveFx(4)} style={{ inset: 0 }}>
+        <Fx
+          fx={(frame) => {
+            const u = prog(frame.tau, D.l1 - 0.3, D.l1 + 0.1, outCubic);
+            return { opacity: u.toFixed(3), transform: `translate3d(0, ${px((1 - u) * 16)}, 0)` };
+          }}
+          style={{ left: PANE.left, top: paneY(3) + 2, opacity: 0 }}
+        >
+          <ExtLink href={PROMPT_MASTER} className="type-label" style={{ color: "var(--soft)" }}>
+            /prompt-master
+          </ExtLink>
+        </Fx>
+      </Fx>
+      <Fx fx={leaveFx(0)} style={{ inset: 0 }}>
+        <Rule at={D.split.start} top={SPLIT_Y} tone="var(--clay)" />
+      </Fx>
+      <Baton
+        from={HANDS}
+        to={BATON_SLOT}
+        path={(a, b, u) => arcPoint(a, b, 140, u)}
+        progress={(tau) => prog(tau, D.baton.launch, D.baton.land, inOutCubic)}
+        show={D.baton.launch}
+        hide={D.baton.land}
+      />
+      {OTHER_LINES.map((lines, i) => (
+        <Fx key={lines[0]} fx={leaveFx(1 + i)} style={{ inset: 0 }}>
+          <Baton
+            from={HANDS}
+            to={{ x: PANE.left + 44, y: paneY(i) + 42 }}
+            path={dropPoint}
+            progress={(tau) => batonProgress(tau, 186.3 + i * 0.2, D.l1, 1, 0)}
+            show={186.3 + i * 0.2}
+            hide={D.exit + 0.6}
+          />
+        </Fx>
+      ))}
+    </>
   );
 }
 
@@ -208,106 +288,6 @@ const ACTS: readonly Act[] = [
   { kind: "carry", at: 190.6, dur: 0.5 },
   { kind: "hop", at: 190.75, height: 60 },
 ];
-
-function CliAgentsPlate() {
-  const paneFx = (frame: Frame): StyleMap => {
-    const u = prog(frame.tau, D.split.start + 0.05, D.split.end + 0.05, outExpo);
-    const shut = blind(frame.tau, 1);
-    return {
-      "clip-path": `inset(0 0 ${((1 - u) * 100).toFixed(2)}% 0)`,
-      transform: `scaleY(${(1 - shut).toFixed(4)})`,
-    };
-  };
-  const kiroFx = (frame: Frame): StyleMap => {
-    const u = prog(frame.tau, D.collapse.start, D.collapse.end, inQuad);
-    return {
-      transform: `scaleY(${(1 - u).toFixed(4)})`,
-      visibility: u >= 1 ? "hidden" : "visible",
-    };
-  };
-  const mainFx = (frame: Frame): StyleMap => ({
-    transform: `scaleY(${(1 - blind(frame.tau, 0)).toFixed(4)})`,
-  });
-  const l1Fx = (frame: Frame): StyleMap => ({
-    transform: `scaleY(${(1 - blind(frame.tau, 0)).toFixed(4)})`,
-  });
-  return (
-    <>
-      <Fx
-        fx={mainFx}
-        style={{ left: 0, top: 0, width: 1920, height: 1080, transformOrigin: "0 280px" }}
-      >
-        <ReadToolRow
-          tool="Bash"
-          arg="kiro-cli …"
-          status="running"
-          at={D.split.start}
-          style={{ position: "absolute", left: 200, top: BASH_Y }}
-        />
-      </Fx>
-      <Fx
-        fx={(frame) => ({ transform: `scaleY(${(1 - blind(frame.tau, 0)).toFixed(4)})` })}
-        style={{ inset: 0, transformOrigin: `0 ${BASH_Y}px` }}
-      >
-        <TipTitle text={TITLE} settleBy={D.title} exit={D.exit} />
-      </Fx>
-      <Fx
-        fx={paneFx}
-        style={{
-          left: 0,
-          top: SPLIT_Y,
-          width: 1920,
-          height: 1080 - SPLIT_Y,
-          background: "var(--bg-deep)",
-          transformOrigin: "0 0",
-        }}
-      >
-        <div style={{ position: "absolute", left: 0, top: -SPLIT_Y, width: 1920, height: 1080 }}>
-          <Fx fx={kiroFx} style={{ inset: 0, transformOrigin: `0 ${SPLIT_Y}px` }}>
-            <KiroPane />
-          </Fx>
-          {OTHER_LINES.map((lines, i) => (
-            <OtherCard key={lines[0]} i={i} lines={lines} />
-          ))}
-          <Fx fx={l1Fx} style={{ left: 200, top: 836, transformOrigin: "0 50%" }}>
-            <RuleRise
-              text={others.lines[0] ?? ""}
-              className="type-body"
-              settleBy={D.l1}
-              rule={false}
-            />
-          </Fx>
-        </div>
-      </Fx>
-      <Fx
-        fx={(frame) => ({ transform: `scaleY(${(1 - blind(frame.tau, 1)).toFixed(4)})` })}
-        style={{ inset: 0, transformOrigin: `0 ${SPLIT_Y}px` }}
-      >
-        <Rule at={D.split.start} top={SPLIT_Y} tone="var(--clay)" />
-        <Chip text="kiro-cli" at={D.split.start + 0.12} top={SPLIT_Y} />
-      </Fx>
-      <Baton
-        from={HANDS}
-        to={BATON_SLOT}
-        path={(a, b, u) => arcPoint(a, b, 140, u)}
-        progress={(tau) => prog(tau, D.baton.launch, D.baton.land, inOutCubic)}
-        show={D.baton.launch}
-        hide={D.baton.land}
-      />
-      {BATON_END.map((x, i) => (
-        <Baton
-          key={cardX(i)}
-          from={HANDS}
-          to={{ x: cardX(i) + x, y: CARD.top + 44 }}
-          path={dropPoint}
-          progress={(tau) => batonProgress(tau, 186.3 + i * 0.2, D.l1, 0.97, 0.01)}
-          show={186.3 + i * 0.2}
-          hide={D.exit + 0.15}
-        />
-      ))}
-    </>
-  );
-}
 
 export default function Tip06CliAgentsSegment() {
   return (
@@ -332,7 +312,7 @@ export default function Tip06CliAgentsSegment() {
             visibility: u >= 1 ? "hidden" : "visible",
           };
         }}
-        stackFx={(frame) => ({ transform: `translateY(${px(tip6StackDy(frame.tau))})` })}
+        stackFx={(frame) => ({ transform: `translateY(${px(stackDrop(frame.tau))})` })}
         plate={<CliAgentsPlate />}
       />
       <Bot acts={ACTS} place={(tau) => ({ x: 0, y: tip6StackDy(tau), scale: 1 })} />

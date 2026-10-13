@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { renderAt as renderStageAt } from "#/engine/stage/render-at";
+import { LINKS, scriptFor } from "#/talk/script";
 
 import { IDLE, KV, PRICE, STATELESS, SWITCH, TTL } from "./timing";
 import Tip02CacheSegment from "./view";
@@ -10,39 +11,38 @@ vi.mock("#/engine/gl/three-layer", () => ({ useThreeLayer: () => {} }));
 vi.mock("#/talk/mascot/stage-mascot", () => ({ StageMascot: () => null }));
 
 const renderAt = (tau: number) => renderStageAt(tau, <Tip02CacheSegment />);
+const STOPS = [STATELESS, KV, PRICE, TTL, IDLE, SWITCH];
 
 describe("tip 2 segment", () => {
-  it("should show the stateless line at its stop", () => {
-    renderAt(STATELESS.at);
-    expect(
-      screen.getByText("Each turn sends the whole chat history and gets one response."),
-    ).toBeVisible();
-  });
-
-  it("should show the suffix line at the kv stop", () => {
-    renderAt(KV.at);
-    expect(screen.getByText("Run prefill only on the new suffix.")).toBeVisible();
-  });
-
-  it("should show the cache write label at the price stop", () => {
+  it("should show the real pricing screenshot at the price stop", () => {
     renderAt(PRICE.at);
-    expect(screen.getByText("Cache hit, per million tokens")).toBeVisible();
+    expect(screen.getByRole("img")).toHaveAttribute("src", "/talk/refs/pricing.webp");
   });
 
-  it("should keep the cold price line on screen at the ttl stop", () => {
+  it("should link the pricing window to the pricing page", () => {
+    renderAt(PRICE.at);
+    expect(screen.getByRole("link")).toHaveAttribute("href", LINKS.pricing);
+  });
+
+  it("should link the settings read to the settings reference at the ttl stop", () => {
     renderAt(TTL.at);
-    expect(screen.getByText("Cold is 25–80× the price of warm.")).toBeVisible();
+    expect(screen.getByRole("link")).toHaveAttribute("href", LINKS.settings);
   });
 
-  it("should show why a late check-in costs a re-read at the idle stop", () => {
+  it("should link cachebeat to its repo at the idle stop", () => {
     renderAt(IDLE.at);
-    expect(
-      screen.getByText("A check-in after the cache expires re-reads the whole context, uncached."),
-    ).toBeVisible();
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "https://github.com/ARahim3/cachebeat",
+    );
   });
 
-  it("should show the effort line at the switch stop", () => {
-    renderAt(SWITCH.at);
-    expect(screen.getByText("/effort → keeps the cache on 5.5 models and Fable 5.1")).toBeVisible();
+  it("should leave every prose line and footnote to the speaker at each stop", () => {
+    for (const stop of STOPS) {
+      const { unmount } = renderAt(stop.at);
+      const { lines, footnotes } = scriptFor(stop.id);
+      for (const prose of [...lines, ...footnotes]) expect(screen.queryByText(prose)).toBeNull();
+      unmount();
+    }
   });
 });

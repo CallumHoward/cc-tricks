@@ -2,9 +2,10 @@ import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderAt } from "#/engine/stage/render-at";
-import { scriptFor } from "#/talk/script";
+import { LINKS, scriptFor } from "#/talk/script";
 
-import { CUES } from "./cues";
+import { answerBar, LAND, LAYA_NAME, LAYA_SHOT } from "./laya-plate";
+import { flickerRect } from "./system-one";
 import { chipsWritten, cursorAt, RINGED, stepAt, TARGETS, TB } from "./timing";
 import BonusLayaSegment from "./view";
 
@@ -25,28 +26,23 @@ describe("bonus laya", () => {
     expect(cursorAt(TB.browser.holdEnd)).not.toEqual(TARGETS[RINGED]);
   });
 
-  it("should keep every sound cue inside the window and out of the holds", () => {
-    const holds = [TB.one, TB.laya, TB.browser].map((h) => [h.at, h.holdEnd] as const);
-    for (const { tau } of CUES) {
-      expect(tau).toBeGreaterThanOrEqual(TB.winStart);
-      expect(tau).toBeLessThan(TB.winEnd);
-      expect(holds.some(([a, b]) => tau > a && tau < b)).toBe(false);
+  it("should land each flicker bar on its answer bar in the Laya window", () => {
+    for (let i = 0; i < 4; i++) {
+      const r = flickerRect(i, LAND, 0);
+      const bar = answerBar(i);
+      expect([r.x, r.y + r.h / 2, r.w]).toEqual([bar.x, bar.y, bar.w]);
     }
   });
 
-  it("should show the book when frozen at b-system-one", () => {
+  it("should show the real book cover when frozen at b-system-one", () => {
     renderAt(TB.one.at, <BonusLayaSegment />);
-    expect(screen.getByText("Thinking, Fast and Slow")).toBeVisible();
+    expect(screen.getByRole("img", { name: /Thinking, Fast and Slow/ })).toBeVisible();
     expect(screen.getByText(scriptFor("b-system-one").labels[0] ?? "")).toBeVisible();
   });
 
-  it("should show the Laya foot when frozen at b-laya", () => {
+  it("should show the playground and link laya-ultrafast when frozen at b-laya", () => {
     renderAt(TB.laya.at, <BonusLayaSegment />);
-    expect(screen.getByText(scriptFor("b-laya").footnotes[0] ?? "")).toBeVisible();
-  });
-
-  it("should show the browser lines when frozen at b-browser", () => {
-    renderAt(TB.browser.at, <BonusLayaSegment />);
-    expect(screen.getByText(scriptFor("b-browser").lines[1] ?? "")).toBeVisible();
+    expect(screen.getByRole("img", { name: LAYA_SHOT.alt })).toHaveAttribute("src", LAYA_SHOT.src);
+    expect(screen.getByRole("link", { name: LAYA_NAME })).toHaveAttribute("href", LINKS.laya);
   });
 });

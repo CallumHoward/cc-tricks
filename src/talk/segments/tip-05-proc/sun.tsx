@@ -1,6 +1,8 @@
 import { inOutCubic, outCubic, prog } from "#/engine/motion/ease";
 import type { StyleValues } from "#/engine/stage/applier";
 import { useTrack } from "#/engine/stage/react";
+import { ambientTime } from "#/engine/stage/stage";
+import type { Frame } from "#/engine/types";
 import { GLYPH_PATHS } from "#/talk/kit/tui";
 import { Live } from "#/talk/segments/tip-03-effort/bracket";
 import { SPIN_AT } from "#/talk/segments/tip-03-effort/timing";
@@ -12,25 +14,33 @@ const SET_AT = T5.chain.holdEnd;
 /** Once the pins are in, the sun shrinks so it clears the Haiku tiles and the reset list. */
 const SHRINK_AT = T5.chain.pinsAt + 0.8;
 
-/** The ✳: leaves the spinner, rises as the sun, sweeps the day, then sets into the ✻. */
-function sunPose(tau: number): StyleValues {
+/**
+ * The ✳: leaves the spinner, rises as the sun, sweeps the day, then sets into the ✻; it turns on
+ * ambient time.
+ */
+function sunPose(tau: number, rho: number): StyleValues {
   const rest = sunAt(sunMinute(tau));
   const u = prog(tau, T5.leave, T5.leave + 1.15, outCubic);
   const set = prog(tau, SET_AT, SET_AT + 0.3, inCubic);
   const p = set > 0 ? arcPoint(rest, SPIN_AT, set, -60) : arcPoint(SPIN_AT, rest, u, 260);
   const full = SUN_SIZE * (1 - 0.25 * prog(tau, SHRINK_AT, SHRINK_AT + 0.8, inOutCubic));
   const size = set > 0 ? full + (36 - full) * set : 36 + (full - 36) * u;
-  return { x: p.x - 50, y: p.y - 50, scale: size / 100, rotate: (1 - u) * -200 + set * 120 };
+  return {
+    x: p.x - 50,
+    y: p.y - 50,
+    scale: size / 100,
+    rotate: (1 - u) * -200 + set * 120 + 24 * (rho - T5.leave),
+  };
 }
 
 /** Below the horizon the sun is hidden: the ruler's axis is the ground. */
 const HORIZON_CLIP = { clipPath: `inset(0 0 ${1080 - HORIZON}px 0)` } as const;
 
 export function Sun() {
-  const pose = useTrack(sunPose);
+  const pose = useTrack((tau: number, frame: Frame) => sunPose(tau, ambientTime(frame)));
   return (
     <Live from={T5.leave} to={SET_AT + 0.3}>
-      <div className="seg-abs" style={{ inset: 0, ...HORIZON_CLIP }}>
+      <div className="seg-abs" style={{ inset: 0, pointerEvents: "none", ...HORIZON_CLIP }}>
         <svg
           ref={pose}
           className="seg-abs seg-clay"

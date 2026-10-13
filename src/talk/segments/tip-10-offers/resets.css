@@ -1,8 +1,9 @@
-/* W7 sits in the rebuilt Settings › Usage panel as the Limit resets row: one line, not a stack. */
-.t10-reset-row .wg-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 40px;
-  background: var(--bg-deep);
+/* The reset row link's name: read by assistive tech, the screenshot shows the words. */
+.t10-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

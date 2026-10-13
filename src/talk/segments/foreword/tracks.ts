@@ -1,4 +1,4 @@
-import { inOutCubic, inOutQuad, lerp, outCubic, prog } from "#/engine/motion/ease";
+import { inOutCubic, inOutQuad, inQuad, lerp, outCubic, prog } from "#/engine/motion/ease";
 import { SPRINGS, springProgress } from "#/engine/motion/spring";
 import type { Shot } from "#/talk/kit/motion";
 import { HOME } from "#/talk/kit/tui";
@@ -121,6 +121,14 @@ export function crowdCells(): CrowdCell[] {
 }
 
 export const FLOOR_Y = 760;
+const FLOOR_DEPTH = 3000;
+
+/** World y of the floor's horizon rule: rises into place for taste, sinks away before the prompt. */
+export function floorEdge(tau: number): number {
+  const show = inOutCubic(prog(tau, F.floor.start, F.floor.end));
+  const hide = inQuad(prog(tau, F.toPrompt.start, F.toPrompt.start + 0.4));
+  return FLOOR_Y + FLOOR_DEPTH * (1 - show + hide);
+}
 
 /** Camera: home → 1/8 crowd → push back in to ours and the floor → home for the prompt. */
 export const FW_SHOTS: readonly Shot[] = [
@@ -153,7 +161,7 @@ const at = (cx: number, feet: number, s = 1): Anchor => ({ cx, feet, s });
 export const HOPS = [23.75, 34.12, 40.6, 42.0, 46.05] as const;
 
 /** A hop's feet touch down this long after its act starts. */
-export const HOP_LANDS = 0.58;
+const HOP_LANDS = 0.58;
 
 function anchor(i: number, tau: number): Anchor {
   switch (i) {

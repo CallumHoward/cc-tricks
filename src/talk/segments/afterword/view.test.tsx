@@ -6,19 +6,16 @@ import { renderAt } from "#/engine/stage/render-at";
 import AfterwordSegment from "./view";
 
 describe("AfterwordSegment", () => {
-  it("should show the weekly bars and the typed caption at the limits stop", () => {
+  it("should show the real weekly limits screenshot at the limits stop", () => {
     renderAt(272, <AfterwordSegment />);
-    expect(screen.getByText("All models")).toBeVisible();
-    expect(screen.getByText("95% used")).toBeVisible();
-    expect(screen.getByText("Opus")).toBeVisible();
-    expect(screen.getByTestId("sightings-poster")).not.toBeVisible();
+    const shot = screen.getByRole("img", { name: /weekly limits/i });
+    expect(shot).toBeVisible();
+    expect(shot).toHaveAttribute("src", "/talk/refs/weekly-limits.webp");
   });
 
-  it("should pin the sightings poster at the wanted stop", () => {
+  it("should keep the screenshot on screen without a poster at the wanted stop", () => {
     renderAt(277, <AfterwordSegment />);
-    expect(screen.getByTestId("sightings-poster")).toBeVisible();
-    expect(screen.getByText("SIGHTINGS WANTED")).toBeVisible();
-    expect(screen.getByText("quota.")).toBeVisible();
-    expect(screen.getByText("Opus")).not.toBeVisible();
+    expect(screen.getByRole("img", { name: /weekly limits/i })).toBeVisible();
+    expect(screen.queryByTestId("sightings-poster")).toBeNull();
   });
 });

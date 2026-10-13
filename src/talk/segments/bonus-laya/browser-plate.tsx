@@ -4,16 +4,17 @@ import { outCubic, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
 import { useFrame, useTrack } from "#/engine/stage/react";
 import type { Frame } from "#/engine/types";
-import { RuleRise } from "#/talk/kit/motion";
 import { put } from "#/talk/kit/motion/dom";
 import { springFrom } from "#/talk/kit/motion/schedule";
 import { GLYPH_PATHS } from "#/talk/kit/tui";
 import { scriptFor } from "#/talk/script";
-import { Live, Wiped } from "#/talk/segments/tip-03-effort/bracket";
+import { TipTitle } from "#/talk/segments/shared/tip-title";
+import { Live } from "#/talk/segments/tip-03-effort/bracket";
 
 import { cursorAt, RINGED, stepAt, TARGETS, TB } from "./timing";
 
-const script = scriptFor("b-browser");
+/** "LLM plans. System One clicks." broken after the first sentence. */
+const TITLE = (scriptFor("b-browser").headline ?? "").replace(". ", ".\n");
 const WIN = Object.freeze({ x: 160, y: 540, w: 1600, h: 330 });
 const PLAN_LINES = [300, 250, 320, 210, 280];
 
@@ -101,15 +102,7 @@ export function BrowserPlate() {
   const strip = useTrack((tau: number) => ({ y: (1 - prog(tau, 261.1, 261.6, outCubic)) * 560 }));
   return (
     <Live from={TB.laya.holdEnd} to={TB.winEnd}>
-      <div className="seg-abs" style={{ left: 160, top: 196, scale: 0.7, transformOrigin: "0 0" }}>
-        <RuleRise text={"LLM plans.\nSystem One clicks."} settleBy={262.5} />
-      </div>
-      <Wiped at={262.3} className="type-body seg-text seg-abs" style={{ left: 160, top: 404 }}>
-        {script.lines[0]}
-      </Wiped>
-      <Wiped at={262.5} className="type-body seg-soft seg-abs" style={{ left: 160, top: 458 }}>
-        {script.lines[1]}
-      </Wiped>
+      <TipTitle text={TITLE} settleBy={262.5} />
       <div ref={strip} className="seg-abs" style={{ inset: 0 }}>
         <div className="b3-window" style={{ left: WIN.x, top: WIN.y, width: WIN.w, height: WIN.h }}>
           <div className="b3-bar">
@@ -123,9 +116,6 @@ export function BrowserPlate() {
         <Steps />
         <Cursor />
       </div>
-      <Wiped at={262.6} className="type-label seg-muted seg-abs" style={{ left: 360, top: 896 }}>
-        {script.footnotes[0]}
-      </Wiped>
     </Live>
   );
 }

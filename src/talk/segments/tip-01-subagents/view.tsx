@@ -1,9 +1,10 @@
-import { Fragment } from "react";
+import type { ReactNode } from "react";
 
 import { outExpo, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
-import { sampleKeys } from "#/engine/motion/track";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
+import { ExtLink } from "#/talk/kit/ext-link";
 import { RuleRise } from "#/talk/kit/motion";
 import { springFrom } from "#/talk/kit/motion/schedule";
 import {
@@ -17,11 +18,13 @@ import {
 import { setStyle, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
-import { scriptFor } from "#/talk/script";
-import { Drive, Gate, TypedMono, TypedText } from "#/talk/segments/shared/gated-parts";
+import { LINKS, scriptFor } from "#/talk/script";
+import { Drive, Gate } from "#/talk/segments/shared/gated-parts";
 import { BOT_HOME, HomeRest } from "#/talk/segments/shared/home";
 import { TipDock } from "#/talk/segments/shared/tip-turn";
 
+import { RefShot } from "./ref-shot";
+import { SpringLetters } from "./spring-letters";
 import {
   ADV,
   AT,
@@ -29,50 +32,38 @@ import {
   botOffset,
   CARD,
   CARD_CLOSE,
-  cardColX,
+  cardFloat,
   cardFrame,
-  cardLineY,
+  CHIPS,
   chipAt,
   chipCover,
-  CHIPS,
-  CONTEXT,
-  contextFill,
+  completionOut,
   CRATES,
   crateRise,
   crateX,
   dockY,
   EXIT,
   HOLD_END,
-  LABEL_AT,
-  MAIN_TOKENS,
+  linkIn,
   PANEL,
+  plateOut,
+  ROWS_BOX,
+  rowsReveal,
   scanAt,
+  SHOT,
+  shotCam,
+  spinnerOut,
   TRANSCRIPT,
   TRANSCRIPT_LEFT,
   transcriptLine,
-  plateFold,
-  ROW,
-  rowFold,
-  rowTop,
-  SPINNER_ELAPSED,
-  SPINNER_TOKENS,
-  SPINNER_VERB,
-  spokeAt,
-  spokeLand,
-  SPOKE_ANGLES,
-  starScale,
-  SUBAGENTS,
-  subagentTokens,
-  spinnerFold,
   TURN,
-  whipUp,
   WIN,
   YAML_AT,
 } from "./tracks";
 
 const S1 = scriptFor("t1-agents");
 const S2 = scriptFor("t1-model-effort");
-const S3 = scriptFor("t1-advisor");
+const ADVISOR_DOCS = scriptFor("t1-advisor").sources[0] ?? "";
 const YAML = (S2.code[0]?.code ?? "").split("\n");
 
 const ACTS: readonly Act[] = [
@@ -110,116 +101,36 @@ function Bot() {
 
 // t1-agents ---------------------------------------------------------------------------------------
 
-/** The ✳ grows out of the spinner glyph and sheds five spokes that land as the rows' ○ bullets. */
-function SpokeStar() {
-  const ref = useFrameRef<SVGSVGElement>((svg: SVGSVGElement, frame: Frame) => {
-    const { tau } = frame;
-    const spokes = svg.children;
-    for (let i = 0; i < SPOKE_ANGLES.length; i++) {
-      const el = spokes[i] as SVGRectElement | undefined;
-      if (!el) continue;
-      const s = spokeAt(i, tau);
-      const scale = i < SUBAGENTS.length && tau >= 49.1 ? 1 : starScale(tau);
-      const len = 36 * scale * (1 - s.ring) + 9 * s.ring;
-      const thick = Math.max(1, 9 * scale * (1 - s.ring) + 9 * s.ring);
-      el.setAttribute("x", (-len / 2).toFixed(2));
-      el.setAttribute("y", (-thick / 2).toFixed(2));
-      el.setAttribute("width", len.toFixed(2));
-      el.setAttribute("height", thick.toFixed(2));
-      el.setAttribute("rx", (thick / 2).toFixed(2));
-      el.setAttribute("fill-opacity", (1 - s.ring).toFixed(3));
-      el.setAttribute("stroke-width", (1.6 * s.ring).toFixed(2));
-      el.setAttribute(
-        "transform",
-        `translate(${s.x.toFixed(2)} ${s.y.toFixed(2)}) rotate(${s.rotate.toFixed(2)})`,
-      );
-      el.setAttribute(
-        "visibility",
-        s.visible && (scale > 0.02 || s.ring > 0) ? "visible" : "hidden",
-      );
-    }
+/** Dims everything but the five subagent rows, then outlines them with a breathing glow. */
+function RowsHighlight() {
+  const ref = useFrameRef<HTMLDivElement>((el: HTMLDivElement, frame: Frame) => {
+    const { open, glow } = rowsReveal(frame.tau);
+    const breathe = glow * (0.75 + 0.25 * Math.sin(ambientTime(frame) * 1.3));
+    const h = 34 + (ROWS_BOX.height - 34) * open;
+    setStyle(el, "height", `${h.toFixed(2)}px`);
+    setStyle(el, "opacity", open > 0 ? "1" : "0");
+    setStyle(
+      el,
+      "box-shadow",
+      `0 0 ${(18 + 18 * breathe).toFixed(1)}px ${(2 + 3 * breathe).toFixed(1)}px rgb(217 119 87 / ${(0.55 * breathe).toFixed(3)}), 0 0 0 3000px rgb(16 16 22 / ${(0.5 * open).toFixed(3)})`,
+    );
+    setStyle(el, "outline-color", `rgb(235 159 127 / ${(0.9 * glow).toFixed(3)})`);
   });
-  return (
-    <svg
-      ref={ref}
-      width={1920}
-      height={1080}
-      viewBox="0 0 1920 1080"
-      style={{ position: "absolute", inset: 0, overflow: "visible" }}
-      aria-hidden
-    >
-      {SPOKE_ANGLES.map((angle) => (
-        <rect key={angle} fill="var(--clay)" stroke="var(--clay)" visibility="hidden" />
-      ))}
-    </svg>
-  );
-}
-
-/** A 250k context window under a row's counter, filled by its live token count. */
-function ContextMeter({ tokens, main }: { tokens: (tau: number) => number; main?: boolean }) {
-  const fill = (tau: number) => ({ scaleX: contextFill(tokens(tau)) });
   return (
     <div
+      ref={ref}
       style={{
-        ...abs(CONTEXT.left, CONTEXT.top),
-        width: CONTEXT.width,
-        height: CONTEXT.height,
-        borderRadius: CONTEXT.height / 2,
-        background: "var(--hairline)",
-        overflow: "hidden",
+        position: "absolute",
+        left: ROWS_BOX.left,
+        top: ROWS_BOX.top,
+        width: ROWS_BOX.width,
+        height: 34,
+        borderRadius: 10,
+        outline: "2px solid transparent",
+        outlineOffset: 0,
+        opacity: 0,
       }}
-    >
-      <Drive
-        fn={fill}
-        style={{
-          inset: 0,
-          transformOrigin: "0 50%",
-          background: main ? "var(--clay-hi)" : "var(--clay-wash-55)",
-        }}
-      />
-    </div>
-  );
-}
-
-/** Hides each row's own ○ until its spoke has landed on it. */
-function SubagentRow({ i }: { i: number }) {
-  const a = SUBAGENTS[i] ?? SUBAGENTS[0];
-  const land = spokeLand(i);
-  const ref = useFrameRef<HTMLDivElement>((el: HTMLDivElement, frame: Frame) => {
-    const bullet = el.querySelector(".tui-agent-inner > span");
-    setStyle(bullet, "visibility", frame.tau >= land + 0.1 ? "visible" : "hidden");
-    setStyle(el.querySelector(".tui-agent-stats"), "color", "var(--muted)");
-  });
-  const tokens = subagentTokens(i);
-  const fold = (tau: number) => rowFold(i, tau);
-  return (
-    <Drive fn={fold} style={{ ...abs(ROW.left, rowTop(i)), transformOrigin: "0 50%" }}>
-      <div ref={ref}>
-        <AgentRow
-          style={{ width: ROW.width }}
-          name="general-purpose"
-          action={a.action}
-          actionAt={land + 0.05}
-          enterAt={land - 0.3}
-          tokens={tokens}
-        />
-      </div>
-      <ContextMeter tokens={tokens} />
-    </Drive>
-  );
-}
-
-const mainFold = (tau: number) => rowFold(-1, tau);
-const mainTokens = (tau: number) => sampleKeys(MAIN_TOKENS, tau);
-const tintMain = (el: HTMLDivElement) =>
-  setStyle(el.querySelector(".tui-agent-stats"), "color", "var(--clay-hi)");
-
-function MainRow() {
-  const ref = useFrameRef<HTMLDivElement>(tintMain);
-  return (
-    <div ref={ref}>
-      <AgentRow style={{ width: ROW.width }} main name="main" enterAt={49} tokens={MAIN_TOKENS} />
-    </div>
+    />
   );
 }
 
@@ -230,48 +141,33 @@ function AgentsPlate() {
         text={S1.headline ?? ""}
         settleBy={AT.agents - 0.8}
         exit={HOLD_END.agents}
-        style={abs(200, 196)}
+        style={abs(200, 92)}
       />
-      <RuleRise
-        text={S1.lines[0] ?? ""}
-        settleBy={AT.agents - 0.8}
-        exit={HOLD_END.agents}
-        className="type-body text-soft"
-        rule={false}
-        style={abs(200, 368)}
-      />
-      <Gate from={0} to={HOLD_END.agents + 0.05}>
-        <TypedMono
-          text={S1.labels[0] ?? ""}
-          at={LABEL_AT}
-          className="type-label text-muted"
-          style={{ left: 200, top: 846 }}
-        />
+      <Gate from={TURN.spinnerAt} to={50}>
+        <Drive fn={spinnerOut} style={abs(HOME.textX, HOME.spinnerY - 18)}>
+          <SpinnerLine className="type-label" verb="Orchestrating" at={TURN.spinnerAt} />
+        </Drive>
       </Gate>
-      <Gate from={TURN.spinnerAt} to={55}>
-        <Drive
-          fn={spinnerFold}
-          style={{ ...abs(HOME.textX, HOME.spinnerY - 18), transformOrigin: "0 50%" }}
+      <Gate from={48.9} to={HOLD_END.agents + 0.6}>
+        <RefShot
+          src={SHOT.src}
+          alt="Claude Code with main and five general-purpose subagents, each at 150k to 231k tokens"
+          left={SHOT.left}
+          top={SHOT.top}
+          width={SHOT.width}
+          height={SHOT.height}
+          cam={shotCam}
         >
-          <SpinnerLine
-            className="type-label"
-            verb={SPINNER_VERB}
-            at={TURN.spinnerAt}
-            tokens={SPINNER_TOKENS}
-            elapsed={SPINNER_ELAPSED}
-          />
+          <RowsHighlight />
+        </RefShot>
+        <Drive
+          fn={linkIn}
+          className="type-label text-muted"
+          style={abs(SHOT.left, SHOT.top + SHOT.height + 60)}
+        >
+          <ExtLink href={LINKS.previousTalk}>{S1.labels[0]}</ExtLink>
         </Drive>
       </Gate>
-      <Gate from={49} to={55}>
-        <Drive fn={mainFold} style={{ ...abs(ROW.left, ROW.mainTop), transformOrigin: "0 50%" }}>
-          <MainRow />
-          <ContextMeter tokens={mainTokens} main />
-        </Drive>
-        {SUBAGENTS.map((a, i) => (
-          <SubagentRow key={a.action} i={i} />
-        ))}
-      </Gate>
-      <SpokeStar />
     </>
   );
 }
@@ -295,7 +191,7 @@ function Chip({ i }: { i: number }) {
         color: "var(--on-clay)",
         lineHeight: "46px",
         fontWeight: 700,
-        boxShadow: "0 10px 24px rgb(0 0 0 / 35%)",
+        boxShadow: "0 10px 24px rgb(0 0 0 / 35%), 0 0 22px rgb(217 119 87 / 45%)",
         whiteSpace: "pre",
       }}
     >
@@ -319,8 +215,33 @@ function ChipCover({ i }: { i: number }) {
 
 const cardTrack = (tau: number) => cardFrame(tau);
 
+/** Card and chips share one slow ambient tilt, so the chips never slide off their slots. */
+function CardFloat({ children }: { children: ReactNode }) {
+  const ref = useFrameRef<HTMLDivElement>((el: HTMLDivElement, frame: Frame) => {
+    const f = cardFloat(ambientTime(frame));
+    setStyle(
+      el,
+      "transform",
+      `rotateX(${f.rotateX.toFixed(3)}deg) rotateY(${f.rotateY.toFixed(3)}deg)`,
+    );
+  });
+  return (
+    <div style={{ position: "absolute", inset: 0, perspective: 1800 }}>
+      <div
+        ref={ref}
+        style={{
+          position: "absolute",
+          inset: 0,
+          transformOrigin: `${CARD.left + CARD.width / 2}px ${CARD.top + 160}px`,
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function ModelPlate() {
-  const lineOrigin = ROW.mainTop + 20 - CARD.top;
   return (
     <>
       <RuleRise
@@ -329,41 +250,20 @@ function ModelPlate() {
         exit={HOLD_END.model}
         style={abs(200, 196)}
       />
-      <Drive
-        fn={cardTrack}
-        style={{
-          ...abs(CARD.left, CARD.top),
-          width: CARD.width,
-          transformOrigin: `50% ${lineOrigin}px`,
-        }}
-      >
-        <CodeBlock lines={YAML} label={S2.code[0]?.label} at={YAML_AT} stagger={0.08} />
-      </Drive>
-      <Gate from={0} to={CARD_CLOSE.start + 0.05}>
-        {CHIPS.map((c, i) => (
-          <ChipCover key={c.text} i={i} />
-        ))}
-        {S2.labels.map((label, i) => (
-          <Fragment key={label}>
-            <TypedMono
-              text="#"
-              at={55.9}
-              cps={64}
-              className="type-label text-muted"
-              style={{ left: cardColX(14), top: cardLineY(3 + i) - 18 }}
-            />
-            <TypedMono
-              text={label}
-              at={55.9 + 2 / 64}
-              cps={64}
-              className="type-label text-muted"
-              style={{ left: cardColX(16), top: cardLineY(3 + i) - 18, fontStyle: "italic" }}
-            />
-          </Fragment>
-        ))}
-        {CHIPS.map((c, i) => (
-          <Chip key={c.text} i={i} />
-        ))}
+      <Gate from={54.85} to={CARD_CLOSE.end}>
+        <CardFloat>
+          <Drive fn={cardTrack} style={{ ...abs(CARD.left, CARD.top), width: CARD.width }}>
+            <CodeBlock lines={YAML} label={S2.code[0]?.label} at={YAML_AT} stagger={0.08} />
+          </Drive>
+          <Drive fn={cardTrack} style={{ inset: 0 }}>
+            {CHIPS.map((c, i) => (
+              <ChipCover key={c.text} i={i} />
+            ))}
+            {CHIPS.map((c, i) => (
+              <Chip key={c.text} i={i} />
+            ))}
+          </Drive>
+        </CardFloat>
       </Gate>
     </>
   );
@@ -371,12 +271,12 @@ function ModelPlate() {
 
 // t1-advisor --------------------------------------------------------------------------------------
 
-const advisorStar = (tau: number) => {
+/** The advisor ✽ swings in, then turns forever on ambient time. */
+const advisorStar = (tau: number, frame: Frame) => {
   const k = springFrom(tau, ADV.starIn, SPRINGS.LAND);
-  const settle = AT.advisor - 0.8;
   return {
     x: 520 * (1 - k),
-    rotate: -90 * (1 - k) + 1.5 * Math.max(0, tau - settle),
+    rotate: -90 * (1 - k) + 24 * ambientTime(frame),
     scale: tau < ADV.starIn ? 0 : 1,
   };
 };
@@ -462,7 +362,7 @@ function Tethers() {
       ref={ref}
       width={1920}
       height={1080}
-      style={{ position: "absolute", inset: 0 }}
+      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
       aria-hidden
     >
       {CRATES.map((c) => (
@@ -486,29 +386,20 @@ const summaryTrack = (tau: number) => {
 function AdvisorPlate() {
   return (
     <Gate from={ADV.typeAt} to={EXIT.foldEnd}>
-      <TypedText
-        text={ADV.line1}
-        at={ADV.typeAt}
-        cps={ADV.cps}
-        caret
-        className="type-headline"
-        style={{ left: 200, top: 196 }}
-      />
-      <TypedText
-        text={ADV.line2}
-        at={ADV.typeAt + (ADV.line1.length + 1) / ADV.cps}
-        cps={ADV.cps}
-        caret
-        className="type-headline text-clay"
-        style={{ left: 200, top: 322 }}
-      />
       <RuleRise
-        text={S3.lines[0] ?? ""}
-        settleBy={62}
+        text={ADV.line1}
+        settleBy={ADV.typeAt + 0.75}
         className="type-body text-soft"
         rule={false}
-        style={abs(200, 470)}
+        style={abs(200, 150)}
       />
+      <ExtLink
+        href={ADVISOR_DOCS}
+        className="type-headline type-headline--xl"
+        style={{ ...abs(196, 214), display: "block", textDecorationThickness: "0.03em" }}
+      >
+        <SpringLetters text={ADV.line2} at={ADV.typeAt + 0.4} className="text-clay" />
+      </ExtLink>
       <Drive fn={advisorStar} style={{ ...abs(1450, 214), width: 190, height: 190 }}>
         <svg viewBox="0 0 100 100" width={190} height={190} aria-hidden>
           <path d={GLYPH_PATHS["✽"]} fill="var(--clay-hi)" />
@@ -555,21 +446,14 @@ function AdvisorPlate() {
       {CRATES.map((c, i) => (
         <Crate key={c.label} i={i} />
       ))}
-      <TypedText
-        text={S3.lines[1] ?? ""}
-        at={ADV.l2At}
-        cps={80}
-        className="type-body text-soft"
-        style={{ left: 200, top: 822 }}
-      />
     </Gate>
   );
 }
 
 // Exit ------------------------------------------------------------------------------------------
 
-const foldTrack = (tau: number) => plateFold(tau);
-const whipTrack = (tau: number) => whipUp(tau);
+const foldTrack = (tau: number) => plateOut(tau);
+const whipTrack = (tau: number) => completionOut(tau);
 
 export default function Tip01SubagentsSegment() {
   return (

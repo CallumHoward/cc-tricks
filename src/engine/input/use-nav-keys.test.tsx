@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { createClock } from "#/engine/clock/clock";
@@ -16,10 +15,9 @@ describe("useNavKeys", () => {
   ];
 
   function Surface({ stage }: { stage: Stage }) {
-    const [el, setEl] = useState<HTMLElement | null>(null);
-    useNavKeys(stage, el);
+    useNavKeys(stage);
     return (
-      <main ref={setEl}>
+      <main>
         <p>stage</p>
         <button type="button">widget</button>
       </main>
@@ -47,14 +45,22 @@ describe("useNavKeys", () => {
     expect(stage.getSnapshot().stopId).toBe("c");
   });
 
-  it("should advance when the stage is clicked but not when a widget is", async () => {
+  it("should not navigate when the stage or a widget is clicked", async () => {
     const { stage, user } = setup();
 
-    await user.click(screen.getByRole("button"));
-    expect(stage.getSnapshot().target).toBe(0);
-
     await user.click(screen.getByText("stage"));
-    expect(stage.getSnapshot().target).toBe(1);
+    await user.click(screen.getByRole("button"));
+
+    expect(stage.getSnapshot().target).toBe(0);
+  });
+
+  it("should leave keys to a focused widget", async () => {
+    const { stage, user } = setup();
+    screen.getByRole("button").focus();
+
+    await user.keyboard("{ArrowRight}");
+
+    expect(stage.getSnapshot().target).toBe(0);
   });
 
   it("should emit stage commands for non-navigation keys", async () => {
@@ -64,6 +70,6 @@ describe("useNavKeys", () => {
 
     await user.keyboard("m");
 
-    expect(listener).toHaveBeenCalledWith({ type: "mute" });
+    expect(listener).toHaveBeenCalledWith({ type: "overview" });
   });
 });

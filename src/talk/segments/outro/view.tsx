@@ -5,21 +5,15 @@ import { sampleKeys } from "#/engine/motion/track";
 import type { Frame } from "#/engine/types";
 import { qrModules } from "#/talk/kit/data/logic";
 import { QrGrow } from "#/talk/kit/data/qr-grow";
-import { ContextBar, RuleRise, World } from "#/talk/kit/motion";
-import {
-  AgentRow,
-  GLYPH_PATHS,
-  punch,
-  ScrollbackRecap,
-  ScrollbackWhip,
-  StaticGlyph,
-} from "#/talk/kit/tui";
+import { ExtLink } from "#/talk/kit/ext-link";
+import { ContextBar, World } from "#/talk/kit/motion";
+import { GLYPH_PATHS, punch, ScrollbackRecap, StaticGlyph } from "#/talk/kit/tui";
 import { charLength, typedChars } from "#/talk/kit/tui/tui-math";
 import { setStyle, setText, typeClip, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { scriptFor } from "#/talk/script";
 import { HomeRest } from "#/talk/segments/shared/home";
-import { SHOWNOTES_URL, shownotesLabel } from "#/talk/shownotes-url";
+import { SHOWNOTES_URL } from "#/talk/shownotes-url";
 
 import {
   BAR,
@@ -30,21 +24,21 @@ import {
   botLift,
   CRANE,
   cookedText,
+  homeCrane,
   elapsedSeconds,
   landing,
   OUT,
   plateRules,
+  plateCrane,
   plateFed,
+  LABEL,
+  labelLift,
   QR,
-  REVEAL_SLANT,
-  revealEdge,
   SCROLLBACK,
   SHORT_ZONES,
-  thesisLines,
   tileAt,
 } from "./tracks";
 
-const thesis = scriptFor("outro-thesis");
 const qr = scriptFor("outro-qr");
 const BAR_POSE = { pitch: 0, height: BAR.height, labels: 0, scroll: 0 };
 const ALWAYS = { from: 0, to: 1e9 };
@@ -68,38 +62,48 @@ function Gate({
   );
 }
 
-function Screen({ y, children }: { y: number; children: ReactNode }) {
+/** A vertical crane layer: `offset` px plus the crane's eased travel and dolly scale. */
+function Crane({
+  offset,
+  track,
+  children,
+}: {
+  offset: number;
+  track: (tau: number) => { y: number; scale: number };
+  children: ReactNode;
+}) {
+  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
+    const { y, scale } = track(frame.tau);
+    setStyle(
+      root,
+      "transform",
+      `scale(${scale.toFixed(5)}) translate3d(0, ${(offset + y).toFixed(2)}px, 0)`,
+    );
+  });
   return (
-    <div style={{ position: "absolute", inset: 0, transform: `translateY(${y}px)` }}>
+    <div ref={ref} className="fin-layer">
       {children}
     </div>
   );
 }
 
-/** Home shot → the camera whips up the scrollback and every completion line flies past in order. */
+function Screen({ y, children }: { y: number; children: ReactNode }) {
+  return (
+    <div className="fin-layer" style={{ transform: `translateY(${y}px)` }}>
+      {children}
+    </div>
+  );
+}
+
+/** Home shot → the camera cranes up the scrollback and every completion line passes in order. */
 function Recap() {
   return (
-    <ScrollbackWhip at={OUT.whip} dur={OUT.whipDur} distance={1080}>
+    <Crane offset={0} track={homeCrane}>
       <HomeRest pile={10} {...ALWAYS} />
       <Screen y={-1080}>
         <ScrollbackRecap lines={SCROLLBACK} at={OUT.recapAt} dur={OUT.recapDur} x={200} y={540} />
       </Screen>
-    </ScrollbackWhip>
-  );
-}
-
-function Thesis() {
-  const [lead, emphasised] = thesisLines(thesis.headline ?? "", thesis.emphasis[0] ?? "");
-  return (
-    <div className="fin-thesis" style={{ left: 200, top: 300 }}>
-      <RuleRise text={lead} settleBy={OUT.thesisBy - 0.15} exit={OUT.thesisExit} />
-      <RuleRise
-        text={emphasised}
-        settleBy={OUT.thesisBy}
-        exit={OUT.thesisExit + 0.05}
-        className="type-headline fin-em"
-      />
-    </div>
+    </Crane>
   );
 }
 
@@ -152,83 +156,34 @@ function CookedLine() {
   );
 }
 
-function Words({
-  text,
-  at,
-  end,
-  className,
-}: {
-  text: string;
-  at: number;
-  end: number;
-  className: string;
-}) {
-  const words = text.split(" ");
-  const ref = useFrameRef<HTMLParagraphElement>((root: HTMLParagraphElement, frame: Frame) => {
-    const n = Math.round(Math.min(1, Math.max(0, (frame.tau - at) / (end - at))) * words.length);
-    for (let i = 0; i < root.children.length; i++)
-      setStyle(root.children[i], "visibility", i < n ? "visible" : "hidden");
-  });
-  return (
-    <p ref={ref} className={`fin-words ${className}`}>
-      {words.map((word, i) => (
-        // oxlint-disable-next-line react/no-array-index-key -- words of a fixed line
-        <span key={i}>{word}</span>
-      ))}
-    </p>
-  );
-}
-
-function Typed({
-  text,
-  at,
-  className,
-  children,
-}: {
-  text: string;
-  at: number;
-  className: string;
-  children?: ReactNode;
-}) {
-  const total = charLength(text) + (children ? 1 : 0);
+/** The show notes link: words rise through a mask one by one beside the QR. */
+function ShownotesLink() {
+  const words = (qr.lines[0] ?? "").split(" ");
   const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
-    const typed = typedChars(frame.tau, at, 60, total);
-    setStyle(root, "clip-path", typed === 0 ? "inset(0 100% 0 0)" : typeClip(typed, total));
+    setStyle(root, "visibility", frame.tau >= OUT.labelAt ? "visible" : "hidden");
+    const spans = root.querySelectorAll(".fin-mask > span");
+    for (let i = 0; i < spans.length; i++) {
+      const lift = labelLift(frame.tau, i);
+      setStyle(spans[i], "visibility", lift < 0.999 ? "visible" : "hidden");
+      setStyle(spans[i], "transform", `translate3d(0, ${(lift * 110).toFixed(2)}%, 0)`);
+    }
   });
   return (
-    <div ref={ref} className={`tui ${className}`} style={{ clipPath: "inset(0 100% 0 0)" }}>
-      {children}
-      {text}
-    </div>
-  );
-}
-
-function References({ host }: { host: string }) {
-  return (
-    <div className="fin-refs" style={{ left: 820, top: 330 }}>
-      <Words
-        text={qr.lines[0] ?? ""}
-        at={OUT.l1At}
-        end={OUT.l1At + 0.45}
-        className="type-body fin-ink"
-      />
-      <Typed text={host} at={OUT.urlAt} className="type-code fin-url" />
-      <div className="fin-ref-list">
-        {qr.refs.map((ref, i) => {
-          const [title = ref.label, source] = ref.label.split(" · ");
-          const at = OUT.refsAt + i * 0.2;
-          return (
-            <div key={ref.href} className="fin-ref">
-              <AgentRow name={title} enterAt={at} style={{ width: 920 }} />
-              {source ? (
-                <Typed text={source} at={at + 0.25} className="type-label fin-ref-source">
-                  <span className="tui-hook" />
-                </Typed>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+    <div
+      ref={ref}
+      className="fin-abs"
+      style={{ left: LABEL.left, top: LABEL.top, visibility: "hidden" }}
+    >
+      <ExtLink href={SHOWNOTES_URL} className="fin-link type-body">
+        <span className="fin-link-words">
+          {words.map((word, i) => (
+            // oxlint-disable-next-line react/no-array-index-key -- words of a fixed line
+            <span key={i} className="fin-mask">
+              <span>{word}</span>
+            </span>
+          ))}
+        </span>
+      </ExtLink>
     </div>
   );
 }
@@ -269,16 +224,22 @@ function Tiles({ value }: { value: string }) {
   );
 }
 
-/** The QR's ivory plate feeds out row by row with the print, like terminal output. */
+/** The QR card feeds out row by row with the print, like terminal output. */
 function QrPlate({ value }: { value: string }) {
   const { size: n } = qrModules(value);
   const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
     const fed = plateFed(frame.tau, n);
     setStyle(root, "visibility", fed > 0 ? "visible" : "hidden");
-    if (fed > 0) setStyle(root, "clip-path", `inset(0 0 ${(QR.size - fed).toFixed(1)}px 0)`);
+    const clip =
+      fed >= QR.size ? "none" : `inset(-80px -80px ${(QR.size - fed).toFixed(1)}px -80px)`;
+    if (fed > 0) setStyle(root, "clip-path", clip);
   });
   return (
-    <div ref={ref} className="fin-abs" style={{ left: QR.left, top: QR.top, visibility: "hidden" }}>
+    <div
+      ref={ref}
+      className="fin-abs fin-qr"
+      style={{ left: QR.left, top: QR.top, visibility: "hidden" }}
+    >
       <QrGrow value={value} start={OUT.qrFrom} end={OUT.qrTo} size={QR.size} holdBack={10} />
     </div>
   );
@@ -300,13 +261,11 @@ function PlateBot() {
   );
 }
 
-/** Outro-thesis → outro-qr: the short clean bar, then the prompt box as an ivory QR plate. */
-function BonePlate() {
+/** Outro-thesis → outro-qr: the short clean bar, then the prompt box becomes the QR plate. */
+function Plate() {
   const value = SHOWNOTES_URL;
-  const host = shownotesLabel(value);
   return (
-    <World camera={CRANE}>
-      <Thesis />
+    <World camera={CRANE} smear={false}>
       <Gate to={OUT.collapseTo}>
         <div
           className="fin-ghost-bar"
@@ -325,46 +284,28 @@ function BonePlate() {
       <PlateRules />
       <CookedLine />
       <QrPlate value={value} />
-      <References host={host} />
       <PlateBot />
       <Tiles value={value} />
+      <ShownotesLink />
     </World>
-  );
-}
-
-/** The bone plate sweeps in on its own bed, its slanted edge uncovering the short bar in place. */
-function BoneReveal({ children }: { children: ReactNode }) {
-  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
-    const e = revealEdge(frame.tau);
-    const top = (e + REVEAL_SLANT).toFixed(1);
-    const bottom = (e - REVEAL_SLANT).toFixed(1);
-    setStyle(root, "clip-path", `polygon(0 0, ${top}px 0, ${bottom}px 100%, 0 100%)`);
-  });
-  return (
-    <div
-      ref={ref}
-      className="km-tone km-bed"
-      data-tone="bone"
-      style={{ position: "absolute", inset: 0, clipPath: "inset(0 100% 0 0)" }}
-    >
-      {children}
-    </div>
   );
 }
 
 export default function OutroSegment() {
   return (
     <Gate from={OUT.start} to={OUT.end + 1}>
-      <div className="km-tone" style={{ position: "absolute", inset: 0 }}>
-        <Gate to={OUT.wipeTo}>
-          <Recap />
+      <div className="km-tone fin-layer">
+        <Gate to={OUT.wipeFrom + OUT.wipeDur}>
+          <Crane offset={0} track={plateCrane}>
+            <Recap />
+          </Crane>
+        </Gate>
+        <Gate from={OUT.wipeFrom}>
+          <Crane offset={-1080} track={plateCrane}>
+            <Plate />
+          </Crane>
         </Gate>
       </div>
-      <Gate from={OUT.wipeFrom}>
-        <BoneReveal>
-          <BonePlate />
-        </BoneReveal>
-      </Gate>
     </Gate>
   );
 }

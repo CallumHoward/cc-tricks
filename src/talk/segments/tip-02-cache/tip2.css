@@ -49,41 +49,6 @@
   transform-origin: 0 50%;
 }
 
-.t2-col-value {
-  width: 160px;
-  color: var(--text);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.t2-table {
-  display: grid;
-  gap: 4px;
-}
-
-.t2-table__row > div {
-  display: grid;
-  grid-template-columns: 250px 150px 120px;
-  font-variant-numeric: tabular-nums;
-}
-
-.t2-w1 .dk-root {
-  display: none;
-}
-
-.t2-w1 .wg {
-  width: 860px;
-  gap: 18px;
-}
-
-.t2-w1 .wg-row {
-  gap: 12px;
-}
-
-.t2-w1 .wg-chip {
-  padding: 0 18px;
-}
-
 .t2-strip {
   display: flex;
   gap: 6px;
@@ -102,10 +67,6 @@
 
 .t2-code {
   color: var(--text);
-}
-
-.t2-on-clay {
-  color: var(--on-clay);
 }
 
 .t2-notice {
@@ -164,16 +125,80 @@
   fill: var(--clay);
 }
 
-.t2-w1 .wg-readout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 48px;
-  max-width: 860px;
+/* The pricing screenshot keeps its own look: a neutral window, not slide chrome */
+.t2-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 0 0 22px 22px;
+  background: #171717;
+  box-shadow:
+    0 0 0 2px rgb(255 255 255 / 8%),
+    0 60px 140px rgb(0 0 0 / 55%);
 }
 
-/* The payoff ratio is the number the room should read */
-.t2-w1 .wg-hot {
-  display: inline-block;
-  transform: scale(1.5);
-  transform-origin: 0 35%;
+.t2-card img {
+  display: block;
+  border-radius: 0 0 22px 22px;
+}
+
+.t2-card__chrome {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  padding: 0 26px;
+  border-radius: 22px 22px 0 0;
+  background: #2a2a2a;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 8%);
+}
+
+.t2-card__dots {
+  display: flex;
+  gap: 14px;
+}
+
+.t2-card__dots i {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4a4a4a;
+}
+
+.t2-card__title {
+  color: #d4d4d4;
+  font:
+    500 40px/1 system-ui,
+    sans-serif;
+}
+
+.t2-card__dim {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgb(10 10 10 / 64%);
+}
+
+.t2-card__outline {
+  position: absolute;
+  border: 5px solid var(--clay);
+  border-radius: 14px;
+  box-shadow:
+    0 0 36px var(--clay-wash-55),
+    inset 0 0 28px var(--clay-wash-20);
+}
+
+.t2-road-tag {
+  padding: 2px 16px;
+  border: 2px solid var(--clay-wash-55);
+  border-radius: 8px;
+  background: var(--bg-deep);
+  color: var(--clay-hi);
+}
+
+.t2-road-tag--off {
+  border-color: var(--muted);
+  color: var(--soft);
 }

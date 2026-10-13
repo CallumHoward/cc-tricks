@@ -1,16 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { stampImpact } from "#/talk/segments/tip-06-cli-agents/cue-timing";
-
-import {
-  ccTower,
-  counterPlaces,
-  cursorTower,
-  flapCounter,
-  flapRows,
-  stampSettleFor,
-  TIP8,
-} from "./timing";
+import { ccTower, counterPlaces, cursorTower, flapCounter, flapRows, TIP8 } from "./timing";
 
 describe("tip 8 timing", () => {
   it("should pad both board columns to the same number of lines", () => {
@@ -42,9 +32,5 @@ describe("tip 8 timing", () => {
       counterPlaces(digits).map(({ place, comma }) => (comma ? `${place},` : `${place}`));
     expect(commas(6)).toEqual(["5", "4", "3,", "2", "1", "0"]);
     expect(commas(4)).toEqual(["3,", "2", "1", "0"]);
-  });
-
-  it("should land the stamp's first impact on its slam cue", () => {
-    expect(stampImpact(stampSettleFor(TIP8.stampHit))).toBeCloseTo(TIP8.stampHit, 2);
   });
 });

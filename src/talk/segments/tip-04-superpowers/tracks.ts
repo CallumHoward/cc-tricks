@@ -1,12 +1,22 @@
-import { clamp, inOutExpo, inQuad, outCubic, outExpo, prog } from "#/engine/motion/ease";
+import {
+  clamp,
+  inOutCubic,
+  inOutExpo,
+  inQuad,
+  outCubic,
+  outExpo,
+  prog,
+} from "#/engine/motion/ease";
 import type { StyleValues } from "#/engine/stage/applier";
 import { BOT_HOME } from "#/talk/segments/shared/home";
-import { foldFlat, hopArc, hopFlight, whipScroll } from "#/talk/segments/shared/tip-turn";
+import { completionRise, hopArc, hopFlight, plateExit } from "#/talk/segments/shared/tip-turn";
 
 /** Visible window of this segment (registry: start + tail → next start + tail). */
 export const WIN = Object.freeze({ start: 151.9, end: 160.9 });
 export const AT = 156.5;
 export const HOLD_END = 159.5;
+/** The press swing has braked into bullet time by here. */
+export const SETTLE = AT - 0.8;
 /** Impact lands on the next press, just past the hold. */
 export const CRACK = HOLD_END + 0.15;
 
@@ -18,14 +28,14 @@ export const TURN = Object.freeze({
   spinnerAt: 153,
 });
 
-/** The split walnut gets 0.45 τ-s on screen before the plate folds. */
+/** The split walnut gets 0.45 τ-s on screen before the plate dollies out. */
 export const EXIT = Object.freeze({
   fold: CRACK + 0.45,
-  foldEnd: CRACK + 0.73,
+  foldEnd: CRACK + 0.85,
   dockUp: CRACK + 0.5,
   completeAt: CRACK + 0.55,
   pocketAt: CRACK + 0.8,
-  whipAt: CRACK + 0.87,
+  whipAt: CRACK + 0.8,
   whipEnd: 160.84,
   home: 160.84,
 });
@@ -40,7 +50,7 @@ export function dockY(tau: number): number {
 
 // Plan → triads → hammer -----------------------------------------------------------------------
 
-export const PLAN = Object.freeze({ cols: [200, 700] as const, top: 548, gap: 50, enter: 153.1 });
+const PLAN = Object.freeze({ cols: [200, 700] as const, top: 548, gap: 50, enter: 153.1 });
 
 export type PlanRow = { i: number; label: string; x: number; y: number; at: number };
 
@@ -56,7 +66,7 @@ export const PLAN_ROWS: readonly PlanRow[] = Array.from({ length: 10 }, (_, i) =
 /** The odometer's "+" pops once the count lands. */
 export const PLUS_AT = 154.3;
 
-export const SPROUT = Object.freeze({ start: 153.6, stagger: 0.05, dur: 0.3 });
+const SPROUT = Object.freeze({ start: 153.6, stagger: 0.05, dur: 0.3 });
 
 /** The three ✳ of row i (implementer, reviewer, reviewer), at rest beside the row. */
 function triadHome(row: number, j: number): { x: number; y: number } {
@@ -78,28 +88,30 @@ export const WALNUT_TOP = WALNUT.ground - WALNUT.h;
 const HOIST_TOP = 90;
 const HOISTED_GAP = WALNUT_TOP - (HOIST_TOP + HAMMER.headH);
 
-export const CONVERGE = Object.freeze({ start: 154.7, end: 155.2 });
-export const RELEASE = 155.5;
+const CONVERGE = Object.freeze({ start: 154.5, end: 154.95 });
+/** The head forms from the swarm over this span. */
+export const FORM = Object.freeze({ start: 154.75, end: 155.0 });
+export const RELEASE = 155.2;
 
-/** Bullet time: the fall accelerates until `FALL.join`, then brakes hard into `gap` at `at`. */
-export const FALL = Object.freeze({ join: AT - 0.3, joinGap: 30, gap: 6, creep: 0.5 });
+/** Bullet time: the fall accelerates until `FALL.join`, then brakes into `gap` by SETTLE. */
+export const FALL = Object.freeze({ join: SETTLE - 0.22, joinGap: 30, gap: 6, creep: 0.5 });
 
 /**
- * Gap (px) between the head and the walnut: hoisted → falls (accelerating) → brakes into 6 px at
- * `at` → creeps 0.5 px/τ-s → 0 at CRACK.
+ * Gap (px) between the head and the walnut: hoisted → falls (accelerating) → brakes into 6 px by
+ * SETTLE → creeps 0.5 px/τ-s → 0 at CRACK.
  */
 export function hammerGap(tau: number): number {
   if (tau < RELEASE) {
-    const windUp = Math.sin(prog(tau, 155.15, RELEASE) * Math.PI) * 18;
+    const windUp = Math.sin(prog(tau, FORM.end - 0.1, RELEASE) * Math.PI) * 18;
     return HOISTED_GAP + windUp;
   }
   if (tau < FALL.join) {
     return HOISTED_GAP - (HOISTED_GAP - FALL.joinGap) * prog(tau, RELEASE, FALL.join) ** 3;
   }
-  if (tau < AT)
-    return FALL.joinGap - (FALL.joinGap - FALL.gap) * outCubic(prog(tau, FALL.join, AT));
-  if (tau < HOLD_END) return FALL.gap - FALL.creep * (tau - AT);
-  const atHoldEnd = FALL.gap - FALL.creep * (HOLD_END - AT);
+  if (tau < SETTLE)
+    return FALL.joinGap - (FALL.joinGap - FALL.gap) * outCubic(prog(tau, FALL.join, SETTLE));
+  if (tau < HOLD_END) return FALL.gap - FALL.creep * (tau - SETTLE);
+  const atHoldEnd = FALL.gap - FALL.creep * (HOLD_END - SETTLE);
   if (tau < CRACK) return atHoldEnd * (1 - inQuad(prog(tau, HOLD_END, CRACK)));
   return -22 * outExpo(prog(tau, CRACK, CRACK + 0.06));
 }
@@ -107,11 +119,11 @@ export function hammerGap(tau: number): number {
 /** Fall progress 0 (hoisted) → 1 (at rest above the walnut), from the gap. */
 const fallDone = (tau: number) => clamp((HOISTED_GAP - hammerGap(tau)) / (HOISTED_GAP - FALL.gap));
 
-/** Swing (deg, clockwise about the head's centre): cocked 28° → 10° at `at` → 1.5°/τ-s → flat. */
+/** Swing (deg, clockwise about the head's centre): cocked 28° → 10° by SETTLE → 1.5°/τ-s → flat. */
 export function hammerTilt(tau: number): number {
-  if (tau < AT) return 28 - 18 * fallDone(tau);
-  if (tau < HOLD_END) return 10 - 1.5 * (tau - AT);
-  const atHoldEnd = 10 - 1.5 * (HOLD_END - AT);
+  if (tau < SETTLE) return 28 - 18 * fallDone(tau);
+  if (tau < HOLD_END) return 10 - 1.5 * (tau - SETTLE);
+  const atHoldEnd = 10 - 1.5 * (HOLD_END - SETTLE);
   return atHoldEnd * (1 - inQuad(prog(tau, HOLD_END, CRACK)));
 }
 
@@ -123,12 +135,16 @@ export const hammerShadow = (tau: number): number =>
 export const headTop = (tau: number): number => WALNUT_TOP - hammerGap(tau) - HAMMER.headH;
 
 /** The head forms from the swarm: 0 → 1 while the ✳ converge. */
-export const headForm = (tau: number): number => prog(tau, 155.0, 155.3, outCubic);
+export const headForm = (tau: number): number => prog(tau, FORM.start, FORM.end, outCubic);
+
+/** The handle draws down from the head once it has formed. */
+export const handleGrow = (tau: number): number =>
+  prog(tau, FORM.start + 0.1, FORM.end + 0.15, outCubic);
 
 /** Motion streak length above the head: grows through the fall and hangs in bullet time. */
 export function streakLength(tau: number): number {
   if (tau < RELEASE || tau >= CRACK + 0.1) return 0;
-  return 150 * outCubic(prog(tau, RELEASE + 0.1, AT - 0.2)) * (1 - prog(tau, CRACK, CRACK + 0.1));
+  return 150 * outCubic(prog(tau, RELEASE + 0.05, SETTLE)) * (1 - prog(tau, CRACK, CRACK + 0.1));
 }
 
 /** Where ✳ k (row-major: row = k/3, j = k%3) is: sprouting, at rest, or converging into the head. */
@@ -139,7 +155,7 @@ export function swarmAt(k: number, tau: number): { x: number; y: number; scale: 
   const sprout = SPROUT.start + row * SPROUT.stagger;
   const pop = prog(tau, sprout, sprout + SPROUT.dur, outExpo);
   const start = CONVERGE.start + (k % 10) * 0.012;
-  const u = prog(tau, start, CONVERGE.end, inOutExpo);
+  const u = prog(tau, start, CONVERGE.end, inOutCubic);
   const col = k % 10;
   const line = Math.floor(k / 10);
   const target = {
@@ -163,10 +179,12 @@ export function dispatches(tau: number): number {
 export const odometerScale = (tau: number): number =>
   tau < 153.45 ? 0 : 0.6 + 0.4 * prog(tau, 153.45, 153.75, outExpo);
 
-/** The plan (spinner, rows, odometer) folds shut once the swarm has left. */
+/** The plan (spinner, rows, odometer) sinks back and fades as the swarm lifts off it. */
+export const PLAN_OUT = Object.freeze({ start: 154.5, end: 154.95 });
+
 export function planFold(tau: number): StyleValues {
-  const u = prog(tau, 154.8, 155.1, inOutExpo);
-  return { scaleY: 1 - u, opacity: u >= 1 ? 0 : 1 };
+  const u = prog(tau, PLAN_OUT.start, PLAN_OUT.end, inOutCubic);
+  return { y: 40 * u, scale: 1 - 0.05 * u, opacity: 1 - u };
 }
 
 // Walnut ---------------------------------------------------------------------------------------
@@ -220,13 +238,15 @@ export function botOffset(tau: number): { x: number; y: number } {
 
 // Exit -----------------------------------------------------------------------------------------
 
-/** Hammer, walnut and label squash onto the ground line before the dock rises through them. */
+/** Hammer, walnut and label sink and fade before the dock rises through them. */
+export const PROP_OUT = Object.freeze({ start: CRACK + 0.25, end: CRACK + 0.65 });
+
 export function propFold(tau: number): StyleValues {
-  const u = prog(tau, CRACK + 0.3, EXIT.dockUp, inOutExpo);
-  return { y: 40 * u, scaleY: 1 - u, opacity: u >= 1 ? 0 : 1 };
+  const u = prog(tau, PROP_OUT.start, PROP_OUT.end, inOutCubic);
+  return { y: 60 * u, scale: 1 - 0.06 * u, opacity: 1 - u };
 }
 
-/** Everything on the plate folds into the completion line at the spinner row. */
-export const plateFold = (tau: number): StyleValues => foldFlat(tau, EXIT.fold, EXIT.foldEnd);
+/** Everything on the plate dollies back and fades before the completion line appears. */
+export const plateFold = (tau: number): StyleValues => plateExit(tau, EXIT.fold, EXIT.foldEnd);
 
-export const whipUp = (tau: number): StyleValues => whipScroll(tau, EXIT.whipAt, EXIT.whipEnd);
+export const whipUp = (tau: number): StyleValues => completionRise(tau, EXIT.whipAt, EXIT.whipEnd);

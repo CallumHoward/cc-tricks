@@ -1,41 +1,45 @@
 import { outCubic, prog } from "#/engine/motion/ease";
 import { keys } from "#/engine/motion/track";
-import { ContextBar, RuleRise, Stamp } from "#/talk/kit/motion";
-import { num, put } from "#/talk/kit/motion/dom";
-import { GLYPH_PATHS, HOME, Pile, PromptBox, ReturnGlyph, SpinnerLine } from "#/talk/kit/tui";
+import { ambientTime } from "#/engine/stage/stage";
+import { ExtLink } from "#/talk/kit/ext-link";
+import { ContextBar } from "#/talk/kit/motion";
+import { attr, num, put } from "#/talk/kit/motion/dom";
+import { HOME, Pile, PromptBox, ReturnGlyph, SpinnerLine } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { scriptFor } from "#/talk/script";
 import { BOT_HOME, HOME_ZONES } from "#/talk/segments/shared/home";
 import { TipTitle } from "#/talk/segments/shared/tip-title";
+import { useDecoded } from "#/talk/segments/shared/use-decoded";
 import { During, Echo, FILL, Layer } from "#/talk/segments/tip-09-suggestions/parts";
 import { riseStart, sinkAt } from "#/talk/segments/tip-09-suggestions/tracks";
-import { ResetButton } from "#/talk/widgets/reset-button";
 
 import "./resets.css";
 
-import { OfferTicket } from "./offer-ticket";
 import {
-  bankedX,
+  CARD,
+  chromeOut,
   diveAt,
-  instantX,
+  loop,
   mixRect,
-  panelDrift,
   pileCount,
   pileHop,
+  resetsOut,
   resetsScrollY,
-  splitLead,
+  ROW_PX,
+  shotCam,
+  SHOT,
   T10,
   type Rect,
 } from "./tracks";
 
 const SCRIPT = scriptFor("t10-resets");
 const TITLE = SCRIPT.headline ?? T10.prompt;
+const [FULL_RESET = "", , RESET_FOR_FREE = ""] = SCRIPT.ui;
+/** The limit-reset article the show notes link for tip 10. */
+const LIMIT_RESET_URL = "https://support.claude.com/en/articles/17007452-what-is-a-limit-reset";
 /** The echo and spinner sink out of the transcript as the title rises over them. */
 const CLEAR_AT = riseStart(TITLE, T10.titleSettle) - 0.4;
-const L1 = SCRIPT.lines[0] ?? "";
-const [BANKED = "", INSTANT = ""] = SCRIPT.labels;
-const STAMP = SCRIPT.stamps[0] ?? "";
 
 const CH = 20.4;
 /** The ⏎ that pops after the typed prompt (prompt text origin + text + 0.6 ch margin). */
@@ -45,140 +49,143 @@ const RETURN: Rect = {
   w: CH,
   h: 40,
 };
-const PANEL: Rect = { x: 200, y: 360, w: 940, h: 520 };
-const TICKET = { x: 1190, w: 550, h: 220, stub: 100 };
 
-const BOT_SPOT = { left: 1470, top: 390 - 180 };
-/**
- * The pile hops onto the banked ticket's lid, between the title's end and the bot (bottom-centre
- * anchor).
- */
-const PILE_SPOT = { x: 1375, y: PANEL.y + 32 };
-/** COMMUNITY TERMS lands across the instant ticket's lower edge, under both labels. */
-const STAMP_AT = { left: 1395, top: 868 };
+/** The bot and the pile hop up onto the card's top edge, right of the title. */
+const BOT_SPOT = { left: 1470, top: CARD.y - 182 };
+const PILE_SPOT = { x: 1375, y: CARD.y };
 
 const RESETS_BOT_ACTS: readonly Act[] = [
   { kind: "look", at: T10.diveAt, dur: 1, x: -0.8, y: 0.6 },
   { kind: "hop", at: T10.botHopAt, height: 70 },
-  { kind: "point", at: T10.pointAt, dur: 4.1, angle: 40, side: "L" },
+  { kind: "point", at: T10.highlightAt + 0.2, dur: 3.6, angle: 40, side: "L" },
 ];
 
-function UsageBar({ label, fill, top }: { label: string; fill: number; top: number }) {
-  return (
-    <div style={{ position: "absolute", left: 40, top, width: PANEL.w - 80 }}>
-      <div className="type-label" style={{ color: "var(--soft)" }}>
-        {label}
-      </div>
-      <div
-        style={{
-          position: "relative",
-          height: 16,
-          marginTop: 10,
-          borderRadius: 8,
-          background: "var(--hairline)",
-          overflow: "hidden",
-        }}
-      >
-        <Layer
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: 8,
-            background: "var(--clay)",
-            transformOrigin: "0 50%",
-          }}
-          write={(el, frame) => {
-            const u = prog(frame.tau, T10.barsAt, T10.barsAt + 0.8, outCubic);
-            put(el, "transform", `scaleX(${num(fill * u, 4)})`);
-          }}
-        />
-      </div>
-    </div>
-  );
-}
+const PERIMETER = 2 * (ROW_PX.w + ROW_PX.h);
 
-/** Settings › Usage, opened out of the ⏎ (a clip morph from the glyph's box to the panel). */
-function UsagePanel() {
+/**
+ * The Full reset row lit up: everything else dims, a clay outline draws on and a point of light
+ * keeps orbiting it on ambient time. The row is the link to the limit-reset article.
+ */
+function RowHighlight() {
   return (
     <Layer
       style={{
         position: "absolute",
-        left: PANEL.x,
-        top: PANEL.y,
-        width: PANEL.w,
-        height: PANEL.h,
-        borderRadius: 24,
-        background: "var(--panel)",
-        boxShadow: "0 30px 80px rgb(0 0 0 / 35%)",
+        left: ROW_PX.x,
+        top: ROW_PX.y,
+        width: ROW_PX.w,
+        height: ROW_PX.h,
+        borderRadius: 14,
       }}
       write={(el, frame) => {
-        const u = diveAt(frame.tau);
+        const u = prog(frame.tau, T10.highlightAt, T10.highlightAt + T10.highlightDur, outCubic);
         put(el, "visibility", u > 0 ? "visible" : "hidden");
-        put(el, "transform", `translate3d(${num(panelDrift(frame.tau), 2)}px, 0, 0)`);
-        if (u >= 1) {
-          put(el, "clip-path", "none");
-          return;
-        }
-        const r = mixRect(RETURN, PANEL, u);
-        const top = r.y - PANEL.y;
-        const left = r.x - PANEL.x;
-        const right = PANEL.x + PANEL.w - (r.x + r.w);
-        const bottom = PANEL.y + PANEL.h - (r.y + r.h);
-        put(
-          el,
-          "clip-path",
-          `inset(${num(top, 1)}px ${num(right, 1)}px ${num(bottom, 1)}px ${num(left, 1)}px round ${num(10 + 14 * u, 1)}px)`,
-        );
+        put(el, "box-shadow", `0 0 0 3000px rgb(12 12 11 / ${num(0.58 * u, 3)})`);
+        const [outline, orbit] = el.querySelectorAll("rect");
+        attr(outline, "stroke-dashoffset", num(PERIMETER * (1 - u), 1));
+        const lap = loop(ambientTime(frame), 3.2);
+        attr(orbit, "stroke-dashoffset", num(-PERIMETER * lap, 1));
+        put(orbit, "opacity", num(u, 3));
       }}
     >
-      <Layer
-        style={{ ...FILL, borderRadius: 24, background: "var(--clay)", pointerEvents: "none" }}
-        write={(el, frame) => {
-          const u = diveAt(frame.tau);
-          put(el, "opacity", num(Math.max(0, 1 - u * 1.6), 3));
-        }}
-      />
-      <div style={{ position: "absolute", left: 40, top: 30, overflow: "hidden" }}>
-        <Layer
-          className="type-label"
-          style={{ color: "var(--muted)", letterSpacing: "0.04em" }}
-          write={(el, frame) => {
-            const u = prog(frame.tau, T10.diveAt + 0.35, T10.diveAt + 0.7, outCubic);
-            put(el, "transform", `translate3d(0, ${num((1 - u) * 110, 2)}%, 0)`);
-          }}
-        >
-          {"Settings › Usage"}
-        </Layer>
-      </div>
-      <UsageBar label="Current session" fill={0.62} top={86} />
-      <UsageBar label="Current week" fill={0.88} top={164} />
-      <RuleRise
-        text={L1}
-        settleBy={T10.resetsCopySettle}
-        className="type-body"
-        rule={false}
-        style={{ position: "absolute", left: 40, top: 240 }}
-      />
-      <Layer
-        className="t10-reset-row"
-        style={{ position: "absolute", left: 40, top: 310, width: PANEL.w - 80 }}
-        write={(el, frame) => {
-          const u = prog(frame.tau, T10.rowAt, T10.rowAt + T10.rowDur);
-          const cells = Math.round(u * 48) / 48;
-          put(
-            el,
-            "clip-path",
-            cells >= 1 ? "none" : `inset(-8px ${num((1 - cells) * 100, 2)}% -60px 0)`,
-          );
-        }}
+      <ExtLink
+        href={LIMIT_RESET_URL}
+        style={{ position: "absolute", inset: 0, display: "block", borderRadius: 14 }}
       >
-        <ResetButton />
-      </Layer>
+        <span className="t10-sr">{`${FULL_RESET} · ${RESET_FOR_FREE}`}</span>
+      </ExtLink>
+      <svg
+        aria-hidden
+        width={ROW_PX.w}
+        height={ROW_PX.h}
+        style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none" }}
+      >
+        <rect
+          x={0}
+          y={0}
+          width={ROW_PX.w}
+          height={ROW_PX.h}
+          rx={14}
+          fill="none"
+          stroke="var(--clay)"
+          strokeWidth={3}
+          strokeDasharray={PERIMETER}
+          style={{ filter: "drop-shadow(0 0 10px rgb(217 119 87 / 70%))" }}
+        />
+        <rect
+          x={0}
+          y={0}
+          width={ROW_PX.w}
+          height={ROW_PX.h}
+          rx={14}
+          fill="none"
+          stroke="#fff4ec"
+          strokeWidth={5}
+          strokeLinecap="round"
+          strokeDasharray={`90 ${PERIMETER - 90}`}
+          style={{ filter: "drop-shadow(0 0 12px #eb9f7f) drop-shadow(0 0 26px #d97757)" }}
+        />
+      </svg>
     </Layer>
   );
 }
 
-/** The clay ⏎ that dives open into the panel. */
+/**
+ * Settings › Usage, the real screenshot: it opens out of the ⏎, then the camera pushes in onto the
+ * Full reset row while the frame widens into a letterbox under the title.
+ */
+function UsageShot() {
+  useDecoded(SHOT.src);
+  return (
+    <div style={{ ...FILL, filter: "drop-shadow(0 30px 60px rgb(0 0 0 / 45%))" }}>
+      <Layer
+        style={{ ...FILL, background: "#1a1a19" }}
+        write={(el, frame) => {
+          const u = diveAt(frame.tau);
+          put(el, "visibility", u > 0 ? "visible" : "hidden");
+          const { card, s, tx, ty, radius } = shotCam(frame.tau, RETURN);
+          put(
+            el,
+            "clip-path",
+            `inset(${num(card.y, 1)}px ${num(1920 - card.x - card.w, 1)}px ${num(1080 - card.y - card.h, 1)}px ${num(card.x, 1)}px round ${num(radius, 1)}px)`,
+          );
+          const shot = el.firstElementChild as HTMLElement | null;
+          put(
+            shot,
+            "transform",
+            `translate3d(${num(card.x + tx, 2)}px, ${num(card.y + ty, 2)}px, 0) scale(${num(s, 4)})`,
+          );
+          const flash = el.lastElementChild as HTMLElement | null;
+          put(flash, "opacity", num(Math.max(0, 1 - u * 1.6), 3));
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: SHOT.w,
+            height: SHOT.h,
+            transformOrigin: "0 0",
+          }}
+        >
+          <img
+            src={SHOT.src}
+            alt="Claude settings, Usage: Full reset, expires Oct 23, with a Reset for free button"
+            width={SHOT.w}
+            height={SHOT.h}
+            draggable={false}
+            style={{ display: "block" }}
+          />
+          <RowHighlight />
+        </div>
+        <div style={{ ...FILL, background: "var(--clay)", pointerEvents: "none" }} />
+      </Layer>
+    </div>
+  );
+}
+
+/** The clay ⏎ that dives open into the window. */
 function DiveGlyph() {
   return (
     <Layer
@@ -187,7 +194,7 @@ function DiveGlyph() {
         const u = diveAt(frame.tau);
         const shown = frame.tau >= T10.submitAt && u < 0.7;
         put(el, "visibility", shown ? "visible" : "hidden");
-        const r = mixRect(RETURN, PANEL, u);
+        const r = mixRect(RETURN, shotCam(T10.diveAt + T10.diveDur, RETURN).card, u);
         const s = 1 + 9 * u;
         put(
           el,
@@ -204,60 +211,18 @@ function DiveGlyph() {
   );
 }
 
-function Stub({ live }: { live: boolean }) {
+/** The home prompt box and context bar, sinking away as the window opens. */
+function HomeChrome() {
   return (
-    <svg
-      viewBox="0 0 100 100"
-      aria-hidden
-      style={{
-        position: "absolute",
-        left: "50%",
-        top: "64%",
-        width: 54,
-        height: 54,
-        transform: "translate(-50%, -50%)",
-      }}
-    >
-      <path d={GLYPH_PATHS["✳"]} fill={live ? "var(--clay)" : "var(--muted)"} />
-    </svg>
-  );
-}
-
-function ResetTicket({
-  label,
-  top,
-  x,
-}: {
-  label: string;
-  top: number;
-  x: (tau: number) => number;
-}) {
-  const [lead, rest] = splitLead(label);
-  return (
-    <Layer
-      style={{ position: "absolute", left: TICKET.x - PANEL.x - PANEL.w, top }}
-      write={(el, frame) => put(el, "transform", `translate3d(${num(x(frame.tau), 2)}px, 0, 0)`)}
-    >
-      <OfferTicket width={TICKET.w} height={TICKET.h} stubWidth={TICKET.stub} stub={<Stub live />}>
-        <div className="type-body" style={{ color: "var(--text)", lineHeight: 1.1 }}>
-          {lead}
-        </div>
-        <div
-          className="type-label"
-          style={{ color: "var(--soft)", marginTop: 12, whiteSpace: "normal" }}
-        >
-          {rest.trim()}
-        </div>
-      </OfferTicket>
-    </Layer>
-  );
-}
-
-/** Stop 27: `10. Anthropic extra offers` dives through ⏎ into Settings › Usage and two tickets. */
-export function ResetsPlate() {
-  return (
-    <div style={FILL}>
-      <During from={T10.start - 1} to={T10.diveAt + T10.diveDur}>
+    <During from={T10.start - 1} to={T10.diveAt + T10.chromeOutDur}>
+      <Layer
+        style={FILL}
+        write={(el, frame) => {
+          const u = chromeOut(frame.tau);
+          put(el, "transform", `translate3d(0, ${num(260 * u, 2)}px, 0)`);
+          put(el, "opacity", num(1 - u, 3));
+        }}
+      >
         <ContextBar zones={HOME_ZONES} />
         <PromptBox
           style={{ position: "absolute", left: HOME.left, top: HOME.promptTop }}
@@ -266,7 +231,27 @@ export function ResetsPlate() {
           cps={T10.cps}
           submitAt={T10.submitAt}
         />
-      </During>
+      </Layer>
+    </During>
+  );
+}
+
+/** Stop 27: `10. Anthropic extra offers` dives through ⏎ into the real Settings › Usage page. */
+export function ResetsPlate() {
+  return (
+    <Layer
+      style={{ ...FILL, transformOrigin: "960px 600px" }}
+      write={(el, frame) => {
+        const u = resetsOut(frame.tau);
+        put(
+          el,
+          "transform",
+          `translate3d(0, ${num(-48 * u, 2)}px, 0) scale(${num(1 - 0.08 * u, 4)})`,
+        );
+        put(el, "opacity", num(1 - u, 3));
+      }}
+    >
+      <HomeChrome />
       <Layer
         style={FILL}
         write={(el, frame) =>
@@ -305,6 +290,8 @@ export function ResetsPlate() {
         </div>
       </Layer>
       <TipTitle text={TITLE} settleBy={T10.titleSettle} exit={T10.resetsHoldEnd} />
+      <UsageShot />
+      <DiveGlyph />
       <Layer
         style={{ ...FILL, zIndex: 2, pointerEvents: "none" }}
         write={(el, frame) => {
@@ -316,28 +303,6 @@ export function ResetsPlate() {
       >
         <Pile count={pileCount} x={HOME.pileX} y={HOME.pileY} />
       </Layer>
-      <div
-        style={{
-          position: "absolute",
-          left: PANEL.x + PANEL.w,
-          top: PANEL.y,
-          width: 1920 - PANEL.x - PANEL.w,
-          height: PANEL.h + 20,
-          overflow: "hidden",
-          zIndex: 1,
-        }}
-      >
-        <ResetTicket label={BANKED} top={30} x={bankedX} />
-        <ResetTicket label={INSTANT} top={280} x={instantX} />
-      </div>
-      <UsagePanel />
-      <DiveGlyph />
-      <Stamp
-        text={STAMP}
-        settleBy={T10.stampSettle}
-        rotate={-8}
-        style={{ ...STAMP_AT, zIndex: 2 }}
-      />
       <Layer
         style={{
           position: "absolute",
@@ -356,6 +321,6 @@ export function ResetsPlate() {
       >
         <StageMascot acts={RESETS_BOT_ACTS} title="the bot" />
       </Layer>
-    </div>
+    </Layer>
   );
 }

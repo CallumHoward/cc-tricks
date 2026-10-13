@@ -70,6 +70,17 @@ describe("createClock", () => {
     expect(hold?.tau0).toBeCloseTo(14, 9);
   });
 
+  it("should land on the stop at once when a goto is a cut", () => {
+    const clock = createClock({ stops: STOPS });
+
+    clock.dispatch({ type: "goto", index: 3, cut: true }, 5);
+
+    expect(clock.target).toBe(3);
+    expect(clock.sample(5).tau).toBeCloseTo(40, 9);
+    expect(clock.sample(5).v).toBeCloseTo(DEFAULT_TUNING.holdSpeed, 9);
+    expect(clock.sample(1e4).tau).toBeLessThanOrEqual(holdEnd(STOPS[3] as Stop));
+  });
+
   it("should stop notifying after unsubscribing", () => {
     const clock = createClock({ stops: STOPS });
     const listener = vi.fn<() => void>();

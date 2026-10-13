@@ -15,7 +15,13 @@ import { STAGE_HEIGHT, STAGE_WIDTH, useViewportScale } from "#/engine/stage/view
 
 import { createLayerRegistry } from "./layer-registry";
 import type { PostParams } from "./post-params";
-import { createThreeHost, type ThreeHost, type ThreeLayer, type ThreeRegistry } from "./three-host";
+import {
+  createThreeHost,
+  type ThreeBackdrop,
+  type ThreeHost,
+  type ThreeLayer,
+  type ThreeRegistry,
+} from "./three-host";
 
 export type ThreeLayerContext = { width: number; height: number };
 
@@ -26,28 +32,38 @@ const fill = { position: "absolute", inset: 0, width: "100%", height: "100%" } a
 const devicePixelRatio = () => (typeof window === "undefined" ? 1 : window.devicePixelRatio || 1);
 
 /**
- * WebGL canvas under the DOM world; children render above it. Idle (no layers) costs nothing. Keep
- * `post` stable (module-level): a new object recreates the renderer.
+ * WebGL canvas under the DOM world; children render above it. Idle (no layers, no backdrop) costs
+ * nothing. Keep `post` and `backdrop` stable (module-level): a new one recreates the renderer.
  */
 export function ThreeLayerProvider({
   children,
   post,
+  backdrop,
 }: {
   children: ReactNode;
   post?: Partial<PostParams>;
+  /** Builds the world drawn under every layer with its own camera */
+  backdrop?: () => ThreeBackdrop;
 }) {
   const stage = useStage();
   const scale = useViewportScale();
   const [registry] = useState(() => createLayerRegistry<Object3D>());
   const hostRef = useRef<ThreeHost | null>(null);
+  const scaleRef = useRef(scale);
 
   const canvasRef = useCallback(
     (canvas: HTMLCanvasElement | null) => {
       if (!canvas) return;
-      const created = createThreeHost({ canvas, registry, post });
+      const created = createThreeHost({
+        canvas,
+        registry,
+        post,
+        backdrop: backdrop?.(),
+        pixelRatio: devicePixelRatio() * scaleRef.current,
+      });
       hostRef.current = created;
       const draw = (frame: Parameters<ThreeHost["render"]>[0]) => {
-        const active = registry.size > 0;
+        const { active } = created;
         canvas.style.visibility = active ? "visible" : "hidden";
         if (active) created.render(frame);
       };
@@ -59,10 +75,11 @@ export function ThreeLayerProvider({
         hostRef.current = null;
       };
     },
-    [registry, stage, post],
+    [registry, stage, post, backdrop],
   );
 
   useEffect(() => {
+    scaleRef.current = scale;
     hostRef.current?.setPixelRatio(devicePixelRatio() * scale);
   }, [scale]);
 

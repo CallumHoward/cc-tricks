@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { settleTime, SPRINGS } from "#/engine/motion/spring";
-import { smear, whipOffset } from "#/talk/kit/tui/tui-math";
 
 import {
   botX,
-  breakWords,
   collapseScale,
+  foldAt,
+  glintX,
   letterScale,
+  lineRise,
+  plateOut,
   riseStart,
   scrollY,
   sweepX,
@@ -57,16 +59,26 @@ describe("tip 9 tracks", () => {
     expect(riseStart("a b\nc", 10)).toBeCloseTo(last - 2 * 0.07, 9);
   });
 
-  it("should break copy into lines of the given word counts", () => {
-    expect(breakWords("a b c d e", [2, 2])).toBe("a b\nc d\ne");
+  it("should take at least 0.35 τ-seconds to dolly the plate away", () => {
+    expect(T9.exit.foldDur).toBeGreaterThanOrEqual(0.35);
+    expect(foldAt(T9.exit.foldAt + 0.1)).toBeLessThan(0.25);
+  });
+
+  it("should leave the plate lifted, shrunk and gone once the exit dolly ends", () => {
+    expect(plateOut(0)).toMatchObject({ scale: 1, opacity: 1 });
+    expect(plateOut(1)).toEqual({ y: -48, scale: 0.94, opacity: 0 });
+  });
+
+  it("should loop the read glint along the swept span and wrap on rewind", () => {
+    expect(glintX(0, 600)).toBe(0);
+    expect(glintX(1.2, 600)).toBeCloseTo(300, 6);
+    expect(glintX(-1.2, 600)).toBeCloseTo(300, 6);
   });
 
   it("should come to rest on the home shot before the window ends", () => {
-    const { whipAt, whipDur } = T9.exit;
-    const offset = (tau: number) => whipOffset(tau, whipAt, whipDur, 1080);
     const edge = T9.end - 0.05;
-    expect(offset(edge)).toBe(1080);
-    expect(smear(offset, edge, 0)).toEqual({ blur: 0, stretch: 1 });
+    expect(T9.exit.riseAt + T9.exit.riseDur).toBeLessThan(T9.end);
+    expect(lineRise(edge)).toBe(1);
     expect(botX(edge)).toBeCloseTo(0, 10);
   });
 });

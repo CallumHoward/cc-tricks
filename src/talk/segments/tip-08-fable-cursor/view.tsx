@@ -1,16 +1,10 @@
 import { Fragment } from "react";
 
-import { inOutCubic, inQuad, outExpo, prog } from "#/engine/motion/ease";
+import { inOutCubic, outExpo, prog } from "#/engine/motion/ease";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
-import {
-  CssBed,
-  diveAt,
-  GlyphDive,
-  RuleRise,
-  SplitFlap,
-  Stamp,
-  ZERO_GLYPH,
-} from "#/talk/kit/motion";
+import { ExtLink } from "#/talk/kit/ext-link";
+import { RuleRise, SplitFlap } from "#/talk/kit/motion";
 import type { Act } from "#/talk/mascot/actions";
 import { scriptFor } from "#/talk/script";
 import { TipTitle } from "#/talk/segments/shared/tip-title";
@@ -20,7 +14,6 @@ import {
   px,
   SegmentRoot,
   TipFrame,
-  Typed,
   type StyleMap,
 } from "#/talk/segments/tip-06-cli-agents/boundary";
 import { placeAt, type PlaceKey } from "#/talk/segments/tip-06-cli-agents/timing";
@@ -33,25 +26,15 @@ import {
   cursorTower,
   flapCounter,
   flapRows,
-  stampSettleFor,
   TIP8,
 } from "./timing";
 
 const D = TIP8;
 const cache = scriptFor("t8-cache");
 const x18 = scriptFor("t8-18x");
+const CURSOR_PRICING = "https://cursor.com/docs/models-and-pricing";
 const TABLE = cache.tables[0] ?? { head: [], rows: [] };
 const BOARD_ROWS = TABLE.rows.map(([l = "", r = ""]) => flapRows(l, r, 24));
-
-/** The `0` of the spinner's `↓ 0 tokens` (measured from a still). */
-const ZERO = { x: 594, y: 486, size: 28 };
-const DIVE = {
-  at: { x: ZERO.x, y: ZERO.y },
-  size: ZERO.size,
-  glyph: ZERO_GLYPH,
-  start: D.dive.start,
-  end: D.dive.end,
-};
 
 const COL_X = [200, 980] as const;
 const HEAD_Y = 372;
@@ -62,6 +45,11 @@ const FLOOR = 860;
 const TOWER_X = [1272, 1432] as const;
 const TOWER_W = 138;
 
+/** The 18× headline, broken so each line holds one idea. */
+const X18_TITLE = (x18.headline ?? "")
+  .replace(" Fable", "\nFable")
+  .replace(" for the", "\nfor the");
+
 /** The tower's label block: the H says "CC", and "Claude Code" does not fit a 138 px tower. */
 const CC_LABEL = "CC";
 const base = (tau: number) => prog(tau, D.towers.start - 0.1, D.towers.start + 0.2, outExpo);
@@ -71,11 +59,11 @@ const tileFade = (tau: number, row: number) =>
   prog(tau, (D.rows[row] ?? 0) + 0.85, (D.rows[row] ?? 0) + 1.1, inOutCubic);
 
 const boardFold = (tau: number, row: number) =>
-  prog(tau, D.board.foldStart + row * 0.08, D.board.foldStart + row * 0.08 + 0.3, inQuad);
+  prog(tau, D.board.foldStart + row * 0.06, D.board.foldStart + row * 0.06 + 0.4, inOutCubic);
 
-/** The counter snaps shut before the tower bases rise through its row. */
+/** The counter drifts down and out before the tower bases rise through its row. */
 const counterFold = (tau: number) =>
-  prog(tau, D.cache.at + D.cache.hold, D.towers.start - 0.1, inQuad);
+  prog(tau, D.cache.at + D.cache.hold - 0.1, D.cache.at + D.cache.hold + 0.3, inOutCubic);
 
 function FlapCounter() {
   const digits = 6;
@@ -83,8 +71,11 @@ function FlapCounter() {
     (place: number) =>
     (frame: Frame): StyleMap => {
       const v = flapCounter(frame.tau);
-      const digit = Math.floor(v / 10 ** place) % 10;
-      const phase = place === 0 ? v - Math.floor(v) : 0;
+      // The ones flap keeps ticking on ambient time, so the stop reads as slo-mo, not a freeze
+      const tick = ambientTime(frame) * 0.62;
+      const ones = (Math.floor(v) + Math.floor(tick)) % 10;
+      const digit = place === 0 ? ones : Math.floor(v / 10 ** place) % 10;
+      const phase = place === 0 ? tick - Math.floor(tick) : 0;
       const flipping = phase > 0.02 && phase < 0.98;
       return {
         "--d": `"${digit}"`,
@@ -130,7 +121,8 @@ function Board() {
     (frame: Frame): StyleMap => {
       const u = prog(frame.tau, D.rows[0] - 0.2 + i * 0.1, D.rows[0] + 0.15 + i * 0.1, outExpo);
       return {
-        transform: `translate3d(0, ${((1 - u) * 110).toFixed(2)}%, 0) scaleY(${(1 - boardFold(frame.tau, 0)).toFixed(4)})`,
+        transform: `translate3d(0, ${((1 - u) * 110 - boardFold(frame.tau, 0) * 60).toFixed(2)}%, 0)`,
+        opacity: (1 - boardFold(frame.tau, 0)).toFixed(3),
       };
     };
   return (
@@ -150,7 +142,7 @@ function Board() {
               letterSpacing: "0.08em",
             }}
           >
-            {text}
+            {i === 0 ? <ExtLink href={CURSOR_PRICING}>{text}</ExtLink> : text}
           </Fx>
         </div>
       ))}
@@ -159,7 +151,8 @@ function Board() {
           <Fx
             key={`${r}-${lines.join("|")}`}
             fx={(frame) => ({
-              transform: `rotateX(${(boardFold(frame.tau, r + 1) * 90).toFixed(1)}deg)`,
+              transform: `rotateX(${(boardFold(frame.tau, r + 1) * 70).toFixed(1)}deg)`,
+              opacity: (1 - boardFold(frame.tau, r + 1)).toFixed(3),
               "--tile": (1 - tileFade(frame.tau, r)).toFixed(3),
             })}
             className="t8-flap"
@@ -186,11 +179,15 @@ function Board() {
   );
 }
 
-/** Tighter cells than the kit's default so each phrase reads as words, not spaced letters. */
+/**
+ * Tighter cells than the kit's default so each phrase reads as words, not spaced letters. The hinge
+ * line goes with the tiles, so punctuation on it ("flat-rate") lands as one glyph, not "=".
+ */
 const FLAP_CSS = `
 .t8-flap .km-flap-board{font-size:42px;grid-template-columns:repeat(var(--cols),0.62em)!important;gap:6px 2px}
 .t8-flap .km-flap-top,.t8-flap .km-flap-leaf[data-half="top"]{background:color-mix(in srgb,var(--hairline) calc(var(--tile)*100%),transparent)}
 .t8-flap .km-flap-bot,.t8-flap .km-flap-leaf[data-half="bottom"]{background:color-mix(in srgb,var(--panel) calc(var(--tile)*100%),transparent)}
+.t8-flap .km-flap-bot{border-top-width:calc(var(--tile)*1px)}
 `;
 
 function Tower({
@@ -198,15 +195,22 @@ function Tower({
   height,
   label,
   tone,
+  glowing = false,
 }: {
   x: number;
   height: (tau: number) => number;
   label: string;
   tone: string;
+  /** Breathes a clay glow on ambient time */
+  glowing?: boolean;
 }) {
   const fx = (frame: Frame): StyleMap => {
     const h = height(frame.tau);
-    return { "clip-path": `inset(${px(2400 - h)} 0 0 0)` };
+    const glow = glowing ? 0.35 + 0.2 * Math.sin(ambientTime(frame) * 1.6) : 0;
+    return {
+      "clip-path": `inset(${px(2400 - h)} -40px 0 -40px)`,
+      filter: glow > 0 ? `drop-shadow(0 0 18px rgb(217 119 87 / ${glow.toFixed(3)}))` : "none",
+    };
   };
   return (
     <>
@@ -265,67 +269,58 @@ function Towers() {
         }}
       />
       <Tower x={TOWER_X[0]} height={cursorTower} label={cursorLabel} tone="var(--muted)" />
-      <Tower x={TOWER_X[1]} height={(tau) => ccTower(tau)} label={CC_LABEL} tone="var(--clay)" />
+      <Tower
+        x={TOWER_X[1]}
+        height={(tau) => ccTower(tau)}
+        label={CC_LABEL}
+        tone="var(--clay)"
+        glowing
+      />
     </>
   );
 }
 
 function Plate() {
-  const exitFold = (frame: Frame): StyleMap => {
-    const u = prog(frame.tau, D.exit, D.exit + 0.3, inOutCubic);
+  // Rises in behind the receding home shot, drifts up and fades at the exit
+  const fx = (frame: Frame): StyleMap => {
+    const v = prog(frame.tau, D.enter.start + 0.25, D.enter.end + 0.15, inOutCubic);
+    const u = prog(frame.tau, D.exit, D.exit + 0.4, inOutCubic);
     return {
-      transform: `scaleY(${(1 - u).toFixed(4)})`,
-      display: frame.tau >= D.dive.start - 0.05 && u < 1 ? "block" : "none",
+      transform: `translate3d(0, ${px(70 * (1 - v) - 48 * u)}, 0)`,
+      opacity: (v * (1 - u)).toFixed(3),
+      display: frame.tau >= D.enter.start && u < 1 ? "block" : "none",
     };
   };
   return (
-    <Fx fx={exitFold} style={{ inset: 0, transformOrigin: "0 500px", display: "none" }}>
-      <GlyphDive
-        {...DIVE}
-        plate={
-          <>
-            <CssBed tone="dark" />
-            <TipTitle text={cache.headline ?? ""} settleBy={D.title} exit={D.board.foldStart} />
-            <Fx
-              fx={(frame) => ({ transform: `scaleY(${(1 - counterFold(frame.tau)).toFixed(4)})` })}
-              style={{ inset: 0, transformOrigin: `0 ${COUNTER.top + COUNTER.size * 0.75}px` }}
-            >
-              <FlapCounter />
-            </Fx>
-            <Board />
-            <Towers />
-            <div style={{ position: "absolute", left: 200, top: 226 }}>
-              <RuleRise
-                text={"Up to ~18× more\nFable tokens in CC\nfor the same price"}
-                settleBy={D.headline}
-              />
-            </div>
-            <Typed
-              text={x18.footnotes[0] ?? ""}
-              start={D.foot.start}
-              cps={D.foot.cps}
-              className="type-label text-muted"
-              top={664}
-            />
-            <Stamp
-              text={x18.stamps[0] ?? ""}
-              settleBy={stampSettleFor(D.stampHit)}
-              rotate={-9}
-              style={{ left: 560, top: 780 }}
-            />
-          </>
-        }
-      />
+    <Fx fx={fx} style={{ inset: 0, display: "none" }}>
+      <TipTitle text={cache.headline ?? ""} settleBy={D.title} exit={D.board.foldStart} />
+      <Fx
+        fx={(frame) => {
+          const u = counterFold(frame.tau);
+          return { transform: `translate3d(0, ${px(40 * u)}, 0)`, opacity: (1 - u).toFixed(3) };
+        }}
+        style={{ inset: 0, transformOrigin: `0 ${COUNTER.top + COUNTER.size * 0.75}px` }}
+      >
+        <FlapCounter />
+      </Fx>
+      <Board />
+      <Towers />
+      <div style={{ position: "absolute", left: 200, top: 250 }}>
+        <RuleRise text={X18_TITLE} settleBy={D.headline} />
+      </div>
     </Fx>
   );
 }
 
+/** The home shot dollies back and dims away as the board rolls in over it. */
 const homeFx = (frame: Frame): StyleMap => {
-  if (frame.tau >= D.exit || frame.tau < D.dive.start) return { transform: "none", opacity: "1" };
-  const d = diveAt(frame.tau, DIVE);
+  const back =
+    prog(frame.tau, D.enter.start, D.enter.end, inOutCubic) *
+    (1 - prog(frame.tau, D.exit + 0.1, D.exit + 0.5, inOutCubic));
+  if (back <= 0) return { transform: "none", opacity: "1" };
   return {
-    transform: `translate3d(${px(d.tx)}, ${px(d.ty)}, 0) scale(${d.scale.toFixed(5)})`,
-    opacity: d.u >= 1 ? "0" : "1",
+    transform: `translate3d(0, ${px(60 * back)}, 0) scale(${(1 - 0.06 * back).toFixed(5)})`,
+    opacity: (1 - back).toFixed(3),
   };
 };
 

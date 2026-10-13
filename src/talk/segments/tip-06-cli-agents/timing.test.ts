@@ -11,16 +11,16 @@ import {
   tip6StackDy,
   TIP6,
   typedAt,
-  wrapCard,
   wrapCommand,
 } from "./timing";
 
 describe("tip 6 timing", () => {
-  it("should keep every card line within its width and lose no characters", () => {
+  it("should keep each pane command within two lines without splitting a flag from its value", () => {
     for (const { code } of scriptFor("t6-others").code) {
-      const lines = wrapCard(code, 27);
-      for (const line of lines) expect(Array.from(line).length).toBeLessThanOrEqual(27);
-      expect(lines.join("").replace(/ /g, "")).toBe(code.replace(/ /g, ""));
+      const lines = wrapCommand(code, 66);
+      expect(lines.length).toBeLessThanOrEqual(2);
+      expect(lines.some((line) => /(^|\s)-{1,2}[\w-]+$/.test(line.trim()))).toBe(false);
+      expect(lines.join(" ").replace(/\s+/g, " ")).toBe(code);
     }
   });
 
@@ -48,10 +48,17 @@ describe("tip 6 timing", () => {
     expect(documentedKiro("kiro-cli chat --v3 --model x")).toBe("kiro-cli chat --v3 --model x");
   });
 
-  it("should finish the exit whip inside the 1.4 s exit tail", () => {
+  it("should clear the completion line before the home shot takes over inside the exit tail", () => {
     const t = exitTimes(100);
-    expect(t.whipAt + t.whipDur).toBeLessThanOrEqual(101.4);
-    expect(t.pocketAt + t.pocketDur).toBeLessThanOrEqual(t.whipAt + t.whipDur);
+    expect(t.scrollAt + t.scrollDur).toBeLessThanOrEqual(t.restAt);
+    expect(t.pocketAt + t.pocketDur).toBeLessThanOrEqual(t.restAt);
+    expect(t.restAt).toBeLessThan(101.4);
+  });
+
+  it("should give every exit move at least 0.35 s", () => {
+    const t = exitTimes(100);
+    expect(t.foldEnd - 100).toBeGreaterThanOrEqual(0.35);
+    expect(t.scrollDur).toBeGreaterThanOrEqual(0.35);
   });
 
   it("should creep a baton no faster than the hold allows", () => {

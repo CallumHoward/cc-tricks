@@ -27,6 +27,33 @@ test.describe("talk stage", () => {
     expect(consoleErrors, "browser console errors").toEqual([]);
   });
 
+  test("never navigates when the stage is clicked", async ({ page }) => {
+    await page.goto("/");
+    const stage = page.locator("[data-stage]");
+    await expect(stage).toHaveAttribute("data-target", "0");
+
+    await stage.click({ position: { x: 200, y: 200 } });
+    await page.waitForTimeout(300);
+
+    await expect(stage).toHaveAttribute("data-target", "0");
+  });
+
+  test("opens the overview with M and jumps to the stop picked with Enter", async ({ page }) => {
+    await page.goto("/");
+    const stage = page.locator("[data-stage]");
+    await expect(stage).toHaveAttribute("data-target", "0");
+
+    await page.keyboard.press("m");
+    const overview = page.getByRole("dialog", { name: "Slide overview" });
+    await expect(overview).toBeVisible();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+
+    await expect(stage).toHaveAttribute("data-target", "7");
+    await expect(overview).toBeHidden();
+  });
+
   test("freezes a still frame from the query and flags readiness", async ({ page }) => {
     await page.goto("/?t=1&w=0");
 

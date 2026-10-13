@@ -92,7 +92,7 @@ export function rowCol(i: number): { row: number; col: number } {
 // ── views ────────────────────────────────────────────────────────────────────────────────────
 
 /** Road centre in the switch shot; the camera pivots on it so the road clears the copy. */
-const ROAD_X = 1450;
+export const ROAD_X = 1450;
 
 type ViewKey = { at: number; v: View };
 const VIEWS: readonly ViewKey[] = [
@@ -130,6 +130,20 @@ export function viewAt(tau: number): View {
     }
   }
   return (VIEWS.at(-1) as ViewKey).v;
+}
+
+/**
+ * Perpetual sway on ambient time (`frame.rho`), so stops read as slow motion rather than a freeze.
+ * Faded out at both ends so the home shots stay exact.
+ */
+export function ambientView(view: View, tau: number, rho: number): View {
+  const env = smoothstep(prog(tau, 72.9, 74.2)) * (1 - smoothstep(prog(tau, 131.9, 132.5)));
+  if (env <= 0) return view;
+  return {
+    ...view,
+    ax: view.ax + env * 0.02 * Math.sin(rho * 0.31 + 1.3),
+    ay: view.ay + env * 0.05 * Math.sin(rho * 0.42),
+  };
 }
 
 const D = pxCameraDistance(1080, CAMERA_FOV);
@@ -315,58 +329,25 @@ function kvBlock(i: number, tau: number): Block {
 
 // ── t2-price ─────────────────────────────────────────────────────────────────────────────────
 
-export const PRICE_VALUES = [0.4, 0.5, 0.8, 0.02] as const;
-export const PRICE_COUNTS = [15, 19, 31, 1] as const;
-export const PRICE_X = [1200, 1370, 1540, 1710] as const;
-export const PRICE_BASE = 880;
-export const COIN = 13.2;
+/** Screen px of the pricing card's caching columns at rest (the blocks pour into them). */
+const ABSORB = Object.freeze({ x: 1222, y: 560 });
 
-function priceSlot(i: number): { column: number; index: number } {
-  let start = 0;
-  for (let c = 0; c < PRICE_COUNTS.length; c++) {
-    const n = PRICE_COUNTS[c] ?? 0;
-    if (i < start + n) return { column: c, index: i - start };
-    start += n;
-  }
-  return { column: 3, index: 0 };
-}
-
-/** The hit column sags under the bot through the hold (≤ 1 px per τ-s). */
-export function hitSag(tau: number): number {
-  return 3 * smoothstep(prog(tau, 99.6, 100.4)) + 0.8 * clamp(tau - 100.5, 0, 3);
-}
-
-function priceBlock(i: number, tau: number): Block {
-  const { column, index } = priceSlot(i);
-  const grow = outCubic(
-    prog(
-      tau,
-      T.columns - 0.3 + column * 0.12 + index * 0.012,
-      T.columns + 0.4 + column * 0.12 + index * 0.012,
-    ),
-  );
-  const y = PRICE_BASE - COIN * (index + 0.5) * grow + (column === 3 ? hitSag(tau) : 0);
-  const tone = column === 3 ? COLORS.cached : column === 0 ? COLORS.idle : COLORS.paid;
+/** The K/V blocks pour into the pricing screenshot's caching columns and vanish behind it. */
+function absorbBlock(i: number): Block {
+  const col = i % KV_COLS;
+  const layer = Math.floor(i / KV_COLS);
   return {
-    x: PRICE_X[column] ?? 0,
-    y,
-    z: 0,
-    w: 132,
-    h: COIN - 2.4,
-    d: 70,
-    rx: 0,
-    rz: 0,
-    s: 1,
-    rgb: column === 0 ? COLORS.base : tone,
+    x: ABSORB.x + (col - 5) * 26,
+    y: ABSORB.y + (layer - 2.5) * 26,
+    z: -40,
+    w: 30,
+    h: 30,
+    d: 30,
+    rx: 0.6,
+    rz: 0.3,
+    s: 0,
+    rgb: COLORS.cached,
   };
-}
-
-/** After the iris the columns sink into the floor while their tops fly up into the ring row. */
-function priceSink(i: number, tau: number): Block {
-  const b = priceBlock(i, tau);
-  const u = inOutCubic(prog(tau, T.rings, T.ringsLand - 0.1));
-  if (u <= 0) return b;
-  return { ...b, y: lerp(b.y, PRICE_BASE, u), h: b.h * (1 - u), s: u >= 1 ? 0 : 1 };
 }
 
 // ── t2-idle ──────────────────────────────────────────────────────────────────────────────────
@@ -435,7 +416,7 @@ export function appendSlide(turn: 0 | 1 | 2, tau: number): number {
   return 520 * (1 - u) + 12 * u * (1 - prog(tau, at + 0.9, 132.5));
 }
 
-function roadRowY(rowFromNear: number): number {
+export function roadRowY(rowFromNear: number): number {
   return ROAD_NEAR - rowFromNear * ROAD_ROW;
 }
 
@@ -530,27 +511,26 @@ export function blockAt(i: number, tau: number): Block {
   if (i >= N_TOKENS) {
     if (tau < T.fork || tau >= T.foldEnd) return hidden();
     const g = ghostBlock(i - N_TOKENS, tau);
-    return { ...g, s: g.s * (1 - foldAt(tau)) };
+    return { ...g, s: g.s * (1 - foldAt(tau, i)) };
   }
   if (tau < T.dive) return barBlock(i);
   if (tau < T.kvMorph) return statelessBlock(i, tau);
   if (tau < T.kvMorph + 1.5)
     return blend(i, tau, statelessBlock, T.kvMorph, kvBlock, T.kvMorph + 1.5);
   if (tau < T.plan) return kvBlock(i, tau);
-  if (tau < T.plan + 1.2) return blend(i, tau, kvBlock, T.plan, priceBlock, T.plan + 1.2, 0.004);
-  if (tau < T.cut) return priceBlock(i, tau);
-  if (tau < T.ringsLand) return priceSink(i, tau);
+  if (tau < T.plan + 1.2) return blend(i, tau, kvBlock, T.plan, absorbBlock, T.plan + 1.2, 0.004);
   if (tau < T.crack) return hidden();
   if (tau < 123.6) return idleBlock(i, tau);
   if (tau < 124.4) return blend(i, tau, idleBlock, 123.6, switchBlock, 124.4, 0.004);
   if (tau < T.fold) return switchBlock(i, tau);
   const b = switchBlock(i, T.fold);
-  return { ...b, s: 1 - foldAt(tau) };
+  return { ...b, z: b.z - 60 * foldAt(tau, i), s: 1 - foldAt(tau, i) };
 }
 
-/** The exit squash every plate shares (0 before the fold, 1 folded). */
-function foldAt(tau: number): number {
-  return inOutCubic(prog(tau, T.fold, T.foldEnd));
+/** The exit: blocks sink and shrink one after another from the far end (0 before, 1 gone). */
+function foldAt(tau: number, i = 0): number {
+  const at = T.fold + (N_BLOCKS - 1 - i) * 0.002;
+  return inOutCubic(prog(tau, at, at + 0.3));
 }
 
 // ── props ────────────────────────────────────────────────────────────────────────────────────
@@ -586,7 +566,7 @@ export function propsAt(tau: number): Props {
   const reply =
     outExpo(prog(tau, T.reply, T.reply + 0.6)) * (1 - inOutCubic(prog(tau, 77.0, 77.4)));
   const scan = tau >= T.scan - 0.1 && tau < T.kvMorph ? scanX(tau) : null;
-  const skip = outCubic(prog(tau, T.fork - 0.2, T.fork + 0.3)) * (1 - foldAt(tau));
+  const skip = outCubic(prog(tau, T.fork - 0.2, T.fork + 0.3)) * (1 - foldAt(tau, N_BLOCKS - 1));
   const p = tau >= T.crack && tau < 123.6 ? pulseX(tau) : null;
   return { monolith, door, drawer, reply, scan, skip, pulse: p };
 }

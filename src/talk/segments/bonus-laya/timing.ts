@@ -20,7 +20,7 @@ export const TB = Object.freeze({
 export const TB_TOKENS = keys([TB.spinnerAt, 96_300], [TB.browser.holdEnd, 103_800]);
 
 /** Left (System 2) and right (System 1) spinner rows after the split. */
-export const LEFT: Pt = { x: 160, y: 520 };
+export const LEFT: Pt = { x: 200, y: 520 };
 export const RIGHT: Pt = { x: 1180, y: 520 };
 
 /** Token chips the slow spinner has written by τ: brisk in the lead-in, one per 0.4 τ-s in the hold. */

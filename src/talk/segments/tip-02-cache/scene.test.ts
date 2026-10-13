@@ -4,10 +4,9 @@ import { botFeet, SPOTS } from "./bot";
 import {
   appendSlide,
   blockAt,
-  hitSag,
+  ambientView,
   N_BLOCKS,
   PREFIX_COLS,
-  PRICE_COUNTS,
   project,
   rowCol,
   scanX,
@@ -23,10 +22,6 @@ describe("tip 2 scene", () => {
     expect(rowCol(0)).toEqual({ row: 0, col: 0 });
     expect(rowCol(12)).toEqual({ row: 1, col: 0 });
     expect(rowCol(65)).toEqual({ row: 3, col: 20 });
-  });
-
-  it("should spend every token block on exactly one price column", () => {
-    expect(PRICE_COUNTS.reduce((a, b) => a + b, 0)).toBe(66);
   });
 
   it("should project the unrotated view onto stage pixels unchanged", () => {
@@ -58,8 +53,19 @@ describe("tip 2 scene", () => {
     expect(suffixFront(KV.at + KV.holdSpan)).toBeLessThan(6);
   });
 
-  it("should let the hit column sag at most one px per story second in the hold", () => {
-    expect(hitSag(PRICE.at + 2) - hitSag(PRICE.at)).toBeLessThanOrEqual(2);
+  it("should hide every token block while the pricing card is up", () => {
+    for (let i = 0; i < N_BLOCKS; i++) expect(blockAt(i, PRICE.at).s).toBe(0);
+  });
+
+  it("should keep the ambient sway off at both home shots", () => {
+    const home = viewAt(WINDOW.start);
+    expect(ambientView(home, WINDOW.start, 3.7)).toEqual(home);
+    expect(ambientView(viewAt(T.home), T.home, 3.7)).toEqual(viewAt(T.home));
+  });
+
+  it("should sway the camera on ambient time inside a stop", () => {
+    const view = viewAt(KV.at);
+    expect(ambientView(view, KV.at, 10).ay).not.toBeCloseTo(ambientView(view, KV.at, 14).ay, 3);
   });
 
   it("should leave turn nine twelve px to slide at the switch stop", () => {

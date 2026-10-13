@@ -4,7 +4,7 @@ import { ColdOpen } from "./cold-open";
 import { Win } from "./lib";
 import { T } from "./tracks";
 
-/** Title & spoiler: the million-token cold open, the ✳ sun over the road, the bone spoiler. */
+/** Title & spoiler: the million-token cold open, the ✳ sun over the road, the spoiler bar. */
 export default function TitleSegment() {
   return (
     <>

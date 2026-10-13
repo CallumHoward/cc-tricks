@@ -2,41 +2,38 @@ import "./afterword.css";
 import type { ReactNode } from "react";
 
 import { sampleKeys } from "#/engine/motion/track";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
-import { WeeklyBars } from "#/talk/kit/data/weekly-bars";
-import { RuleRise, World } from "#/talk/kit/motion";
-import { GLYPH_PATHS, HOME, punch, ScrollbackWhip, SpinnerLine } from "#/talk/kit/tui";
+import { World } from "#/talk/kit/motion";
+import { HOME, SpinnerLine } from "#/talk/kit/tui";
 import { setStyle, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
-import { drawMascot } from "#/talk/mascot/draw";
-import { MascotSvg } from "#/talk/mascot/mascot";
-import { restPose } from "#/talk/mascot/pose";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
 import { scriptFor } from "#/talk/script";
 import { HomeRest } from "#/talk/segments/shared/home";
 
 import {
   AFT,
-  BARS,
   BOT_ACTS,
-  BOT_WIDTH,
+  BOT_SCALE,
+  BOT_STAND,
   BOT_X,
-  botStretch,
-  captionWords,
+  CARD,
+  CARD_HEIGHT,
+  CARD_SCALE,
+  CARD_TILT,
+  columnScale,
+  columnY,
+  EMBER_COUNT,
+  emberAt,
+  FABLE,
+  glowReveal,
+  letterAt,
   limitsCamera,
-  POSTER,
-  POSTER_ROTATE,
-  posterCurl,
-  posterLift,
-  WEEKLY,
-  wordLines,
+  SHOT,
 } from "./tracks";
 
 const limits = scriptFor("aft-limits");
-const wanted = scriptFor("aft-wanted");
-const CAPTION = (limits.lines[0] ?? "").split(" ");
-const WANTED_H = wordLines(wanted.headline ?? "", [4, 3]);
-const WANTED_L1 = wordLines(wanted.lines[0] ?? "", [6]);
-const SILHOUETTE = drawMascot(restPose(), 0, { boil: 0, silhouette: "#141413" });
+const TITLE = Array.from(limits.kicker ?? "Afterword");
 const ALWAYS = { from: 0, to: 1e9 };
 
 function Screen({ y, children }: { y: number; children: ReactNode }) {
@@ -47,165 +44,188 @@ function Screen({ y, children }: { y: number; children: ReactNode }) {
   );
 }
 
-/** The home shot with no `❯` this time: the spinner simply reads `Ebbing…`. */
+/** The home shot with no `❯` this time: the spinner simply reads `Ebbing…`, gone by the return. */
 function Terminal() {
+  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
+    setStyle(root, "display", frame.tau < AFT.craneIn + AFT.craneDur ? "block" : "none");
+  });
   return (
     <>
       <HomeRest pile={10} {...ALWAYS} />
-      <SpinnerLine
-        className="type-label"
+      <div ref={ref}>
+        <SpinnerLine
+          className="type-label"
+          style={{
+            position: "absolute",
+            left: HOME.textX,
+            top: HOME.spinnerY,
+            transform: "translateY(-50%)",
+          }}
+          verb="Ebbing"
+          at={AFT.spinnerAt}
+          tokens={2900}
+        />
+      </div>
+    </>
+  );
+}
+
+/** "Afterword", letter by letter: each rises through a mask while the tracking closes up. */
+function Title() {
+  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
+    const letters = root.children;
+    for (let i = 0; i < letters.length; i++) {
+      const { lift, spread } = letterAt(frame.tau, i);
+      setStyle(
+        letters[i],
+        "transform",
+        `translate3d(${(i * spread).toFixed(2)}px, ${(lift * 110).toFixed(2)}%, 0)`,
+      );
+    }
+  });
+  return (
+    <div ref={ref} className="aft-title type-headline" aria-label={TITLE.join("")}>
+      {TITLE.map((ch, i) => (
+        // oxlint-disable-next-line react/no-array-index-key -- letters of a fixed word
+        <span key={i} aria-hidden>
+          {ch}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** The Fable row lights up: a glow outline sweeps on and the rest of the card dims. */
+function FableGlow() {
+  const row = FABLE.row;
+  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
+    const u = glowReveal(frame.tau);
+    setStyle(root, "visibility", u > 0 ? "visible" : "hidden");
+    setStyle(root, "clip-path", `inset(-40px ${((1 - u) * 100).toFixed(2)}% -40px -40px)`);
+    const breathe = 0.5 + 0.5 * Math.sin(ambientTime(frame) * 1.6);
+    setStyle(root, "--aft-glow", (0.55 + 0.45 * breathe).toFixed(3));
+    setStyle(root.parentElement?.querySelector(".aft-dim"), "opacity", (u * 0.55).toFixed(3));
+  });
+  return (
+    <>
+      <div className="aft-dim" style={{ opacity: 0, clipPath: dimHole(row) }} aria-hidden />
+      <div
+        ref={ref}
+        className="aft-glow"
         style={{
-          position: "absolute",
-          left: HOME.textX,
-          top: HOME.spinnerY,
-          transform: "translateY(-50%)",
+          left: row.x * CARD_SCALE,
+          top: row.y * CARD_SCALE,
+          width: row.w * CARD_SCALE,
+          height: row.h * CARD_SCALE,
+          visibility: "hidden",
         }}
-        verb="Ebbing"
-        at={AFT.spinnerAt}
-        tokens={2900}
+        aria-hidden
       />
     </>
   );
 }
 
-function Caption() {
-  const ref = useFrameRef<HTMLParagraphElement>((root: HTMLParagraphElement, frame: Frame) => {
-    // The poster replaces the caption outright: no fragments peeking out round its edges
-    const n = frame.tau < AFT.cut ? captionWords(frame.tau, CAPTION.length) : 0;
-    const words = root.children;
-    for (let i = 0; i < words.length; i++)
-      setStyle(words[i], "visibility", i < n ? "visible" : "hidden");
+/** Everything on the card except the Fable row (an evenodd hole). */
+function dimHole(row: { x: number; y: number; w: number; h: number }): string {
+  const [x0, y0] = [row.x * CARD_SCALE, row.y * CARD_SCALE];
+  const [x1, y1] = [x0 + row.w * CARD_SCALE, y0 + row.h * CARD_SCALE];
+  return `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x0}px ${y0}px, ${x0}px ${y1}px, ${x1}px ${y1}px, ${x1}px ${y0}px, ${x0}px ${y0}px)`;
+}
+
+/** The real weekly-limits screenshot on a floating card that arrives tipped back and lies flat. */
+function LimitsCard() {
+  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
+    const tilt = sampleKeys(CARD_TILT, frame.tau);
+    setStyle(root, "transform", `rotateX(${tilt.toFixed(3)}deg)`);
   });
   return (
-    <p
-      ref={ref}
-      className="fin-caption fin-abs type-body"
-      style={{ left: BARS.left, top: 720, width: 1240 }}
+    <div
+      className="aft-persp"
+      style={{ left: CARD.left, top: CARD.top, width: CARD.width, height: CARD_HEIGHT }}
     >
-      {CAPTION.map((word, i) => (
-        // oxlint-disable-next-line react/no-array-index-key -- words of a fixed sentence
-        <span key={i}>{word}</span>
-      ))}
-    </p>
+      <div ref={ref} className="aft-card">
+        <img
+          src={SHOT.src}
+          width={CARD.width}
+          height={CARD_HEIGHT}
+          alt="Weekly limits: All models 88% used, Fable 95% used, both reset in 6 min"
+          draggable={false}
+        />
+        <FableGlow />
+      </div>
+    </div>
   );
 }
 
-function SqueezedBot() {
+/** Point lights drifting up off the 95% fill end on ambient time: still rising at the stop. */
+function Embers() {
   const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
+    const a = ambientTime(frame);
+    for (let i = 0; i < root.children.length; i++) {
+      const e = emberAt(i, a, frame.tau);
+      const el = root.children[i];
+      setStyle(
+        el,
+        "transform",
+        `translate3d(${e.x.toFixed(2)}px, ${e.y.toFixed(2)}px, 0) scale(${e.size.toFixed(3)})`,
+      );
+      setStyle(el, "opacity", e.alpha.toFixed(3));
+    }
+  });
+  return (
+    <div ref={ref} aria-hidden>
+      {Array.from({ length: EMBER_COUNT }, (_, i) => (
+        <div key={i} className="aft-ember" style={{ opacity: 0 }} />
+      ))}
+    </div>
+  );
+}
+
+function BarBot() {
+  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
+    const shown = frame.tau >= AFT.walkFrom - 0.25;
+    setStyle(root, "visibility", shown ? "visible" : "hidden");
     setStyle(root, "transform", `translate3d(${sampleKeys(BOT_X, frame.tau).toFixed(2)}px, 0, 0)`);
-    const width = sampleKeys(BOT_WIDTH, frame.tau);
-    setStyle(
-      root.firstElementChild,
-      "transform",
-      `scale(${width.toFixed(4)}, ${botStretch(width).toFixed(4)})`,
-    );
   });
   return (
     <div
       ref={ref}
-      className="fin-abs"
-      style={{ left: 0, top: BARS.trackBottom - 180, width: 240, height: 200 }}
+      className="aft-abs"
+      style={{ left: 0, top: BOT_STAND.ground - 180, width: 240, height: 200 }}
     >
-      <div className="fin-bot" style={{ width: 240, height: 200 }}>
+      <div className="aft-bot" style={{ transform: `scale(${BOT_SCALE})` }}>
         <StageMascot acts={BOT_ACTS} title="the bot" />
       </div>
     </div>
   );
 }
 
-function Pin() {
-  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
-    const u = Math.min(1, Math.max(0, (frame.tau - AFT.pinAt) / (AFT.pinLand - AFT.pinAt)));
-    const scale = frame.tau < AFT.pinAt ? 0 : 1 + 1.6 * (1 - u) ** 3;
-    const glint = Math.sin(frame.w * 1.3);
-    setStyle(root, "transform", `scale(${scale.toFixed(4)}) rotate(${glint.toFixed(2)}deg)`);
-  });
-  return (
-    <div ref={ref} className="fin-pin fin-abs" aria-hidden>
-      <svg viewBox="0 0 100 100">
-        <path d={GLYPH_PATHS["✳"]} fill="currentColor" />
-      </svg>
-    </div>
-  );
-}
-
-/** SIGHTINGS WANTED: a hard cut, pinned with a ✳, its bottom corner still curling down. */
-function Poster() {
-  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
-    const { tau } = frame;
-    const shown = tau >= AFT.cut && tau < AFT.yank + AFT.yankDur;
-    setStyle(root, "visibility", shown ? "visible" : "hidden");
-    if (!shown) return;
-    const slam = 1 + 0.05 * punch(tau, frame.v, AFT.cut, 0.3);
-    const rotate = sampleKeys(POSTER_ROTATE, tau);
-    setStyle(
-      root,
-      "transform",
-      `translate3d(0, ${posterLift(tau).toFixed(2)}px, 0) rotate(${rotate.toFixed(3)}deg) scale(${slam.toFixed(4)})`,
-    );
-    const c = posterCurl(tau).toFixed(1);
-    const sheet = root.firstElementChild;
-    setStyle(
-      sheet,
-      "clip-path",
-      `polygon(-40px -60px, calc(100% + 40px) -60px, calc(100% + 40px) calc(100% - ${c}px), calc(100% - ${c}px) 100%, -40px 100%)`,
-    );
-    const fold = root.querySelector<HTMLElement>(".fin-fold");
-    setStyle(fold, "width", `${c}px`);
-    setStyle(fold, "height", `${c}px`);
-  });
-  return (
-    <div
-      ref={ref}
-      className="fin-poster-hang fin-abs"
-      style={{ ...POSTER, visibility: "hidden" }}
-      data-testid="sightings-poster"
-    >
-      <div className="fin-poster">
-        <div className="fin-poster-head type-label">{wanted.kicker}</div>
-        <div className="fin-poster-rules" />
-        <div className="fin-poster-figure">
-          <MascotSvg drawing={SILHOUETTE} title="the bot, last seen" />
-        </div>
-        <div className="fin-poster-h">
-          <RuleRise text={WANTED_H} settleBy={AFT.posterTextBy - 0.3} rule={false} />
-        </div>
-        <RuleRise
-          className="type-body fin-poster-l1"
-          text={WANTED_L1}
-          settleBy={AFT.posterTextBy}
-          rule={false}
-        />
-        <div className="fin-fold fin-abs" />
-      </div>
-      <Pin />
-    </div>
-  );
-}
-
-/** Aft-limits → aft-wanted: the weekly bars at 88% / 95%, the bot as a sliver, then the poster. */
+/** Aft-limits → aft-wanted: the real screenshot, the Fable row lit, then a slow push into it. */
 function LimitsPlate() {
   return (
-    <>
-      <World camera={limitsCamera} smear={false}>
-        <div className="fin-abs fin-kicker" style={{ left: BARS.left, top: 236 }}>
-          <RuleRise
-            text={limits.kicker ?? "Afterword"}
-            settleBy={AFT.kickerBy}
-            className="type-label"
-          />
-        </div>
-        <WeeklyBars
-          className="fin-weekly"
-          bars={WEEKLY}
-          width={BARS.width}
-          style={{ position: "absolute", left: BARS.left, top: BARS.top }}
-        />
-        <Caption />
-        <SqueezedBot />
-      </World>
-      <Poster />
-    </>
+    <World camera={limitsCamera} smear={false}>
+      <Title />
+      <LimitsCard />
+      <Embers />
+      <BarBot />
+    </World>
+  );
+}
+
+/** Cranes down from the terminal to the card and back up again: eased, no blur. */
+function Column({ children }: { children: ReactNode }) {
+  const ref = useFrameRef<HTMLDivElement>((root: HTMLDivElement, frame: Frame) => {
+    setStyle(root, "transform", `scale(${columnScale(frame.tau).toFixed(5)})`);
+    setStyle(
+      root.firstElementChild,
+      "transform",
+      `translate3d(0, ${columnY(frame.tau).toFixed(2)}px, 0)`,
+    );
+  });
+  return (
+    <div ref={ref} className="aft-column">
+      <div style={{ position: "absolute", inset: 0 }}>{children}</div>
+    </div>
   );
 }
 
@@ -224,17 +244,12 @@ function Window({ children }: { children: ReactNode }) {
 export default function AfterwordSegment() {
   return (
     <Window>
-      <ScrollbackWhip at={AFT.whipIn} dur={AFT.whipDur} distance={-1080}>
+      <Column>
         <Terminal />
         <Screen y={1080}>
-          <ScrollbackWhip at={AFT.whipOut} dur={AFT.whipOutDur} distance={1080}>
-            <LimitsPlate />
-            <Screen y={-1080}>
-              <HomeRest pile={10} {...ALWAYS} />
-            </Screen>
-          </ScrollbackWhip>
+          <LimitsPlate />
         </Screen>
-      </ScrollbackWhip>
+      </Column>
     </Window>
   );
 }

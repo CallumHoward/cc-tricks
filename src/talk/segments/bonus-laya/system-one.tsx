@@ -1,31 +1,32 @@
 import { useRef } from "react";
 
-import { outCubic, prog } from "#/engine/motion/ease";
+import { inOutCubic, outCubic, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
 import { useFrame, useTrack } from "#/engine/stage/react";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
-import { RuleRise } from "#/talk/kit/motion";
+import { ExtLink } from "#/talk/kit/ext-link";
 import { put } from "#/talk/kit/motion/dom";
 import { springFrom } from "#/talk/kit/motion/schedule";
 import { StaticGlyph } from "#/talk/kit/tui";
-import { scriptFor } from "#/talk/script";
-import { Layer, Live, Typed, Wiped } from "#/talk/segments/tip-03-effort/bracket";
+import { LINKS, scriptFor } from "#/talk/script";
+import { TipTitle } from "#/talk/segments/shared/tip-title";
+import { Layer, Live, Typed } from "#/talk/segments/tip-03-effort/bracket";
 import { SPIN_AT } from "#/talk/segments/tip-03-effort/timing";
 import { inCubic, type Pt } from "#/talk/segments/tip-03-effort/tracks";
 
+import { answerBar, LAND } from "./laya-plate";
 import { chipsWritten, chipWidth, flickerBar, LEFT, RIGHT, TB } from "./timing";
 
 const script = scriptFor("b-system-one");
 const [FAST = "", SLOW = ""] = script.labels;
 const [BOOK = "", AUTHOR = "", YEAR = ""] = script.ui;
+const COVER = Object.freeze({ src: "/talk/refs/thinking-fast-and-slow.webp", w: 267, h: 400 });
+/** Cover box on stage: centred between the two spinners, standing on the clay shelf at y = 858. */
+const COVER_AT = Object.freeze({ x: 960 - COVER.w / 2, y: 858 - COVER.h });
 const SETTLE = TB.one.at - 0.8;
 const EXIT = TB.one.holdEnd;
 const CHIPS = 24;
-
-/** Bars track geometry of the b-laya ProbBars (stage px), so the flicker bars land in them. */
-export const PROB = Object.freeze({ x: 300, y: 560, w: 1300, rowH: 36, gap: 34 });
-const TRACK_X = PROB.x + 520 + 28;
-const TRACK_W = PROB.w - 520 - 170 - 56;
 
 const splitFrom = (to: Pt) => (tau: number) => {
   const u = prog(tau, TB.split, TB.split + 0.6, outCubic);
@@ -76,18 +77,21 @@ function Chips() {
   );
 }
 
-/** Flicker bar `i` in the right column; drains into its ProbBars track as b-laya begins. */
-function flickerRect(i: number, tau: number, w: number) {
+/** Flicker bar `i` in the right column; flies into the Laya window's answer bar `i` as it lands. */
+export function flickerRect(i: number, tau: number, w: number) {
   const home = { x: RIGHT.x, y: RIGHT.y + 72 + i * 44, w: 520, h: 24 };
-  const goal = { x: TRACK_X, y: PROB.y + i * (PROB.rowH + PROB.gap) + 4, w: TRACK_W, h: 28 };
-  const u = prog(tau, EXIT, EXIT + 0.5, outCubic);
+  const bar = answerBar(i);
+  const goal = { x: bar.x, y: bar.y - 3, w: bar.w, h: 6 };
+  const u = prog(tau, EXIT, LAND, inOutCubic);
   const on = tau >= TB.split + 0.6;
-  const fill = on ? flickerBar(i, w) * (1 - u) + 0.02 * u : 0;
+  const fill = on ? flickerBar(i, w) * (1 - u) + u : 0;
   return {
     x: home.x + (goal.x - home.x) * u,
     y: home.y + (goal.y - home.y) * u,
     w: home.w + (goal.w - home.w) * u,
+    h: home.h + (goal.h - home.h) * u,
     fill,
+    opacity: 1 - prog(tau, LAND, LAND + 0.35),
   };
 }
 
@@ -100,6 +104,8 @@ function FlickerBars() {
       const el = kids[i] as HTMLElement;
       put(el, "transform", `translate3d(${r.x.toFixed(1)}px, ${r.y.toFixed(1)}px, 0)`);
       put(el, "width", `${r.w.toFixed(1)}px`);
+      put(el, "height", `${r.h.toFixed(1)}px`);
+      put(el, "opacity", r.opacity.toFixed(3));
       put(el.firstElementChild as HTMLElement, "transform", `scaleX(${r.fill.toFixed(3)})`);
     }
   });
@@ -114,28 +120,52 @@ function FlickerBars() {
   );
 }
 
+/** The real cover rises onto the clay shelf, turned slightly in 3D and turning on ambient time. */
 function Book() {
   const rule = useTrack((tau: number) => ({ scaleX: prog(tau, 251.15, 251.5, outCubic) }));
-  const rise = useTrack((tau: number) => ({ y: (1 - prog(tau, 251.3, 252.0, outCubic)) * 400 }));
+  const rise = useTrack((tau: number, frame: Frame) => {
+    const rho = ambientTime(frame);
+    return {
+      y: (1 - prog(tau, 251.3, 252.0, outCubic)) * 460,
+      "--ry": -10 + 4 * Math.sin(rho * 0.45),
+      "--rx": 3 * Math.sin(rho * 0.3 + 1),
+    };
+  });
   return (
     <>
       <div
         className="seg-abs"
-        style={{ left: 740, top: 470, width: 420, height: 390, overflow: "hidden" }}
+        style={{
+          left: COVER_AT.x - 60,
+          top: COVER_AT.y - 60,
+          width: COVER.w + 120,
+          height: COVER.h + 60,
+          overflow: "hidden",
+        }}
       >
-        <div ref={rise} className="b1-book">
-          <span className="type-body seg-text">{BOOK}</span>
-          <span className="type-label seg-soft">{AUTHOR}</span>
-          <span className="type-label seg-muted">{YEAR}</span>
+        <div ref={rise} className="seg-shot" style={{ position: "absolute", inset: 0 }}>
+          <div className="seg-shot__tilt">
+            <img
+              className="b1-cover"
+              src={COVER.src}
+              alt={`${BOOK}, ${AUTHOR}, ${YEAR}`}
+              width={COVER.w}
+              height={COVER.h}
+              decoding="sync"
+              loading="eager"
+              draggable={false}
+              style={{ left: 60, top: 60, width: COVER.w, height: COVER.h }}
+            />
+          </div>
         </div>
       </div>
       <div
         ref={rule}
         className="seg-abs"
         style={{
-          left: 730,
-          top: 858,
-          width: 460,
+          left: COVER_AT.x - 70,
+          top: COVER_AT.y + COVER.h,
+          width: COVER.w + 140,
           height: 4,
           background: "var(--clay)",
           transformOrigin: "50% 50%",
@@ -158,20 +188,14 @@ export function SystemOnePlate() {
   return (
     <>
       <Live from={TB.leave} to={EXIT + 0.5}>
-        <div
-          className="seg-abs"
-          style={{ left: 160, top: 196, scale: 0.7, transformOrigin: "0 0" }}
-        >
-          <RuleRise
+        <ExtLink href={LINKS.laya}>
+          <TipTitle
             text={"Bonus: Laya-ultrafast\nfor browser use"}
             settleBy={SETTLE - 0.2}
             exit={EXIT}
           />
-        </div>
+        </ExtLink>
         <Layer track={sink}>
-          <Wiped at={251.6} className="type-body seg-text seg-abs" style={{ left: 160, top: 404 }}>
-            {script.lines[0]}
-          </Wiped>
           <SpinnerRow at={LEFT} glyph="✽" verb="Ruminating" />
           <SpinnerRow at={RIGHT} glyph="·" verb="Pouncing" />
           <Chips />
@@ -192,7 +216,7 @@ export function SystemOnePlate() {
           <Book />
         </Layer>
       </Live>
-      <Live from={TB.split + 0.5} to={TB.laya.barsAt + 0.05}>
+      <Live from={TB.split + 0.5} to={LAND + 0.4}>
         <FlickerBars />
       </Live>
     </>

@@ -12,6 +12,7 @@ import {
   coldPunch,
   magnitudeCrossings,
   roadFraming,
+  spoilerPush,
   totalTokensAt,
 } from "./tracks";
 
@@ -55,5 +56,12 @@ describe("title tracks", () => {
     expect(roadFraming(T.diveStart)).toBe(0);
     expect(roadFraming(T.titleAt)).toBe(1);
     expect(roadFraming(T.spoilerAt)).toBe(0);
+  });
+
+  it("should push in on the spoiler bar and return to the home framing for the exit", () => {
+    const home = { x: 0, y: 0, s: 1 };
+    expect(spoilerPush(T.craneEnd - 0.2, 20)).toEqual(home);
+    expect(spoilerPush(T.spoilerAt).s).toBeGreaterThan(1.3);
+    expect(spoilerPush(T.homeAt, 20)).toEqual(home);
   });
 });

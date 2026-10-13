@@ -1,6 +1,6 @@
-import { clamp, inOutCubic, outCubic, outExpo, prog } from "#/engine/motion/ease";
+import { inOutCubic, outCubic, outExpo, prog, type Ease } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
-import { sampleKeys, type Key } from "#/engine/motion/track";
+import type { Key } from "#/engine/motion/track";
 
 /** Absolute τ for tip 10 (window [231.4, 248.9); stops at 236 and 244.5). */
 export const T10 = Object.freeze({
@@ -20,20 +20,19 @@ export const T10 = Object.freeze({
   titleSettle: 234.4,
   diveAt: 233.05,
   diveDur: 0.6,
-  barsAt: 233.55,
-  rowAt: 233.85,
-  rowDur: 0.45,
-  resetsCopySettle: 234.7,
-  bankedAt: 234.3,
-  instantAt: 234.6,
-  instantLand: 235.15,
-  pileHopAt: 234.55,
+  /** The prompt box and context bar sink away as the window opens out of ⏎. */
+  chromeOutDur: 0.45,
+  /** Camera push from the whole window onto the Limit resets row. */
+  pushAt: 233.7,
+  pushDur: 1.2,
+  /** The highlight round the Full reset row draws on. */
+  highlightAt: 234.6,
+  highlightDur: 0.5,
+  pileHopAt: 234.3,
   pileHopDur: 0.5,
-  stampSettle: 235.15,
   botHopAt: 234.2,
-  pointAt: 234.95,
-  /** Bone wipe in: the resets plate swaps for the offers board at its midpoint. */
-  boneIn: Object.freeze({ start: 238.55, end: 239.35 }),
+  /** The resets plate dollies back and fades as the board's rails draw. */
+  resetsOut: Object.freeze({ start: 238.5, end: 239.05 }),
   ticketsAt: 239.1,
   ticketGap: 0.3,
   ticketRun: 0.55,
@@ -41,29 +40,31 @@ export const T10 = Object.freeze({
   notCcSettle: 241.9,
   closedSettle: 242.4,
   punchAt: 242.8,
-  tearAt: 242.6,
-  tearLand: 243.7,
   headSettle: 243.7,
   peekAt: 242.5,
   exit: Object.freeze({
-    boneOut: Object.freeze({ start: 247.5, end: 248.1 }),
-    lineAt: 247.72,
-    punchAt: 247.98,
-    chipDur: 0.36,
-    whipAt: 248.38,
-    whipDur: 0.42,
+    /** The bot ducks back behind rail A before the tickets leave. */
+    duckAt: 247.2,
+    /** Tickets run off left along their rails, rails retract. */
+    ticketsOutAt: 247.5,
+    ticketOutGap: 0.04,
+    ticketOutRun: 0.38,
+    /** Home chrome cranes up into place as the board clears. */
+    homeIn: Object.freeze({ start: 247.7, end: 248.15 }),
+    lineAt: 247.95,
+    punchAt: 248.15,
+    chipDur: 0.3,
+    riseAt: 248.5,
+    riseDur: 0.35,
   }),
 });
 
-/** Midpoint of a wipe: the frame where the bed and plates swap under full cover. */
-export const swapAt = (w: { start: number; end: number }): number => (w.start + w.end) / 2;
-
-/** Transcript scroll (px, up) as the Settings panel opens under the echo. */
+/** Transcript scroll (px, up) as the Settings window opens under the echo. */
 export function resetsScrollY(tau: number): number {
   return -200 * prog(tau, T10.scrollAt, T10.scrollAt + T10.scrollDur, outExpo);
 }
 
-/** ⏎ → panel morph progress (0 = the ⏎ glyph's box, 1 = the full panel). */
+/** ⏎ → window morph progress (0 = the ⏎ glyph's box, 1 = the whole window open). */
 export function diveAt(tau: number): number {
   return prog(tau, T10.diveAt, T10.diveAt + T10.diveDur, inOutCubic);
 }
@@ -72,7 +73,7 @@ export type Rect = { x: number; y: number; w: number; h: number };
 
 const mix = (a: number, b: number, u: number) => a + (b - a) * u;
 
-/** Rect between `from` and `to`; corners round in from the glyph's 50% to the panel's radius. */
+/** Rect between `from` and `to`. */
 export function mixRect(from: Rect, to: Rect, u: number): Rect {
   return {
     x: mix(from.x, to.x, u),
@@ -82,29 +83,7 @@ export function mixRect(from: Rect, to: Rect, u: number): Rect {
   };
 }
 
-/** Banked ticket: slides out of the panel and LANDs (with overshoot) by 235.0. */
-const BANKED_KEYS: readonly Key[] = [
-  { at: T10.bankedAt, value: -620 },
-  { at: T10.bankedAt + 0.7, value: 0, ease: SPRINGS.LAND },
-];
-
-/** Instant ticket: LANDs 10 px short by 235.15 (settled before at − 0.8), then creeps home. */
-const INSTANT_KEYS: readonly Key[] = [
-  { at: T10.instantAt, value: -620 },
-  { at: T10.instantLand, value: -10, ease: SPRINGS.LAND },
-  { at: T10.resetsAt, value: -10 },
-  { at: T10.resetsHoldEnd, value: 0 },
-];
-
-export const bankedX = (tau: number): number => sampleKeys(BANKED_KEYS, tau);
-export const instantX = (tau: number): number => sampleKeys(INSTANT_KEYS, tau);
-
-/** Settings panel hold creep: drifts 8 px left across the resets hold. */
-export function panelDrift(tau: number): number {
-  return -8 * prog(tau, T10.resetsAt, T10.resetsHoldEnd);
-}
-
-/** The pile hops from home onto the banked ticket once it has landed (0 → 1). */
+/** The pile hops from home onto the window card's top edge (0 → 1). */
 export function pileHop(tau: number): number {
   return prog(tau, T10.pileHopAt, T10.pileHopAt + T10.pileHopDur, inOutCubic);
 }
@@ -113,7 +92,7 @@ export function pileHop(tau: number): number {
 export function ticketRunKeys(i: number): readonly Key[] {
   const start = T10.ticketsAt + i * T10.ticketGap;
   return [
-    { at: start, value: 1500 },
+    { at: start, value: 1900 },
     { at: start + T10.ticketRun, value: 0, ease: SPRINGS.LAND },
   ];
 }
@@ -124,19 +103,11 @@ export function railDrift(tau: number, rate: number): number {
   return -rate * Math.max(0, tau - from);
 }
 
-const TEAR_AT_LAND = 0.58;
-const TEAR_CREEP = 0.025;
-
-/** The cloud ticket's stub tear: fast to 58% by `tearLand`, 60% at the stop, then ≤ 2.5%/τ-s. */
-export function tearProgress(tau: number): number {
-  if (tau <= T10.tearAt) return 0;
-  if (tau <= T10.tearLand) return TEAR_AT_LAND * outCubic(prog(tau, T10.tearAt, T10.tearLand));
-  return clamp(TEAR_AT_LAND + TEAR_CREEP * (tau - T10.tearLand));
-}
-
-/** The bot peeks over rail A: rises from behind it (px below rest → 0). */
+/** The bot peeks over rail A: rises from behind it (px below rest → 0), then ducks back down. */
 export function peekY(tau: number): number {
-  return 150 * (1 - prog(tau, T10.peekAt, T10.peekAt + 0.55, outCubic));
+  const up = prog(tau, T10.peekAt, T10.peekAt + 0.55, outCubic);
+  const down = prog(tau, T10.exit.duckAt, T10.exit.duckAt + 0.3, inOutCubic);
+  return 150 * (1 - up + down);
 }
 
 /** Exit: the ✻ knocked out of the completion line arcs into the pile (0..1 along the flight). */
@@ -154,32 +125,126 @@ export function pileCount(tau: number): number {
   return chipFlight(tau) >= 1 ? 10 : 9;
 }
 
-export type TicketRow = { text: string; tone: "line" | "label" | "foot" };
-export type TicketCopy = { headline: string; rows: readonly TicketRow[]; stamp?: string };
+/** The resets plate's exit dolly (0 in place → 1 gone). */
+export function resetsOut(tau: number): number {
+  return prog(tau, T10.resetsOut.start, T10.resetsOut.end, inOutCubic);
+}
 
-/** One ticket per script card: header, every line, label and footnote in order, and its stamp. */
-export function ticketCopy(card: {
+/** Home chrome sinking out under the opening window (0 → 1). */
+export function chromeOut(tau: number): number {
+  return prog(tau, T10.diveAt, T10.diveAt + T10.chromeOutDur, inOutCubic);
+}
+
+/** Home chrome craning back up as the board clears (1 below → 0 home). */
+export function homeIn(tau: number): number {
+  return 1 - prog(tau, T10.exit.homeIn.start, T10.exit.homeIn.end, inOutCubic);
+}
+
+/** The completion line glides up and fades as the scrollback moves on (0 → 1). */
+export function punchedLineRise(tau: number): number {
+  return prog(tau, T10.exit.riseAt, T10.exit.riseAt + T10.exit.riseDur, inOutCubic);
+}
+
+const inCubic: Ease = (u) => u ** 3;
+
+/** Ticket i runs off left along its rail at the end of the board (px, ≤ 0). */
+export function ticketOutX(i: number, tau: number): number {
+  const from = T10.exit.ticketsOutAt + i * T10.exit.ticketOutGap;
+  const u = prog(tau, from, from + T10.exit.ticketOutRun, inCubic);
+  return u > 0 ? -2100 * u : 0;
+}
+
+/** Positions in [0, 1) of a value looping every `period` ambient seconds; wraps on rewind. */
+export function loop(rho: number, period: number): number {
+  return (((rho % period) + period) % period) / period;
+}
+
+// The real Settings › Usage screenshot ----------------------------------------------------------
+
+export const SHOT = Object.freeze({ src: "/talk/refs/usage-reset.webp", w: 1920, h: 1247 });
+
+/** The opaque app window inside the screenshot (its margins hold the baked macOS shadow). */
+const WINDOW_PX: Rect = { x: 56, y: 38, w: 1808, h: 1134 };
+
+/** The Full reset row (label, expiry and the Reset for free button), screenshot px. */
+export const ROW_PX: Rect = { x: 420, y: 826, w: 1358, h: 88 };
+
+/** The card the window is framed in at the stop: a letterbox under the title. */
+export const CARD: Rect = { x: 120, y: 350, w: 1680, h: 440 };
+
+/** The whole window fitted under the title, as it first opens out of ⏎. */
+const CARD_OPEN: Rect = { x: 360, y: 345, w: 1000, h: (1000 * WINDOW_PX.h) / WINDOW_PX.w };
+
+/** Screenshot scale at the stop: the row's type reads at ~28 px. */
+const PUSH_SCALE = 1.18;
+
+/** Screenshot point framed at the card's centre: the tooltip, the row and the 5-hour reset. */
+const FOCUS = { x: 1085, y: 880 };
+
+/** The screenshot region framed at the stop, around the Full reset row. */
+const VIEW_PUSHED: Rect = (() => {
+  const w = CARD.w / PUSH_SCALE;
+  const h = CARD.h / PUSH_SCALE;
+  return { x: FOCUS.x - w / 2, y: FOCUS.y - h / 2, w, h };
+})();
+
+export type ShotCam = {
+  /** The card's frame rect on screen. */
+  card: Rect;
+  /** Screenshot px → frame px: frame = card origin + t + s·px. */
+  s: number;
+  tx: number;
+  ty: number;
+  /** Corner radius of the card. */
+  radius: number;
+};
+
+/** The screenshot camera: grows out of the ⏎ glyph's box, then pushes in onto the reset row. */
+export function shotCam(tau: number, from: Rect): ShotCam {
+  const d = diveAt(tau);
+  const p = prog(tau, T10.pushAt, T10.pushAt + T10.pushDur, inOutCubic);
+  const card = p > 0 ? mixRect(CARD_OPEN, CARD, p) : mixRect(from, CARD_OPEN, d);
+  const view = mixRect(WINDOW_PX, VIEW_PUSHED, p);
+  const s = card.w / view.w;
+  return {
+    card,
+    s,
+    tx: card.w / 2 - (view.x + view.w / 2) * s,
+    ty: card.h / 2 - (view.y + view.h / 2) * s,
+    radius: 10 + 12 * d,
+  };
+}
+
+// The offers board ------------------------------------------------------------------------------
+
+type Card = {
   headline: string;
   lines: readonly string[];
   labels: readonly string[];
   footnotes: readonly string[];
   stamps: readonly string[];
-}): TicketCopy {
-  const rows = (texts: readonly string[], tone: TicketRow["tone"]) =>
-    texts.map((text) => ({ text, tone }));
-  return {
-    headline: card.headline,
-    rows: [
-      ...rows(card.lines, "line"),
-      ...rows(card.labels, "label"),
-      ...rows(card.footnotes, "foot"),
-    ],
-    stamp: card.stamps[0],
-  };
-}
+};
 
-/** Splits `Banked: saved in …` into its lead word and the rest, keeping the exact text. */
-export function splitLead(label: string): [string, string] {
-  const i = label.indexOf(":");
-  return i < 0 ? ["", label] : [label.slice(0, i + 1), label.slice(i + 1)];
+export type TicketCopy = { headline: string; rows: readonly string[]; stamp?: string };
+
+type Pick = readonly ["lines" | "labels" | "footnotes", number];
+
+/** Per card, the verbatim script rows kept on its ticket: the one fact the eye needs. */
+const KEEP: readonly (readonly Pick[])[] = [
+  [["labels", 0]],
+  [["lines", 0]],
+  [["lines", 0]],
+  [
+    ["lines", 0],
+    ["footnotes", 0],
+  ],
+];
+
+/** One ticket per script card: its header, at most two kept rows, and its stamp. */
+export function ticketCopy(card: Card, index: number): TicketCopy {
+  const rows = (KEEP[index] ?? [])
+    .map(([field, i]) => card[field][i])
+    .filter((row): row is string => row !== undefined)
+    .slice(0, 2);
+  return { headline: card.headline, rows, stamp: card.stamps[0] };
 }

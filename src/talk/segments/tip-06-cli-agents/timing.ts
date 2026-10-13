@@ -1,14 +1,18 @@
 import { clamp, inOutCubic, outCubic, prog } from "#/engine/motion/ease";
 
-/** Exit beats after a tip's last hold: fold → completion line → pocket → whip (1.4 τ-s in all). */
+/**
+ * Exit beats after a tip's last hold: fold → completion line → pocket → the completion line scrolls
+ * away → swap to the home shot (1.4 τ-s in all).
+ */
 export function exitTimes(at: number) {
   return {
-    foldEnd: at + 0.3,
-    completeAt: at + 0.15,
+    foldEnd: at + 0.4,
+    completeAt: at + 0.2,
     pocketAt: at + 0.3,
     pocketDur: 0.5,
-    whipAt: at + 0.8,
-    whipDur: 0.5,
+    scrollAt: at + 0.85,
+    scrollDur: 0.4,
+    restAt: at + 1.3,
   };
 }
 
@@ -34,30 +38,6 @@ export function wrapCommand(command: string, max: number): string[] {
     if (line && Array.from(candidate).length > max) {
       lines.push(line);
       line = `  ${group}`;
-    } else line = candidate;
-  }
-  if (line) lines.push(line);
-  return lines;
-}
-
-/**
- * Greedy wrap for a narrow card: words never glue, and a word longer than `max` breaks before its
- * last `[` (or hard at `max`).
- */
-export function wrapCard(command: string, max: number): string[] {
-  const words = command.split(" ").flatMap((word) => {
-    if (Array.from(word).length <= max) return [word];
-    const cut = word.lastIndexOf("[", max);
-    const at = cut > 0 ? cut : max;
-    return [word.slice(0, at), word.slice(at)];
-  });
-  const lines: string[] = [];
-  let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (line && Array.from(candidate).length > max) {
-      lines.push(line);
-      line = word;
     } else line = candidate;
   }
   if (line) lines.push(line);

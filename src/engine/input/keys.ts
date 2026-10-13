@@ -48,7 +48,8 @@ export function reduceKey(
     case "f":
       return { state: cleared, intent: { type: "fullscreen" } };
     case "m":
-      return { state: cleared, intent: { type: "mute" } };
+    case "o":
+      return { state: cleared, intent: { type: "overview" } };
     case "p":
       return { state: cleared, intent: { type: "presenter" } };
     default:

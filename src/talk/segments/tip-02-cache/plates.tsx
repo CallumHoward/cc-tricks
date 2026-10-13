@@ -1,18 +1,19 @@
 import type { ReactNode } from "react";
 
 import { inOutCubic, outCubic, outExpo, prog } from "#/engine/motion/ease";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
 import { RingTimer } from "#/talk/kit/data/ring-timer";
-import { ClayField, RuleRise } from "#/talk/kit/motion";
-import { AgentRow, ReadToolRow, SpinnerLine, StaticGlyph } from "#/talk/kit/tui";
+import { ExtLink } from "#/talk/kit/ext-link";
+import { RuleRise } from "#/talk/kit/motion";
+import { AgentRow, ReadToolRow, StaticGlyph } from "#/talk/kit/tui";
 import { setStyle, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
-import { scriptFor } from "#/talk/script";
+import { LINKS, scriptFor } from "#/talk/script";
 import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "#/talk/segments/shared/tip-title";
-import { PriceOfATurn } from "#/talk/widgets/price-of-a-turn";
 
 import { Anchor, During, Leave, Rise, Typed } from "./parts";
+import { CARD_LEFT, cardAt, CHROME, highlightAt, onCard, REGIONS, SHOT } from "./price-card";
 import {
-  COIN,
   IDLE_Y,
   KV_LAYER_PITCH,
   KV_PITCH,
@@ -22,11 +23,9 @@ import {
   MONOLITH,
   PITCH,
   PREFIX_COLS,
-  PRICE_BASE,
-  PRICE_COUNTS,
-  PRICE_VALUES,
-  PRICE_X,
   propsAt,
+  ROAD_X,
+  roadRowY,
   ROW_PITCH,
   SKIP,
   STAIR_X0,
@@ -77,21 +76,13 @@ function Bracket({
 export function StatelessPlate() {
   const s = scriptFor("t2-stateless");
   const out = holdEnd(STATELESS);
-  const [bracketLabel, memory] = s.labels;
+  const memory = s.labels[1];
   return (
     <During from={T.dive} to={out + 0.6}>
       <TipTitle text={s.kicker ?? ""} settleBy={T.tapeHome} exit={out} />
       <div style={{ ...SUBHEAD, top: SUBHEAD_TOP }}>
         <RuleRise text={s.headline ?? ""} settleBy={77.3} exit={out} rule={false} />
       </div>
-      <Rise
-        at={78.7}
-        out={out}
-        className="type-body text-soft"
-        style={{ left: LEFT, top: 744, width: 1400 }}
-      >
-        {s.lines[0]}
-      </Rise>
       <Anchor x={MONOLITH.x} y={MONOLITH.y + MONOLITH.h / 2} z={MONOLITH.d / 2} dx={-46} dy={14}>
         <Rise at={72.6} out={77.2} className="type-label text-muted">
           model
@@ -131,9 +122,6 @@ export function StatelessPlate() {
       <Anchor x={STAIR_X0 + 8.5 * PITCH} y={STAIR_Y0 + 1.5 * ROW_PITCH} z={30} dx={-36} dy={-36}>
         <Emboss at={79.3} />
       </Anchor>
-      <Rise at={79.1} out={out} className="type-body" style={{ left: LEFT, top: 804, width: 1500 }}>
-        {bracketLabel}
-      </Rise>
     </During>
   );
 }
@@ -176,9 +164,6 @@ export function KvPlate() {
         exit={out}
         style={{ position: "absolute", left: LEFT, top: 92 }}
       />
-      <Rise at={90.65} out={out} className="type-body text-soft" style={{ left: LEFT, top: 380 }}>
-        {s.lines[0]}
-      </Rise>
       <Anchor x={KV_X0 - 34} y={KV_Y0 - KV_LAYER_PITCH * 3.6} z={0} dx={-72}>
         <Rise at={84.2} out={out} className="type-code t2-drawer-tag">
           {k}
@@ -202,120 +187,104 @@ export function KvPlate() {
           </span>
         </Rise>
       </Anchor>
-      <Typed
-        text={s.footnotes[0] ?? ""}
-        at={90.6}
-        cps={95}
-        out={out + 0.4}
-        className="type-label text-muted"
-        style={{ left: 360, top: 940 }}
-      />
     </During>
   );
 }
 
 // ── t2-price ─────────────────────────────────────────────────────────────────────────────────
 
-const COLUMN_NAMES = ["base", "5m write", "1h write", "hit"] as const;
-/** Column prices are the plate's key numbers: 34 px code type at 1.2× reads at phone size. */
-const VALUE_SCALE = 1.2;
+/** Screen px of the card's bottom edge at rest, where the entrance tilt hinges. */
+const CARD_HINGE = { x: 900, y: 1020 };
 
-function ColumnValue({ i }: { i: number }) {
-  const value = PRICE_VALUES[i] ?? 0;
-  const count = PRICE_COUNTS[i] ?? 1;
-  const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
-    const u = outCubic(
-      prog(frame.tau, T.columns - 0.3 + i * 0.12, T.columns + 0.4 + i * 0.12 + count * 0.012),
-    );
-    // The bot stands on the hit column, so its value sits above the bot's head.
-    const top = PRICE_BASE - COIN * count * u - (i === 3 ? 236 : 50);
+/** The real pricing table, framed as a window: rises in tilted, then the camera glides in. */
+function PriceCard() {
+  const entry = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
+    const u = outCubic(prog(frame.tau, T.cardIn, T.cardLand));
+    const rho = ambientTime(frame);
+    const bob = 4 * Math.sin(rho * 0.6);
+    const tilt = 22 * (1 - u) + 0.6 * Math.sin(rho * 0.45);
     setStyle(
       el,
       "transform",
-      `translate3d(${((PRICE_X[i] ?? 0) - 80).toFixed(1)}px, ${top.toFixed(1)}px, 0) scale(${VALUE_SCALE})`,
+      `perspective(2000px) translate3d(0, ${(260 * (1 - u) + bob).toFixed(1)}px, 0) rotateX(${tilt.toFixed(2)}deg)`,
     );
-    el.textContent = `$${(value * u).toFixed(2)}`;
+    setStyle(el, "opacity", Math.min(1, u * 2.5).toFixed(3));
   });
+  const pose = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
+    const p = cardAt(frame.tau);
+    setStyle(
+      el,
+      "transform",
+      `translate3d(${p.x.toFixed(2)}px, ${p.y.toFixed(2)}px, 0) scale(${p.s.toFixed(4)})`,
+    );
+  });
+  const dim = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
+    const u = inOutCubic(prog(frame.tau, T.dim, T.dim + 0.6));
+    setStyle(el, "transform", `scaleX(${u.toFixed(4)})`);
+  });
+  const dimHits = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
+    const u = inOutCubic(prog(frame.tau, T.narrow, T.narrow + 0.8));
+    setStyle(el, "transform", `scaleX(${u.toFixed(4)})`);
+  });
+  const outline = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
+    const u = outCubic(prog(frame.tau, T.outline, T.outline + 0.7));
+    const r = highlightAt(frame.tau);
+    setStyle(el, "left", `${r.x0.toFixed(1)}px`);
+    setStyle(el, "top", `${r.y0.toFixed(1)}px`);
+    setStyle(el, "width", `${(r.x1 - r.x0).toFixed(1)}px`);
+    setStyle(el, "height", `${(r.y1 - r.y0).toFixed(1)}px`);
+    setStyle(el, "clip-path", `inset(-40px ${((1 - u) * 100).toFixed(2)}% -40px -40px)`);
+  });
+  const { caching, writes } = REGIONS;
   return (
     <div
-      ref={ref}
-      className="type-code t2-col-value"
-      style={{ position: "absolute", left: 0, top: 0, transformOrigin: "50% 100%" }}
+      ref={entry}
+      style={{
+        position: "absolute",
+        inset: 0,
+        transformOrigin: `${CARD_HINGE.x}px ${CARD_HINGE.y}px`,
+      }}
     >
-      $0.00
+      <div
+        ref={pose}
+        className="t2-card"
+        style={{ width: SHOT.w, height: SHOT.h, transformOrigin: "0 0" }}
+      >
+        <div className="t2-card__chrome" style={{ height: CHROME, top: -CHROME }}>
+          <span className="t2-card__dots" aria-hidden>
+            <i />
+            <i />
+            <i />
+          </span>
+          <ExtLink href={LINKS.pricing} className="t2-card__title">
+            Pricing
+          </ExtLink>
+        </div>
+        <img src={SHOT.src} alt="Claude API pricing table" width={SHOT.w} height={SHOT.h} />
+        <div
+          ref={dim}
+          className="t2-card__dim"
+          style={{ left: 0, width: caching.x0, transformOrigin: "0 50%" }}
+        />
+        <div
+          ref={dimHits}
+          className="t2-card__dim"
+          style={{ left: writes.x1, width: SHOT.w - writes.x1, transformOrigin: "100% 50%" }}
+        />
+        <div ref={outline} className="t2-card__outline" />
+      </div>
     </div>
   );
 }
 
 export function PricePlate() {
   const s = scriptFor("t2-price");
-  const table = s.tables[0];
-  const [tableLabel, writes] = s.labels;
-  const context = s.ui[0] ?? "";
   return (
-    <During from={T.plan} to={T.irisEnd + 0.4}>
-      <RuleRise
-        text={s.headline ?? ""}
-        settleBy={99.2}
-        exit={T.irisEnd}
-        style={{ position: "absolute", left: LEFT, top: 92 }}
-      />
-      <Leave at={T.irisEnd}>
-        <Rise at={97.9} className="type-label text-muted" style={{ left: LEFT, top: 286 }}>
-          {tableLabel}
-        </Rise>
-        <div className="t2-table" style={{ position: "absolute", left: LEFT, top: 340 }}>
-          {table?.rows.map((row, r) => (
-            <Rise
-              key={row[0]}
-              at={98.2 + r * 0.12}
-              className="type-code t2-table__row"
-              style={{ position: "relative" }}
-            >
-              <span>{row[0]}</span>
-              <span className="text-clay">{row[1]}</span>
-              <span className="text-muted">{row[2]}</span>
-            </Rise>
-          ))}
-        </div>
-        <Typed
-          text={writes ?? ""}
-          at={98.6}
-          cps={90}
-          className="type-label text-soft"
-          style={{ left: LEFT, top: 578 }}
-        />
-        {COLUMN_NAMES.map((name, i) => (
-          <ColumnValue key={name} i={i} />
-        ))}
-        {COLUMN_NAMES.map((name, i) => (
-          <Rise
-            key={name}
-            at={T.columns + i * 0.12}
-            className="type-label text-muted"
-            style={{
-              left: (PRICE_X[i] ?? 0) - 90,
-              top: PRICE_BASE + 14,
-              width: 180,
-              textAlign: "center",
-            }}
-          >
-            {name}
-          </Rise>
-        ))}
-        <Rise
-          at={T.columns + 0.5}
-          className="type-label text-soft"
-          style={{ left: (PRICE_X[0] ?? 0) - 90, top: 286 }}
-        >
-          {context}
-        </Rise>
-        <div className="t2-w1" style={{ position: "absolute", left: LEFT, top: 650 }}>
-          <Rise at={99.0} style={{ position: "relative" }}>
-            <PriceOfATurn width={520} />
-          </Rise>
-        </div>
-      </Leave>
+    <During from={T.cardIn} to={T.cardGone + 0.1}>
+      <div style={{ ...SUBHEAD, left: CARD_LEFT, top: 96 }}>
+        <RuleRise text={s.headline ?? ""} settleBy={99.2} exit={103} rule={false} />
+      </div>
+      <PriceCard />
     </During>
   );
 }
@@ -355,7 +324,7 @@ function FrostStrip() {
 /** Ring-row slot centres (1h first, then the 5m rings), from the `.t2-rings` flex layout. */
 const RING_ROW = { x: 1200, y: 236, gap: 18, big: 120, small: 84 };
 
-/** Each ring flies from its price column's top into the ring row as the columns sink. */
+/** Each ring flies out of its write column on the pricing card as the card drops away. */
 function FlyFrom({ dx, dy, children }: { dx: number; dy: number; children: ReactNode }) {
   const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
     const u = 1 - outCubic(prog(frame.tau, T.rings, T.ringsLand));
@@ -368,12 +337,14 @@ function FlyFrom({ dx, dy, children }: { dx: number; dy: number; children: React
   return <div ref={ref}>{children}</div>;
 }
 
-function ringOffset(slot: number, column: 1 | 2): { dx: number; dy: number } {
+/** Offset from a ring's slot to its column header on the card when the rings pop. */
+function ringOffset(slot: number): { dx: number; dy: number } {
   const { x, y, gap, big, small } = RING_ROW;
   const cx = slot === 0 ? x + big / 2 : x + big + gap + (slot - 1) * (small + gap) + small / 2;
   const cy = y + big / 2;
-  const count = PRICE_COUNTS[column] ?? 0;
-  return { dx: (PRICE_X[column] ?? 0) - cx, dy: PRICE_BASE - COIN * count - cy };
+  const head = slot === 0 ? REGIONS.write1h : REGIONS.write5m;
+  const from = onCard(T.rings, head.x, head.y);
+  return { dx: from.x - cx, dy: from.y - cy };
 }
 
 export function TtlPlate() {
@@ -383,7 +354,7 @@ export function TtlPlate() {
   const [codeA, codeB] = code;
   const typed = (dt: number) => T.fix + dt;
   return (
-    <During from={T.irisStart} to={out + 0.4}>
+    <During from={T.rings - 0.05} to={out + 0.4}>
       <RuleRise
         text={"Main session: 1h cache.\nSubagents: 5m."}
         settleBy={109.0}
@@ -391,18 +362,15 @@ export function TtlPlate() {
         style={{ position: "absolute", left: LEFT, top: 72 }}
       />
       <Leave at={out}>
-        <Rise at={109.3} className="type-body text-soft" style={{ left: LEFT, top: 384 }}>
-          {s.lines[0]}
-        </Rise>
         <div
           style={{ position: "absolute", left: RING_ROW.x, top: RING_ROW.y }}
           className="t2-rings"
         >
-          <FlyFrom {...ringOffset(0, 2)}>
+          <FlyFrom {...ringOffset(0)}>
             <RingTimer label="1h" start={T.rings} burn={{ start: T.rings, end: 400 }} size={120} />
           </FlyFrom>
           {[0, 1, 2, 3, 4].map((i) => (
-            <FlyFrom key={`r${i + 1}`} {...ringOffset(i + 1, 1)}>
+            <FlyFrom key={`r${i + 1}`} {...ringOffset(i + 1)}>
               <RingTimer
                 label="5m"
                 start={T.rings + 0.1 + i * 0.07}
@@ -421,13 +389,9 @@ export function TtlPlate() {
           style={{ position: "absolute", left: LEFT, top: 480, width: 1000 }}
         />
         <FrostStrip />
-        <ReadToolRow
-          tool="Read"
-          arg={codeA?.label ?? ""}
-          at={T.fix}
-          className="type-code"
-          style={{ position: "absolute", left: LEFT, top: 596 }}
-        />
+        <ExtLink href={LINKS.settings} style={{ position: "absolute", left: LEFT, top: 596 }}>
+          <ReadToolRow tool="Read" arg={codeA?.label ?? ""} at={T.fix} className="type-code" />
+        </ExtLink>
         <Typed
           text={codeA?.code ?? ""}
           at={typed(0.1)}
@@ -436,83 +400,22 @@ export function TtlPlate() {
           style={{ left: 260, top: 664 }}
         />
         <Typed
-          text={codeA?.caption ?? ""}
-          at={typed(0.2)}
-          cps={CODE_CPS}
-          className="type-label text-muted"
-          style={{ left: 260, top: 716 }}
-        />
-        <Typed
           text={codeB?.code ?? ""}
           at={typed(0.3)}
           cps={CODE_CPS}
           className="type-code t2-code"
-          style={{ left: 260, top: 780 }}
-        />
-        <Typed
-          text={codeB?.caption ?? ""}
-          at={typed(0.4)}
-          cps={CODE_CPS}
-          className="type-label text-muted"
-          style={{ left: 260, top: 832 }}
-        />
-        <Typed
-          text={s.footnotes[1] ?? ""}
-          at={typed(0.5)}
-          cps={CODE_CPS}
-          className="type-label text-clay"
-          style={{ left: 260, top: 890 }}
+          style={{ left: 260, top: 732 }}
         />
       </Leave>
     </During>
   );
 }
 
-/** The one clay field (hard cut, forward on the hit) and its footnote; render above everything. */
-export function TtlField() {
-  const s = scriptFor("t2-ttl");
-  return (
-    <>
-      <ClayField
-        text={"Cold is 25–80×\nthe price of warm."}
-        cut={T.cut}
-        settleBy={104.6}
-        iris={{ start: T.irisStart, end: T.irisEnd, to: { x: PRICE_X[2] ?? 0, y: 700 } }}
-      />
-      <FieldFoot text={s.footnotes[0] ?? ""} />
-    </>
-  );
-}
-
-/** The field's footnote: types under the slam and leaves with the iris. */
-function FieldFoot({ text }: { text: string }) {
-  const ref = useFrameRef<HTMLDivElement>((el, frame: Frame) => {
-    const r = 1 - inOutCubic(prog(frame.tau, T.irisStart, T.irisEnd));
-    setStyle(el, "visibility", frame.tau >= T.cut && frame.tau < T.irisEnd ? "visible" : "hidden");
-    setStyle(
-      el,
-      "clip-path",
-      r >= 1
-        ? "none"
-        : `circle(${(r * 2300).toFixed(1)}px at ${(PRICE_X[2] ?? 0).toFixed(0)}px 700px)`,
-    );
-  });
-  return (
-    <div ref={ref} style={{ position: "absolute", inset: 0, zIndex: 21, visibility: "hidden" }}>
-      <Typed
-        text={text}
-        at={104.1}
-        cps={110}
-        className="type-label t2-on-clay"
-        style={{ left: 160, top: 820 }}
-      />
-    </div>
-  );
-}
-
 // ── t2-idle ──────────────────────────────────────────────────────────────────────────────────
 
 const CLOCK = { x: 1480, y: 600, r: 120 };
+const CACHEBEAT_REPO = "ARahim3/cachebeat";
+const CACHEBEAT_URL = "https://github.com/ARahim3/cachebeat";
 
 /** Wall clock: the minute hand sweeps an hour, then creeps into a second lap. */
 function Clock() {
@@ -559,7 +462,10 @@ function Clock() {
 export function IdlePlate() {
   const s = scriptFor("t2-idle");
   const out = holdEnd(IDLE);
-  const [notice, cachebeat] = s.labels;
+  const [notice, cachebeat = ""] = s.labels;
+  const split = cachebeat.indexOf(CACHEBEAT_REPO);
+  const beatPrefix = split >= 0 ? cachebeat.slice(0, split) : cachebeat;
+  const beatRepo = split >= 0 ? CACHEBEAT_REPO : "";
   return (
     <During from={T.crack} to={out + 0.6}>
       <RuleRise
@@ -568,12 +474,6 @@ export function IdlePlate() {
         exit={out}
         style={{ position: "absolute", left: LEFT, top: 92 }}
       />
-      <Rise at={T.idleCopy} out={out} className="type-body" style={{ left: LEFT, top: 246 }}>
-        {s.lines[0]}
-      </Rise>
-      <Rise at={118.0} out={out} className="type-body text-soft" style={{ left: LEFT, top: 306 }}>
-        {s.lines[1]}
-      </Rise>
       <div style={{ position: "absolute", left: 1210, top: 410 }}>
         <RingTimer
           label="1h"
@@ -591,14 +491,15 @@ export function IdlePlate() {
         className="type-code t2-notice"
         style={{ left: LEFT, top: IDLE_Y + 70 }}
       />
-      <Typed
-        text={cachebeat ?? ""}
+      <Rise
         at={T.notice + 0.7}
-        cps={70}
-        out={out + 0.4}
+        out={out}
         className="type-label text-clay"
         style={{ left: LEFT, top: IDLE_Y + 132 }}
-      />
+      >
+        {beatPrefix}
+        <ExtLink href={CACHEBEAT_URL}>{beatRepo}</ExtLink>
+      </Rise>
     </During>
   );
 }
@@ -606,7 +507,6 @@ export function IdlePlate() {
 // ── t2-switch ────────────────────────────────────────────────────────────────────────────────
 
 export function SwitchPlate() {
-  const s = scriptFor("t2-switch");
   return (
     <During from={123.5} to={T.foldEnd}>
       <RuleRise
@@ -614,24 +514,13 @@ export function SwitchPlate() {
         settleBy={127.7}
         style={{ position: "absolute", left: LEFT, top: 72 }}
       />
-      {s.lines.map((line, i) => (
-        <Typed
-          key={line}
-          text={line}
-          at={127.75 + i * 0.3}
-          cps={110}
-          className={i === 2 ? "type-label text-soft" : "type-code"}
-          style={{ left: LEFT, top: 352 + i * 56 }}
-        />
-      ))}
-      <SpinnerLine
-        verb="Simmering"
-        at={123.6}
-        className="type-label"
-        style={{ position: "absolute", left: LEFT, top: 540 }}
-      />
+      <Anchor x={ROAD_X + 120} y={roadRowY(1)} z={26} dx={0} dy={-20}>
+        <Rise at={127.0} out={T.fold} className="type-code t2-road-tag">
+          /effort
+        </Rise>
+      </Anchor>
       <Anchor x={SKIP.x} y={SKIP.y} z={0} dx={-60} dy={46}>
-        <Rise at={125.0} out={T.fold} className="type-label text-soft">
+        <Rise at={125.0} out={T.fold} className="type-code t2-road-tag t2-road-tag--off">
           /model
         </Rise>
       </Anchor>

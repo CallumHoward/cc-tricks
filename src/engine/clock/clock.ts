@@ -98,10 +98,21 @@ export function createClock({ stops, tuning: overrides, start }: ClockOptions): 
     dispatch(action, t) {
       const next = resolveTarget(action, target, stops.length);
       if (next === target) return;
-      const here = evaluate(current, t);
       const to = stopAt(next);
-      const from = stops[heldStopIndex(stops, here.tau)];
-      current = planTrip(here, t, to, from, hopsBetween(stops, here.tau, to), tuning);
+      if (action.type === "goto" && action.cut) {
+        current = planTrip(
+          { tau: to.at, v: to.holdSpeed ?? tuning.holdSpeed },
+          t,
+          to,
+          undefined,
+          1,
+          tuning,
+        );
+      } else {
+        const here = evaluate(current, t);
+        const from = stops[heldStopIndex(stops, here.tau)];
+        current = planTrip(here, t, to, from, hopsBetween(stops, here.tau, to), tuning);
+      }
       target = next;
       for (const listener of listeners) listener();
     },

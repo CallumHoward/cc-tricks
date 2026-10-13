@@ -3,7 +3,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createClock } from "#/engine/clock/clock";
 import type { Frame, Stop } from "#/engine/types";
 
-import { createStage, inMountWindow, mountedAt, PRIORITY, type StageCommand } from "./stage";
+import {
+  AMBIENT_FLOOR,
+  ambientRate,
+  ambientTime,
+  createStage,
+  inMountWindow,
+  mountedAt,
+  PRIORITY,
+  type StageCommand,
+} from "./stage";
 
 /** Lets the frozen-frame readiness chain run: microtasks around a few scheduler flushes. */
 async function settle(scheduler: { flush: () => void }) {
@@ -87,14 +96,14 @@ describe("createStage", () => {
   it("should run frame callbacks in priority order with wall time since start", () => {
     const { stage, advance } = setup();
     const calls: string[] = [];
-    stage.onFrame(() => calls.push("audio"), PRIORITY.audio);
+    stage.onFrame(() => calls.push("overlay"), PRIORITY.overlay);
     stage.onFrame(() => calls.push("dom"));
     stage.onFrame(() => calls.push("clock"), PRIORITY.clock);
 
     stage.start();
     advance(0.5);
 
-    expect(calls).toEqual(["clock", "dom", "audio"]);
+    expect(calls).toEqual(["clock", "dom", "overlay"]);
     expect(stage.frame().w).toBeCloseTo(0.5);
   });
 
@@ -183,7 +192,7 @@ describe("createStage", () => {
     window.__stageReady = false;
 
     stage.freeze({ tau: 7, w: 3 });
-    expect(frames[0]).toEqual({ tau: 7, v: 0, w: 3, dt: 0 });
+    expect(frames[0]).toEqual({ tau: 7, v: 0, w: 3, dt: 0, rho: 7 });
     expect(window.__stageReady).toBe(false);
 
     await settle(scheduler);
@@ -222,8 +231,57 @@ describe("createStage", () => {
     const listener = vi.fn<(command: StageCommand) => void>();
     stage.onCommand(listener);
 
-    stage.emit({ type: "mute" });
+    stage.emit({ type: "overview" });
 
-    expect(listener).toHaveBeenCalledWith({ type: "mute" });
+    expect(listener).toHaveBeenCalledWith({ type: "overview" });
+  });
+
+  it("should keep ambient time creeping at the floor while the playhead holds", () => {
+    const { stage, advance } = setup();
+    stage.start();
+    advance(1 / 60);
+    const before = stage.frame();
+
+    advance(2);
+
+    const after = stage.frame();
+    expect(after.v).toBeLessThan(AMBIENT_FLOOR);
+    expect(ambientTime(after) - ambientTime(before)).toBeCloseTo(AMBIENT_FLOOR * 2, 6);
+  });
+
+  it("should run ambient time at playhead speed when travelling and back when rewinding", () => {
+    const { stage, advance } = setup();
+    stage.start();
+    advance(1 / 60);
+    stage.dispatch({ type: "next" });
+    for (let i = 0; i < 90; i++) advance(1 / 60);
+    const cruising = stage.frame();
+    advance(1 / 60);
+    expect(ambientTime(stage.frame()) - ambientTime(cruising)).toBeCloseTo(stage.frame().v / 60, 2);
+
+    for (let i = 0; i < 600; i++) advance(1 / 60);
+    stage.dispatch({ type: "prev" });
+    for (let i = 0; i < 60; i++) advance(1 / 60);
+    const rewinding = stage.frame();
+    advance(1 / 60);
+    expect(rewinding.v).toBeLessThan(0);
+    expect(ambientTime(stage.frame())).toBeLessThan(ambientTime(rewinding));
+  });
+});
+
+describe("ambientRate", () => {
+  it.each([
+    [0, AMBIENT_FLOOR],
+    [AMBIENT_FLOOR / 2, AMBIENT_FLOOR],
+    [1, 1],
+    [-2.5, -2.5],
+  ])("should map playhead velocity %d to ambient rate %d", (v, rate) => {
+    expect(ambientRate(v)).toBe(rate);
+  });
+});
+
+describe("ambientTime", () => {
+  it("should fall back to story time for frames without ambient time", () => {
+    expect(ambientTime({ tau: 4, v: 0, w: 1, dt: 0 })).toBe(4);
   });
 });

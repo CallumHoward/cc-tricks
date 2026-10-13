@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 
-import { inOutCubic, outBack, outExpo, prog } from "#/engine/motion/ease";
+import { inOutCubic, outExpo, prog } from "#/engine/motion/ease";
 import type { Frame } from "#/engine/types";
 import { ContextBar } from "#/talk/kit/motion";
 import {
@@ -10,7 +10,6 @@ import {
   Pile,
   pocketKeys,
   PromptBox,
-  ScrollbackWhip,
   SpinnerLine,
   type CountSource,
 } from "#/talk/kit/tui";
@@ -40,17 +39,21 @@ export function Fx({
   style,
   className,
   children,
+  inline = false,
 }: {
   fx: (frame: Frame) => StyleMap;
   style?: CSSProperties;
   className?: string;
   children?: ReactNode;
+  /** Render a `span`, e.g. per-letter layers inside a link */
+  inline?: boolean;
 }) {
-  const ref = useFx<HTMLDivElement>(fx);
+  const ref = useFx<HTMLElement>(fx);
+  const Tag = inline ? "span" : "div";
   return (
-    <div ref={ref} className={className} style={{ position: "absolute", ...style }}>
+    <Tag ref={ref} className={className} style={{ position: "absolute", ...style }}>
       {children}
-    </div>
+    </Tag>
   );
 }
 
@@ -127,9 +130,10 @@ export type TipOut = { at: number; pastVerb: string; duration: string };
 
 /**
  * One tip's terminal from home shot to home shot: the prompt types the tip and submits, the plate
- * plays, then everything folds into the completion line, the bot pockets a token and the camera
- * whips up the scrollback onto the next home shot. `textFx` moves the echo + spinner, `stackFx` the
- * prompt box, pile and context bar, `homeFx` all of them (e.g. a glyph dive).
+ * plays, then everything folds into the completion line, the bot pockets a token and the completion
+ * line scrolls away, leaving the home shot (swapped for `HomeRest` so boundaries match-cut).
+ * `textFx` moves the echo + spinner, `stackFx` the prompt box, pile and context bar, `homeFx` all
+ * of them (e.g. a glyph dive).
  */
 export function TipFrame({
   tip,
@@ -149,7 +153,7 @@ export function TipFrame({
   spinnerFx?: (frame: Frame) => StyleMap;
   stackFx?: (frame: Frame) => StyleMap;
   homeFx?: (frame: Frame) => StyleMap;
-  /** Content inside the terminal (whipped away with it) */
+  /** Content inside the terminal */
   plate: ReactNode;
   /** Content above the home layers but still inside the terminal */
   over?: ReactNode;
@@ -161,9 +165,22 @@ export function TipFrame({
     if (u <= 0) return base;
     return { ...base, "clip-path": `inset(0 0 ${(u * 100).toFixed(2)}% 0)` };
   };
+  // `display`, not `visibility`: pile tiles set `visibility: visible` themselves
+  const live = (frame: Frame): StyleMap => ({
+    display: frame.tau < t.restAt ? "block" : "none",
+  });
+  const rest = (frame: Frame): StyleMap => ({
+    display: frame.tau >= t.restAt ? "block" : "none",
+  });
+  const scrollAway = (frame: Frame): StyleMap => {
+    const u = prog(frame.tau, t.scrollAt, t.scrollAt + t.scrollDur, inOutCubic);
+    return u > 0
+      ? { transform: `translate3d(0, ${px(-36 * u)}, 0)`, opacity: (1 - u).toFixed(3) }
+      : { transform: "none", opacity: "1" };
+  };
   return (
     <>
-      <ScrollbackWhip at={t.whipAt} dur={t.whipDur} distance={1080}>
+      <Fx fx={live} style={{ inset: 0 }}>
         <Fx fx={homeFx ?? none} style={{ inset: 0, transformOrigin: "0 0" }}>
           <Fx fx={stackFx ?? none} style={{ inset: 0 }}>
             <ContextBar zones={HOME_ZONES} />
@@ -203,27 +220,29 @@ export function TipFrame({
         </Fx>
         {plate}
         {over}
-        <CompletionLine
-          className="type-label"
-          style={{
-            position: "absolute",
-            left: HOME.textX,
-            top: HOME.spinnerY,
-            transform: "translateY(-50%)",
-          }}
-          pastVerb={out.pastVerb}
-          duration={out.duration}
-          at={t.completeAt}
-        />
-        <div style={{ position: "absolute", inset: 0, transform: "translateY(-1080px)" }}>
-          <HomeRest
-            pile={tip.n}
-            from={Number.NEGATIVE_INFINITY}
-            to={Number.POSITIVE_INFINITY}
-            bot={false}
+        <Fx fx={scrollAway} style={{ inset: 0 }}>
+          <CompletionLine
+            className="type-label"
+            style={{
+              position: "absolute",
+              left: HOME.textX,
+              top: HOME.spinnerY,
+              transform: "translateY(-50%)",
+            }}
+            pastVerb={out.pastVerb}
+            duration={out.duration}
+            at={t.completeAt}
           />
-        </div>
-      </ScrollbackWhip>
+        </Fx>
+      </Fx>
+      <Fx fx={rest} style={{ inset: 0, display: "none" }}>
+        <HomeRest
+          pile={tip.n}
+          from={Number.NEGATIVE_INFINITY}
+          to={Number.POSITIVE_INFINITY}
+          bot={false}
+        />
+      </Fx>
     </>
   );
 }
@@ -237,6 +256,7 @@ export function Typed({
   className,
   top,
   left = 200,
+  color,
 }: {
   text: string;
   start: number;
@@ -244,6 +264,7 @@ export function Typed({
   className: string;
   top: number;
   left?: number;
+  color?: string;
 }) {
   const length = Array.from(text).length;
   const ref = useFx<HTMLDivElement>((frame) => {
@@ -256,46 +277,13 @@ export function Typed({
     <div
       ref={ref}
       className={`tui ${className}`}
-      style={{ position: "absolute", left, top, whiteSpace: "pre", clipPath: "inset(0 100% 0 0)" }}
-    >
-      {text}
-    </div>
-  );
-}
-
-export function Chip({
-  text,
-  at,
-  top,
-  left = 200,
-}: {
-  text: string;
-  at: number;
-  top: number;
-  left?: number;
-}) {
-  const ref = useFx<HTMLDivElement>((frame) => {
-    const u = prog(frame.tau, at, at + 0.32, outBack(2.2));
-    return {
-      transform: `translateY(-50%) scale(${Math.max(0, u).toFixed(4)})`,
-      visibility: frame.tau < at ? "hidden" : "visible",
-    };
-  });
-  return (
-    <div
-      ref={ref}
-      className="type-label tui"
       style={{
         position: "absolute",
         left,
         top,
-        padding: "2px 16px",
-        border: "2px solid var(--clay)",
-        borderRadius: 6,
-        background: "var(--bg-deep)",
-        color: "var(--clay)",
-        transformOrigin: "0 50%",
-        visibility: "hidden",
+        color,
+        whiteSpace: "pre",
+        clipPath: "inset(0 100% 0 0)",
       }}
     >
       {text}

@@ -26,14 +26,11 @@ export const T = Object.freeze({
   titleHoldEnd: 14,
   dollyEnd: 15.0,
   craneEnd: 15.8,
-  boneStart: 15.6,
-  boneEnd: 16.4,
   labelsAt: 17.1,
   spoilerTypeAt: 18.2,
   spoilerAt: 20,
   spoilerHoldEnd: 22,
-  exitBone: 22.0,
-  exitBoneEnd: 22.7,
+  spoilerExit: 22.0,
   exitHop: 22.05,
   homeAt: 23.3,
   end: 23.4,
@@ -242,7 +239,34 @@ export function rayRotation(tau: number): number {
 /** Hold push 1.00 → 1.03 over the title hold. */
 export const holdPush = (tau: number): number => 1 + 0.03 * prog(tau, T.titleAt, T.titleHoldEnd);
 
-/** Spoiler zone sizes: home ratios on the road, labeled ratios on the bone bar, home again on exit. */
+/** The labeled bar's group centre (home px) and where the spoiler push frames it. */
+const SPOILER_FRAME = Object.freeze({
+  from: { x: 800, y: 665 },
+  to: { x: 960, y: 560 },
+  scale: 1.35,
+});
+
+/** How far the spoiler push is in (0 = home framing): in off the crane, out for the exit hop. */
+const spoilerPushIn = (tau: number): number =>
+  inOutCubic(prog(tau, T.craneEnd - 0.2, 16.9)) * (1 - inOutCubic(prog(tau, T.spoilerExit, 22.7)));
+
+/** Spoiler camera on the bar group: push in, 2% creep through the hold, `drift` px of slow sway. */
+export function spoilerPush(tau: number, drift = 0): { x: number; y: number; s: number } {
+  const u = spoilerPushIn(tau);
+  const creep = 1 + 0.02 * prog(tau, T.spoilerAt, T.spoilerHoldEnd);
+  const s = lerp(1, SPOILER_FRAME.scale * creep, u);
+  const { from, to } = SPOILER_FRAME;
+  return {
+    x: lerp(from.x, to.x, u) + drift * u - s * from.x,
+    y: lerp(from.y, to.y, u) - s * from.y,
+    s,
+  };
+}
+
+/**
+ * Spoiler zone sizes: home ratios on the road, labeled ratios on the spoiler bar, home again on
+ * exit.
+ */
 export const SPOILER_SIZES = {
   system: keys([16, 18], [16.9, 16, inOutCubic], [22.1, 16], [22.7, 18, inOutCubic]),
   tools: keys([16, 22], [16.9, 20, inOutCubic], [22.1, 20], [22.7, 22, inOutCubic]),

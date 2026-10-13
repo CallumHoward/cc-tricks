@@ -1,15 +1,17 @@
-import { useRef } from "react";
+import { useRef, type CSSProperties, type ReactNode } from "react";
 
 import { inOutCubic, inQuad, outExpo, prog } from "#/engine/motion/ease";
 import { SPRINGS } from "#/engine/motion/spring";
 import { useFrame } from "#/engine/stage/react";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
+import { ExtLink } from "#/talk/kit/ext-link";
 import { ContextBar, World, shotTrack } from "#/talk/kit/motion";
 import { num, put } from "#/talk/kit/motion/dom";
-import { springFrom } from "#/talk/kit/motion/schedule";
+import { springFrom, staggerStarts } from "#/talk/kit/motion/schedule";
 import { HOME, PromptBox } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
-import { scriptFor } from "#/talk/script";
+import { LINKS, scriptFor } from "#/talk/script";
 import { BOT_HOME, HOME_ZONES, HomeRest } from "#/talk/segments/shared/home";
 import { Mover, Rig, Rise, Typed, Win } from "#/talk/segments/title/lib";
 
@@ -17,6 +19,7 @@ import {
   COMPOSER,
   F,
   FLOOR_Y,
+  floorEdge,
   FW_SHOTS,
   HOPS,
   MENU,
@@ -198,6 +201,13 @@ function Crowd() {
     const { tau } = frame;
     const drift = crowdDrift(tau);
     put(root.current, "transform", `translate3d(${num(drift, 2)}px, ${num(drift * 0.6, 2)}px, 0)`);
+    // The crowd stays behind the horizon once the floor is up
+    const edge = num(floorEdge(tau) - drift * 0.6, 1);
+    put(
+      root.current,
+      "clip-path",
+      `polygon(-30000px -30000px, 30000px -30000px, 30000px ${edge}px, -30000px ${edge}px)`,
+    );
     // The crowd recedes behind the taste lines, then clears before the prompt zoom
     const back = 1 - 0.7 * inOutCubic(prog(tau, F.crowdIn.start, F.crowdIn.end));
     put(root.current, "opacity", num(back * (1 - prog(tau, F.tasteHoldEnd, F.toPrompt.start)), 3));
@@ -241,6 +251,18 @@ function Crowd() {
 
 const MENU_ROWS = invest.ui;
 
+/** Menu rows whose tools are linked in the show notes. */
+const MENU_LINKS: Readonly<Record<string, ReactNode>> = {
+  superpowers: <ExtLink href={LINKS.superpowers}>superpowers</ExtLink>,
+  "headroom / rtk": (
+    <>
+      <ExtLink href={LINKS.headroom}>headroom</ExtLink>
+      &nbsp;/&nbsp;
+      <ExtLink href={LINKS.rtk}>rtk</ExtLink>
+    </>
+  ),
+};
+
 function Menu() {
   const rows = useRef<(HTMLSpanElement | null)[]>([]);
   useFrame((frame: Frame) => {
@@ -281,7 +303,7 @@ function Menu() {
             }}
           >
             <i>{String(i + 1).padStart(2, "0")}</i>
-            {label}
+            {MENU_LINKS[label] ?? label}
           </span>
         </div>
       ))}
@@ -289,70 +311,87 @@ function Menu() {
   );
 }
 
-type Run = { text: string; em?: boolean; br?: boolean; numeral?: boolean };
+/** The leading word of each numbered taste line ("Taste", "Care"), exactly as scripted. */
+const TASTE_WORDS = taste.lines.map((line) => /^\d+\.\s(\p{L}+)/u.exec(line)?.[1] ?? "");
 
-/** Splits a numbered taste line into its numeral, a forced break before `breakAt`, and italics. */
-function tasteRuns(line: string, breakAt: string, em?: string): Run[] {
-  const [, numeral = "", rest = line] = /^(\d+\.)\s(.*)$/.exec(line) ?? [];
-  const cut = rest.indexOf(breakAt);
-  const head = rest.slice(0, cut);
-  const tail = rest.slice(cut);
-  const tailRuns: Run[] =
-    em && tail.includes(em)
-      ? [
-          { text: tail.slice(0, tail.indexOf(em)) },
-          { text: em, em: true },
-          { text: tail.slice(tail.indexOf(em) + em.length) },
-        ]
-      : [{ text: tail }];
-  return [
-    { text: `${numeral} `, numeral: true },
-    { text: head },
-    { text: "", br: true },
-    ...tailRuns,
-  ];
-}
+const LETTER_STAGGER = 0.06;
 
-/** One numbered line typed run by run, the numeral hanging in clay. */
-function TypedRuns({ runs, at, cps }: { runs: readonly Run[]; at: number; cps: number }) {
-  const timed = runs.map((run, i) => ({
-    ...run,
-    start: at + runs.slice(0, i).reduce((n, r) => n + r.text.length, 0) / cps,
-  }));
-  const [numeral, ...body] = timed;
+/** One word, letter by letter: each springs up from its mask while the tracking gathers in. */
+function KineticWord({
+  text,
+  settleBy,
+  exitAt,
+  className,
+  style,
+}: {
+  text: string;
+  settleBy: number;
+  exitAt: number;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const letters = Array.from(text);
+  const starts = staggerStarts(letters.length, settleBy, LETTER_STAGGER, SPRINGS.LAND);
+  const mid = (letters.length - 1) / 2;
+  const els = useRef<(HTMLSpanElement | null)[]>([]);
+  useFrame((frame: Frame) => {
+    const { tau } = frame;
+    // Tracking breathes on ambient time only, so the frozen stop keeps moving in slo-mo
+    const held = prog(tau, F.tasteAt - 0.8, F.tasteAt) * (1 - prog(tau, exitAt - 0.3, exitAt));
+    const breathe = 6 * Math.sin((ambientTime(frame) - tau) * 1.4) * held;
+    letters.forEach((_, i) => {
+      const s = springFrom(tau, starts[i] ?? settleBy, SPRINGS.LAND);
+      const t0 = exitAt + 0.05 * i;
+      const sink = inOutCubic(prog(tau, t0, t0 + 0.4));
+      const x = ((1 - s) * 42 + breathe) * (i - mid);
+      const y = (1 - s + sink) * 118;
+      const r = (1 - s) * -9 + sink * 6;
+      put(
+        els.current[i],
+        "transform",
+        `translate3d(${num(x, 2)}px, ${num(y, 2)}%, 0) rotate(${num(r, 2)}deg)`,
+      );
+    });
+  });
   return (
-    <div className="fw-taste-line">
-      <span className="fw-taste-num text-clay">
-        <Typed text={numeral?.text ?? ""} at={numeral?.start ?? at} cps={cps} />
-      </span>
-      <span>
-        {body.map((run) => {
-          if (run.br) return <br key={`br${run.start}`} />;
-          const typed = <Typed text={run.text} at={run.start} cps={cps} />;
-          return run.em ? <em key={run.start}>{typed}</em> : <span key={run.start}>{typed}</span>;
-        })}
-      </span>
+    <div className={`fw-word ${className ?? ""}`} style={style} aria-label={text}>
+      {letters.map((ch, i) => (
+        <span
+          // oxlint-disable-next-line react/no-array-index-key -- letters repeat; order is fixed
+          key={i}
+          aria-hidden
+          ref={(el) => {
+            els.current[i] = el;
+          }}
+        >
+          {ch}
+        </span>
+      ))}
     </div>
   );
 }
 
-/** Both taste lines at display size on the floor; they mask up and out before the prompt zoom. */
-function TasteLines() {
-  const [a1 = "", a2 = ""] = taste.lines;
-  const exit = (tau: number) => inQuad(prog(tau, F.tasteHoldEnd, F.tasteHoldEnd + 0.25));
+/** Taste and care set large on the floor; they sink letter by letter before the prompt zoom. */
+function TasteWords() {
+  const [tasteWord = "", careWord = ""] = TASTE_WORDS;
   return (
-    <Win from={F.a1At - 0.1} to={F.toPrompt.start + 0.2}>
+    <Win from={F.a1At - 0.1} to={F.toPrompt.start + 0.6}>
       <Mover
         place={(tau: number) => ({
-          y: -60 * exit(tau),
-          s: 0.6,
-          clip: `inset(-40px -40px ${num(100 * exit(tau), 2)}% -40px)`,
+          s: 1 + 0.03 * prog(tau, F.tasteAt, F.tasteHoldEnd),
+          y: -70 * inOutCubic(prog(tau, F.tasteHoldEnd, F.tasteHoldEnd + 0.7)),
         })}
-        className="type-headline"
-        style={{ left: 200, top: 560, width: 2600 }}
+        className="type-hero"
+        style={{ left: 200, top: 470, width: 1200, height: 520 }}
       >
-        <TypedRuns runs={tasteRuns(a1, "knowing")} at={F.a1At} cps={130} />
-        <TypedRuns runs={tasteRuns(a2, "from", "being")} at={F.a2At} cps={130} />
+        <KineticWord text={tasteWord} settleBy={F.a1At + 0.5} exitAt={F.tasteHoldEnd} />
+        <KineticWord
+          text={careWord}
+          settleBy={F.tasteAt - 0.8}
+          exitAt={F.tasteHoldEnd + 0.08}
+          className="fw-word-care"
+          style={{ left: 330, top: 220 }}
+        />
       </Mover>
     </Win>
   );
@@ -360,7 +399,7 @@ function TasteLines() {
 
 function ForewordWorld() {
   return (
-    <World camera={camera}>
+    <World camera={camera} smear={false}>
       <Crowd />
       <Win from={F.cloneAt} to={30.9}>
         <Mover place={(tau: number) => ({ x: cloneX(tau), y: COMPOSER.y })}>
@@ -369,17 +408,9 @@ function ForewordWorld() {
       </Win>
       <Win from={F.floor.start} to={F.toPrompt.start + 0.4}>
         <Mover
-          place={(tau: number) => {
-            const show = inOutCubic(prog(tau, F.floor.start, F.floor.end));
-            const hide = inQuad(prog(tau, F.toPrompt.start, F.toPrompt.start + 0.4));
-            return {
-              clip: `inset(${num((1 - show + hide) * 100, 2)}% 0 0 0)`,
-              x: -9000,
-              y: FLOOR_Y,
-            };
-          }}
+          place={(tau: number) => ({ x: -9000, y: floorEdge(tau), hidden: floorEdge(tau) > 3000 })}
           className="fw-floor"
-          style={{ width: 20000, height: 3000 }}
+          style={{ width: 20000 }}
         />
         <Mover
           place={(tau: number) => ({
@@ -405,20 +436,6 @@ function ForewordWorld() {
           exit={F.chatHoldEnd}
           style={{ position: "absolute", left: COMPOSER.x, top: 212 }}
         />
-        <Mover
-          place={(tau: number) => ({
-            x: COMPOSER.x,
-            y: 726,
-            clip: `inset(-20px ${num(100 * inQuad(prog(tau, F.chatHoldEnd, F.chatHoldEnd + 0.35)), 2)}% -20px -20px)`,
-          })}
-        >
-          <Typed
-            text={chat.lines[0] ?? ""}
-            at={F.lineAt}
-            cps={50}
-            className="type-body text-soft"
-          />
-        </Mover>
       </Win>
       <Win from={F.toPrompt.end - 0.1} to={F.end}>
         <Mover
@@ -443,21 +460,6 @@ function ForewordWorld() {
           settleBy={F.investSettle}
           exit={F.exit}
           style={{ position: "absolute", left: 200, top: 372 }}
-        />
-        <Rise
-          text={"Pause to learn something that\nmakes the next task faster."}
-          className="type-body text-soft"
-          settleBy={F.investSettle}
-          stagger={0.03}
-          exit={F.exit}
-          style={{ position: "absolute", left: 200, top: 672 }}
-        />
-        <Rise
-          text={invest.lines[1] ?? ""}
-          className="type-body text-clay"
-          settleBy={F.investSettle}
-          exit={F.exit}
-          style={{ position: "absolute", left: 200, top: 806 }}
         />
         <Mover
           place={(tau: number) => ({
@@ -493,7 +495,7 @@ export default function ForewordSegment() {
           </Mover>
         </Win>
         <ForewordWorld />
-        <TasteLines />
+        <TasteWords />
       </Win>
       <HomeRest pile={0} from={F.homeAt} to={F.end} />
     </>

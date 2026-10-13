@@ -22,8 +22,9 @@ import { LayaPlate } from "./laya-plate";
 import { SystemOnePlate } from "./system-one";
 import { cursorAt, RINGED, TARGETS, TB, TB_TOKENS } from "./timing";
 
-const BOOK_TOP: Pt = { x: 960, y: 470 };
-const BAR_END: Pt = { x: 1690, y: 690 };
+const BOOK_TOP: Pt = { x: 960, y: 460 };
+/** On the Laya window's top edge, near its right corner. */
+const BAR_END: Pt = { x: 1680, y: 302 };
 const STRIP: Pt = { x: 700, y: 540 };
 
 const stripX = (tau: number) =>

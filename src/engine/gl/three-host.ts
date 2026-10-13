@@ -10,8 +10,18 @@ import { resolvePost, type PostParams } from "./post-params";
 export type ThreeLayer = Layer<THREE.Object3D>;
 export type ThreeRegistry = LayerRegistry<THREE.Object3D>;
 
+/** A world drawn first with its own camera, under every layer and never moved by them. */
+export type ThreeBackdrop = {
+  readonly scene: THREE.Scene;
+  readonly camera: THREE.Camera;
+  /** `size` is the drawing buffer in device px; returns the backdrop's base post overrides */
+  update(frame: Frame, size: { width: number; height: number }): Partial<PostParams> | undefined;
+  dispose(): void;
+};
+
 export type ThreeHostOptions = {
   canvas: HTMLCanvasElement;
+  backdrop?: ThreeBackdrop;
   registry?: ThreeRegistry;
   width?: number;
   height?: number;
@@ -31,6 +41,8 @@ export type ThreeHost = {
    */
   readonly camera: THREE.PerspectiveCamera;
   readonly registry: ThreeRegistry;
+  /** True when there is anything to draw */
+  readonly active: boolean;
   render(frame: Frame): void;
   setPixelRatio(ratio: number): void;
   dispose(): void;
@@ -45,6 +57,7 @@ export function pxCameraDistance(height: number, fov = CAMERA_FOV): number {
 
 export function createThreeHost({
   canvas,
+  backdrop,
   registry = createLayerRegistry<THREE.Object3D>(),
   width = 1920,
   height = 1080,
@@ -70,6 +83,7 @@ export function createThreeHost({
 
   let hdr = makeRT(width, height, true);
   const post = new Post(width, height);
+  const size = { width, height };
 
   const setPixelRatio = (ratio: number) => {
     const pr = Math.min(Math.max(ratio, 0.25), dprCap);
@@ -77,6 +91,8 @@ export function createThreeHost({
     renderer.setSize(width, height, false);
     hdr.dispose();
     hdr = makeRT(width * pr, height * pr, true);
+    size.width = hdr.width;
+    size.height = hdr.height;
   };
   setPixelRatio(pixelRatio);
 
@@ -87,15 +103,30 @@ export function createThreeHost({
     scene,
     camera,
     registry,
+    get active() {
+      return backdrop !== undefined || registry.size > 0;
+    },
     render(frame) {
-      const params = resolvePost(frame, base, ...registry.update(frame));
+      const under = backdrop?.update(frame, size) ?? {};
+      const params = resolvePost(frame, base, under, ...registry.update(frame));
       renderer.setRenderTarget(hdr);
-      renderer.render(scene, camera);
+      if (backdrop) {
+        renderer.render(backdrop.scene, backdrop.camera);
+        if (registry.size > 0) {
+          renderer.autoClear = false;
+          renderer.clearDepth();
+          renderer.render(scene, camera);
+          renderer.autoClear = true;
+        }
+      } else {
+        renderer.render(scene, camera);
+      }
       post.render(renderer, hdr.texture, params, frame.w);
     },
     setPixelRatio,
     dispose() {
       registry.bind(null);
+      backdrop?.dispose();
       hdr.dispose();
       post.dispose();
       renderer.dispose();

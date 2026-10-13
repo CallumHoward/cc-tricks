@@ -1,14 +1,14 @@
-/* Outro plates: recap, the thesis over the short bar, and the QR plate (ink on ivory). */
+/* Outro plates: recap, the short clean bar, and the QR plate on the dark stage. */
 
 .fin-abs,
-.fin-thesis,
-.fin-cooked,
-.fin-refs {
+.fin-cooked {
   position: absolute;
 }
 
-.fin-em .km-rr-word {
-  font-style: italic;
+.fin-layer {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
 }
 
 .fin-rule {
@@ -26,54 +26,38 @@
   color: var(--ink);
 }
 
-.fin-refs {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+/* The QR is the one light thing on the stage: a scannable card with a soft glow */
+.fin-qr .dk-qr {
+  box-shadow:
+    0 30px 70px -10px rgb(0 0 0 / 65%),
+    0 0 60px rgb(217 119 87 / 18%);
+}
+
+.fin-link {
   color: var(--ink);
+  font-size: 56px;
+  white-space: nowrap;
 }
 
-.fin-words {
-  margin: 0;
+.fin-link-words {
+  display: inline-flex;
+  gap: 0.26em;
 }
 
-.fin-words span {
+.fin-mask {
   display: inline-block;
-  margin-right: 0.24em;
+  overflow: hidden;
+  padding-bottom: 0.3em;
+  margin-bottom: -0.3em;
 }
 
-.fin-ink {
-  color: var(--ink);
-}
-
-.fin-url {
-  color: var(--ink);
-}
-
-.fin-ref-list {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  margin-top: 26px;
-}
-
-.fin-ref .tui-dim {
-  color: var(--ink-soft);
-}
-
-.fin-ref .tui-agent-name {
-  color: var(--ink);
-}
-
-.fin-ref-source {
-  display: flex;
-  align-items: center;
-  margin-left: 2ch;
-  color: var(--ink-muted);
-}
-
-.fin-ref-source .tui-hook {
-  border-color: var(--ink-muted);
+/* Inline-blocks don't inherit the link's underline, so each word carries it */
+.fin-mask > span {
+  display: inline-block;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, currentcolor 35%, transparent);
+  text-decoration-thickness: 0.05em;
+  text-underline-offset: 0.18em;
 }
 
 .fin-ghost-bar {

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { renderAt } from "#/engine/stage/render-at";
 import { scriptFor } from "#/talk/script";
+import { getRise } from "#/talk/segments/shared/test-utils";
 
 import Tip08FableCursorSegment from "./view";
 
@@ -14,10 +15,19 @@ describe("tip 8 segment", () => {
     }
   });
 
-  it("should show the stamp and the price foot at t8-18x", () => {
+  it("should link the Cursor column to Cursor's models and pricing at t8-cache", () => {
+    renderAt(214, <Tip08FableCursorSegment />, 1);
+    expect(screen.getByRole("link", { name: "Cursor" })).toHaveAttribute(
+      "href",
+      "https://cursor.com/docs/models-and-pricing",
+    );
+  });
+
+  it("should show the 18x headline with no stamp or price footnote at t8-18x", () => {
     renderAt(219.5, <Tip08FableCursorSegment />, 1);
     const copy = scriptFor("t8-18x");
-    expect(screen.getByText(copy.stamps[0] ?? "")).toBeVisible();
-    expect(screen.getByText(copy.footnotes[0] ?? "")).toBeVisible();
+    expect(getRise(copy.headline ?? "")).toBeVisible();
+    expect(screen.queryByText(copy.stamps[0] ?? "")).toBeNull();
+    expect(screen.queryByText(copy.footnotes[0] ?? "")).toBeNull();
   });
 });

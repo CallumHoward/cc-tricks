@@ -82,8 +82,8 @@ describe("planner", () => {
     expect(discontinuity(p)).toBeLessThan(1e-9);
   });
 
-  it("should default the hold speed to 0.035", () => {
-    expect(DEFAULT_TUNING.holdSpeed).toBe(0.035);
+  it("should default the hold speed to 0.07", () => {
+    expect(DEFAULT_TUNING.holdSpeed).toBe(0.07);
   });
 
   it("should never leave the hold window however long the presenter talks", () => {

@@ -28,6 +28,11 @@ export type Frame = {
   w: number;
   /** Wall seconds since the previous frame (0 for stills) */
   dt: number;
+  /**
+   * Ambient ramped time: advances at the playhead speed but never below the slo-mo floor while
+   * holding, so camera drift and particles keep creeping at stops. Equals `tau` in stills.
+   */
+  rho?: number;
 };
 
 /** Imperative per-frame callback. Must not allocate heavily or touch React state. */
@@ -37,7 +42,8 @@ export type FrameCallback = (frame: Frame) => void;
 export type NavAction =
   | { type: "next" }
   | { type: "prev" }
-  | { type: "goto"; index: number }
+  /** `cut` lands on the stop at once instead of travelling there */
+  | { type: "goto"; index: number; cut?: boolean }
   | { type: "first" }
   | { type: "last" };
 

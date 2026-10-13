@@ -10,7 +10,7 @@ import {
 import { SPRINGS } from "#/engine/motion/spring";
 import type { Key } from "#/engine/motion/track";
 import { splitWords, staggerStarts } from "#/talk/kit/motion/schedule";
-import { pocketKeys } from "#/talk/kit/tui";
+import { HOME, pocketKeys } from "#/talk/kit/tui";
 
 /** Absolute τ for tip 9 (window [222.9, 231.4); stop at 227.5, hold to 230). */
 export const T9 = Object.freeze({
@@ -33,21 +33,18 @@ export const T9 = Object.freeze({
   sweepLand: 226.7,
   strikeAt: 225.4,
   collapseAt: 225.7,
-  copySettle: 226.35,
-  stampSettle: 226.55,
-  footSettle: 226.7,
   botWalkAt: 224.65,
   botWalkDur: 0.8,
   waveAt: 225.5,
   exit: Object.freeze({
     foldAt: 230.0,
-    foldDur: 0.3,
+    foldDur: 0.4,
     ghostLineAt: 230.08,
     solidAt: 230.32,
     solidDur: 0.22,
     pocketAt: 230.42,
-    whipAt: 230.86,
-    whipDur: 0.42,
+    riseAt: 230.86,
+    riseDur: 0.42,
   }),
 });
 
@@ -134,24 +131,35 @@ export function botX(tau: number): number {
   return BOT_SHOO_DX * out - BOT_SHOO_DX * back;
 }
 
-/** Plate fold into the completion line (0 open → 1 folded). */
+/** The plate dollies back (lift, scale) and fades on exit: 0 in place → 1 gone. */
 export function foldAt(tau: number): number {
   return prog(tau, T9.exit.foldAt, T9.exit.foldAt + T9.exit.foldDur, inOutCubic);
 }
 
+/** Plate exit transform for fold progress `u`: lifts 48 px, scales to 0.94 and fades. */
+export function plateOut(u: number): { y: number; scale: number; opacity: number } {
+  return { y: -48 * u, scale: 1 - 0.06 * u, opacity: 1 - u };
+}
+
+/** Where the completion line sits on the home shot. */
+export const COMPLETION_LINE_STYLE = {
+  position: "absolute",
+  left: HOME.textX,
+  top: HOME.spinnerY,
+  transform: "translateY(-50%)",
+} as const;
+
+/** The completion line glides up a few rows and fades as the scrollback moves on (0 → 1). */
+export function lineRise(tau: number): number {
+  return prog(tau, T9.exit.riseAt, T9.exit.riseAt + T9.exit.riseDur, inOutCubic);
+}
+
+/** Read-tape glint: a light travelling the read span every 2.4 ambient seconds (px along it). */
+export function glintX(rho: number, span: number): number {
+  const period = 2.4;
+  const u = (((rho % period) + period) % period) / period;
+  return u * span;
+}
+
 /** The pile: 8 tokens in, the ninth pocketed during the exit. */
 export const PILE_KEYS: readonly Key[] = pocketKeys(T9.exit.pocketAt, 9, 0.42);
-
-/** Breaks display copy into lines of the given word counts (the rest on the last line). */
-export function breakWords(text: string, counts: readonly number[]): string {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let i = 0;
-  for (const n of counts) {
-    if (i >= words.length) break;
-    lines.push(words.slice(i, i + n).join(" "));
-    i += n;
-  }
-  if (i < words.length) lines.push(words.slice(i).join(" "));
-  return lines.join("\n");
-}

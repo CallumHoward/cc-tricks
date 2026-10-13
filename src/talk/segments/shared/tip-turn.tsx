@@ -1,4 +1,4 @@
-import { inOutExpo, prog } from "#/engine/motion/ease";
+import { inOutCubic, prog } from "#/engine/motion/ease";
 import type { StyleValues } from "#/engine/stage/applier";
 import { ContextBar } from "#/talk/kit/motion";
 import { HOME, Pile, pocketKeys, PromptBox } from "#/talk/kit/tui";
@@ -20,17 +20,16 @@ export const hopArc = (from: Point, to: Point, u: number, h: number): Point => (
 export const hopFlight = (tau: number, hop: { at: number; air: number }): number =>
   prog(tau, hop.at + 0.16, hop.at + 0.16 + hop.air);
 
-/** The plate folds flat over [from, to]. */
-export function foldFlat(tau: number, from: number, to: number): StyleValues {
-  const u = prog(tau, from, to, inOutExpo);
-  return { scaleY: 1 - u, opacity: u >= 1 ? 0 : 1 };
+/** The plate dollies back (scale and lift) and fades over [from, to]: no fold, no snap. */
+export function plateExit(tau: number, from: number, to: number): StyleValues {
+  const u = prog(tau, from, to, inOutCubic);
+  return { y: -48 * u, scale: 1 - 0.06 * u, opacity: 1 - u };
 }
 
-/** The completion line whips up the scrollback over [from, to], smeared by its own speed. */
-export function whipScroll(tau: number, from: number, to: number): StyleValues {
-  const u = prog(tau, from, to, inOutExpo);
-  const mid = Math.sin(u * Math.PI);
-  return { y: -620 * u, scaleY: 1 + 1.4 * mid, blur: 6 * mid, opacity: u >= 1 ? 0 : 1 };
+/** The completion line glides up a few rows and fades over [from, to], as scrollback would. */
+export function completionRise(tau: number, from: number, to: number): StyleValues {
+  const u = prog(tau, from, to, inOutCubic);
+  return { y: -96 * u, opacity: 1 - u };
 }
 
 const abs = (left: number, top: number) => ({ position: "absolute" as const, left, top });

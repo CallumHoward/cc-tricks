@@ -1,12 +1,14 @@
-import { prog } from "#/engine/motion/ease";
+import { outCubic, prog } from "#/engine/motion/ease";
+import { ambientTime } from "#/engine/stage/stage";
 import type { Frame } from "#/engine/types";
+import { ExtLink } from "#/talk/kit/ext-link";
 import { RuleRise } from "#/talk/kit/motion";
 import { CompletionLine, GLYPH_PATHS, HOME, punch, SpinnerLine } from "#/talk/kit/tui";
 import { setStyle, setText, useFrameRef } from "#/talk/kit/tui/use-frame-ref";
 import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
-import { scriptFor } from "#/talk/script";
-import { Drive, Gate, TypedMono } from "#/talk/segments/shared/gated-parts";
+import { LINKS, scriptFor } from "#/talk/script";
+import { Drive, Gate } from "#/talk/segments/shared/gated-parts";
 import { BOT_HOME, HomeRest } from "#/talk/segments/shared/home";
 import { TipDock } from "#/talk/segments/shared/tip-turn";
 
@@ -18,12 +20,15 @@ import {
   dispatches,
   dockY,
   EXIT,
+  FORM,
   HAMMER,
+  handleGrow,
   hammerShadow,
   hammerTilt,
   headForm,
   headTop,
   odometerScale,
+  PLAN_OUT,
   PLAN_ROWS,
   planFold,
   propFold,
@@ -43,6 +48,7 @@ import {
 
 const S = scriptFor("t4-superpowers");
 const [HAMMER_LABEL = "superpowers", WALNUT_LABEL = "fix the typo in README"] = S.ui;
+const STREAKS = [0.1, 0.32, 0.55, 0.78, 0.92] as const;
 const settle = AT - 0.8;
 const HEADLINE = (S.headline ?? "").replace(" for tasks", "\nfor tasks");
 
@@ -135,7 +141,7 @@ function Swarm() {
       ref={ref}
       width={1920}
       height={1080}
-      style={{ position: "absolute", inset: 0 }}
+      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
       aria-hidden
     >
       {Array.from({ length: 30 }, (_, k) => (
@@ -163,7 +169,7 @@ const odometerTrack = (tau: number) => ({ scale: odometerScale(tau) });
 
 function Plan() {
   return (
-    <Gate from={TURN.spinnerAt} to={155.15}>
+    <Gate from={TURN.spinnerAt} to={PLAN_OUT.end + 0.05}>
       <Drive fn={planTrack} style={{ inset: 0, transformOrigin: "50% 660px" }}>
         <SpinnerLine
           className="type-label"
@@ -203,18 +209,52 @@ function Plan() {
 
 const hammerTrack = (tau: number) => ({
   y: headTop(tau),
-  scale: tau < 155.0 ? 0 : 1,
+  scale: tau < FORM.start ? 0 : 1,
   rotate: hammerTilt(tau),
 });
 const headTrack = (tau: number) => {
   const k = headForm(tau);
   return { scale: 0.35 + 0.65 * k, opacity: k > 0 ? 1 : 0 };
 };
-const handleTrack = (tau: number) => ({ scaleY: prog(tau, 155.15, 155.4) });
+const handleTrack = (tau: number) => ({ scaleY: handleGrow(tau) });
 const streakTrack = (tau: number) => {
   const len = streakLength(tau);
   return { scaleY: len / 150, opacity: len > 1 ? 1 : 0 };
 };
+
+/**
+ * Speed lines above the falling head: their dashes stream upward on ambient time, so bullet time
+ * still reads as falling.
+ */
+function Streaks() {
+  const ref = useFrameRef<HTMLDivElement>((el: HTMLDivElement, frame: Frame) => {
+    const rho = ambientTime(frame);
+    for (let i = 0; i < el.children.length; i++) {
+      const off = (rho * (520 + 90 * i) + i * 37) % 64;
+      setStyle(el.children[i] as HTMLElement, "background-position", `0 ${(-off).toFixed(1)}px`);
+    }
+  });
+  return (
+    <div ref={ref} style={{ position: "absolute", inset: 0 }}>
+      {STREAKS.map((f, i) => (
+        <div
+          key={f}
+          style={{
+            position: "absolute",
+            left: `${f * 100}%`,
+            bottom: 0,
+            width: 4,
+            height: `${[100, 70, 88, 60, 80][i]}%`,
+            borderRadius: 2,
+            backgroundImage:
+              "repeating-linear-gradient(to top, rgb(250 249 245 / 80%) 0 34px, transparent 34px 64px)",
+            maskImage: "linear-gradient(to top, black, transparent)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 function Hammer() {
   const left = HAMMER.cx - HAMMER.headW / 2;
@@ -245,20 +285,7 @@ function Hammer() {
         fn={streakTrack}
         style={{ left, top: -150, width: HAMMER.headW, height: 150, transformOrigin: "50% 100%" }}
       >
-        {[0.1, 0.32, 0.55, 0.78, 0.92].map((f, i) => (
-          <div
-            key={f}
-            style={{
-              position: "absolute",
-              left: `${f * 100}%`,
-              bottom: 0,
-              width: 4,
-              height: `${[100, 70, 88, 60, 80][i]}%`,
-              borderRadius: 2,
-              background: "linear-gradient(to top, rgb(250 249 245 / 75%), transparent)",
-            }}
-          />
-        ))}
+        <Streaks />
       </Drive>
       <Drive
         fn={headTrack}
@@ -278,7 +305,9 @@ function Hammer() {
           letterSpacing: "0.06em",
         }}
       >
-        {HAMMER_LABEL}
+        <ExtLink href={LINKS.superpowers} style={{ textDecorationThickness: "0.06em" }}>
+          {HAMMER_LABEL}
+        </ExtLink>
       </Drive>
     </Drive>
   );
@@ -409,9 +438,10 @@ const shakeTrack = (tau: number, frame: Frame) => {
 const foldTrack = (tau: number) => plateFold(tau);
 const propTrack = (tau: number) => propFold(tau);
 const whipTrack = (tau: number) => whipUp(tau);
+const WALNUT_IN = 154.6;
 const walnutEnter = (tau: number) => {
-  const u = prog(tau, 154.85, 155.25);
-  return { y: 40 * (1 - u) * (1 - u), scale: u > 0 ? 1 : 0 };
+  const u = prog(tau, WALNUT_IN, WALNUT_IN + 0.4, outCubic);
+  return { y: 40 * (1 - u), opacity: u };
 };
 
 export default function Tip04SuperpowersSegment() {
@@ -429,29 +459,8 @@ export default function Tip04SuperpowersSegment() {
       <Drive fn={foldTrack} style={{ inset: 0, transformOrigin: `50% ${HOME.spinnerY}px` }}>
         <Drive fn={shakeTrack} style={{ inset: 0 }}>
           <Plan />
-          <Gate from={154.85} to={EXIT.foldEnd}>
+          <Gate from={WALNUT_IN} to={EXIT.foldEnd}>
             <RuleRise text={HEADLINE} settleBy={settle} style={abs(200, 236)} />
-            <RuleRise
-              text={S.lines[0] ?? ""}
-              settleBy={settle}
-              className="type-body text-soft"
-              rule={false}
-              style={abs(200, 556)}
-            />
-            <RuleRise
-              text={S.lines[1] ?? ""}
-              settleBy={settle}
-              className="type-body text-clay"
-              rule={false}
-              style={abs(200, 620)}
-            />
-            <TypedMono
-              text={S.footnotes[0] ?? ""}
-              at={155.0}
-              cps={100}
-              className="type-label text-muted"
-              style={{ left: 200, top: 692 }}
-            />
             <Drive fn={propTrack} style={{ inset: 0, transformOrigin: `50% ${WALNUT.ground}px` }}>
               <Drive fn={walnutEnter} style={{ inset: 0 }}>
                 <Walnut />

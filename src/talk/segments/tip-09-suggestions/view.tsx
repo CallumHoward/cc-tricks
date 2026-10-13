@@ -1,6 +1,8 @@
 import { inOutCubic, outCubic, prog } from "#/engine/motion/ease";
 import { keys } from "#/engine/motion/track";
-import { ContextBar, RuleRise, Stamp } from "#/talk/kit/motion";
+import { ambientTime } from "#/engine/stage/stage";
+import { ExtLink } from "#/talk/kit/ext-link";
+import { ContextBar } from "#/talk/kit/motion";
 import { num, put } from "#/talk/kit/motion/dom";
 import {
   CompletionLine,
@@ -9,24 +11,26 @@ import {
   Pile,
   PromptBox,
   ReadToolRow,
-  ScrollbackWhip,
   SpinnerLine,
 } from "#/talk/kit/tui";
 import type { Act } from "#/talk/mascot/actions";
 import { StageMascot } from "#/talk/mascot/stage-mascot";
-import { scriptFor } from "#/talk/script";
+import { LINKS, scriptFor } from "#/talk/script";
 import { BOT_HOME, HOME_ZONES, HomeRest } from "#/talk/segments/shared/home";
-import { TIP_TITLE_LINE, TIP_TITLE_TOP, TipTitle } from "#/talk/segments/shared/tip-title";
+import { TipTitle } from "#/talk/segments/shared/tip-title";
 
-import { During, Echo, FILL, Layer } from "./parts";
+import { During, Echo, FILL, Layer, RisingLine } from "./parts";
 import {
   botX,
-  breakWords,
+  COMPLETION_LINE_STYLE,
   collapseScale,
   foldAt,
   GHOST_TEXT,
+  glintX,
   letterScale,
+  lineRise,
   PILE_KEYS,
+  plateOut,
   riseStart,
   scrollY,
   strikeAt,
@@ -39,19 +43,13 @@ const SCRIPT = scriptFor("t9-suggestions");
 const TITLE = SCRIPT.headline ?? GHOST_TEXT;
 const GHOST = SCRIPT.ui[0] ?? GHOST_TEXT;
 const CODE = SCRIPT.code[0]?.code ?? "";
-const [L1 = "", L2 = ""] = SCRIPT.lines;
-const STAMP = SCRIPT.stamps[0] ?? "";
-const FOOT = SCRIPT.footnotes[0] ?? "";
 
 const PROMPT_Y = HOME.promptTop + HOME.promptHeight / 2;
 /** One mono cell at code size (JetBrains Mono advance 0.6 em × 34 px). */
 const CH = 20.4;
 /** The fresh prompt's caret sits two cells right of the prompt's text origin. */
 const CARET_X = HOME.left + 40 + 2 * CH;
-/** The claim sits right of the transcript under the title; the stat pairs with the docs footnote. */
-const COPY = { x: 1140, top: TIP_TITLE_TOP + TIP_TITLE_LINE + 32 };
 const TAPE = { x: 200, bottom: 740, width: 1200 };
-const STAT = { x: 1080, top: TAPE.bottom + 28 };
 
 const BOT_ACTS: readonly Act[] = [
   { kind: "look", at: T9.ghostAt, dur: 1.1, x: -1, y: 0.7 },
@@ -60,6 +58,7 @@ const BOT_ACTS: readonly Act[] = [
   { kind: "look", at: T9.strikeAt - 0.3, dur: 4.9, x: -1, y: 0.6 },
   { kind: "wave", at: T9.waveAt, dur: T9.at - 0.8 - T9.waveAt, side: "L" },
   { kind: "hop", at: T9.exit.foldAt, height: 50 },
+  { kind: "walk", at: T9.exit.foldAt + 0.16, dur: 0.42, dx: 1, stepRate: 5 },
 ];
 
 /** The re-suggested ghost: struck through, then sucked letter by letter into the caret. */
@@ -122,7 +121,11 @@ function GhostCollapse() {
   );
 }
 
-/** A dim read-head and ghost ✳ sweeping the whole context: each suggestion re-reads it. */
+/**
+ * A dim read-head and ghost ✳ sweeping the whole context: each suggestion re-reads it. A glint
+ * keeps re-reading the swept span and the ✳ keeps turning on ambient time, so the stop reads as
+ * slo-mo.
+ */
 function GhostSweep() {
   return (
     <Layer
@@ -132,9 +135,12 @@ function GhostSweep() {
         const shown = tau > T9.sweepAt && tau < T9.exit.foldAt + T9.exit.foldDur;
         put(el, "visibility", shown ? "visible" : "hidden");
         const x = sweepX(tau);
+        const rho = ambientTime(frame);
         put(el, "width", `${num(x, 1)}px`);
+        const glint = el.children[1]?.firstElementChild as HTMLElement | null;
         const glyph = el.lastElementChild as HTMLElement | null;
-        put(glyph, "transform", `translate(-50%, -50%) rotate(${num(x * 0.06, 2)}deg)`);
+        put(glint, "transform", `translate3d(${num(glintX(rho, x), 1)}px, 0, 0)`);
+        put(glyph, "transform", `translate(-50%, -50%) rotate(${num(rho * 80, 2)}deg)`);
       }}
     >
       <div
@@ -145,10 +151,30 @@ function GhostSweep() {
           borderRadius: 3,
         }}
       />
+      <div style={{ ...FILL, overflow: "hidden", borderRadius: 3 }}>
+        <div
+          style={{
+            position: "absolute",
+            left: -90,
+            top: 0,
+            width: 90,
+            height: "100%",
+            background: "linear-gradient(90deg, transparent, rgb(255 255 255 / 85%), transparent)",
+            filter: "blur(2px)",
+          }}
+        />
+      </div>
       <svg
         viewBox="0 0 100 100"
         aria-hidden
-        style={{ position: "absolute", left: "100%", top: "50%", width: 96, height: 96 }}
+        style={{
+          position: "absolute",
+          left: "100%",
+          top: "50%",
+          width: 96,
+          height: 96,
+          filter: "drop-shadow(0 0 14px rgb(250 249 245 / 55%))",
+        }}
       >
         <path d={GLYPH_PATHS["✳"]} fill="var(--text)" />
       </svg>
@@ -156,14 +182,16 @@ function GhostSweep() {
   );
 }
 
-/** Transcript, copy and the read sweep: everything that folds into the completion line on exit. */
+/** Transcript, title and the read sweep: everything that dollies away on exit. */
 function FoldingPlate() {
   return (
     <Layer
-      style={{ ...FILL, transformOrigin: `0 ${HOME.spinnerY}px` }}
+      style={{ ...FILL, transformOrigin: `960px ${HOME.spinnerY}px` }}
       write={(el, frame) => {
         const f = foldAt(frame.tau);
-        put(el, "transform", `scaleY(${num(1 - f, 4)})`);
+        const out = plateOut(f);
+        put(el, "transform", `translate3d(0, ${num(out.y, 2)}px, 0) scale(${num(out.scale, 4)})`);
+        put(el, "opacity", num(out.opacity, 3));
         put(el, "visibility", f >= 1 ? "hidden" : "visible");
       }}
     >
@@ -179,63 +207,34 @@ function FoldingPlate() {
           outAt={riseStart(TITLE, T9.titleSettle) - 0.4}
           style={{ top: HOME.echoY, transform: "translateY(-50%)" }}
         />
-        <ReadToolRow
-          tool="Update"
-          arg="settings.json"
-          output={[{ text: CODE, kind: "add" }]}
-          at={T9.updateAt}
-          outputAt={T9.updateOutAt}
-          style={{ position: "absolute", left: HOME.textX, top: HOME.echoY + 56 }}
-        />
+        <ExtLink
+          href={LINKS.settings}
+          style={{ position: "absolute", left: HOME.textX, top: HOME.echoY + 56, display: "block" }}
+        >
+          <ReadToolRow
+            tool="Update"
+            arg="settings.json"
+            output={[{ text: CODE, kind: "add" }]}
+            at={T9.updateAt}
+            outputAt={T9.updateOutAt}
+          />
+        </ExtLink>
       </Layer>
 
       <TipTitle text={TITLE} settleBy={T9.titleSettle} exit={T9.exit.foldAt} />
-      <RuleRise
-        text={breakWords(L1, [5])}
-        settleBy={T9.copySettle}
-        className="type-body"
-        rule={false}
-        style={{ position: "absolute", left: COPY.x, top: COPY.top }}
-      />
-      <RuleRise
-        text={L2}
-        settleBy={T9.copySettle + 0.12}
-        className="type-body"
-        rule={false}
-        style={{ position: "absolute", left: STAT.x, top: STAT.top, color: "var(--clay-hi)" }}
-      />
-      <Stamp
-        text={STAMP}
-        settleBy={T9.stampSettle}
-        rotate={-6}
-        style={{ left: STAT.x + 340, top: STAT.top + 100 }}
-      />
       <GhostSweep />
-      <RuleRise
-        text={FOOT}
-        settleBy={T9.footSettle}
-        className="type-label"
-        rule={false}
-        style={{ position: "absolute", left: TAPE.x, top: TAPE.bottom + 26, color: "var(--muted)" }}
-      />
     </Layer>
   );
 }
 
 /** The exit line: the ghost proposes `✻ Crunched for 45s`, then it solidifies. */
 function ExitLine() {
-  const lineStyle = {
-    position: "absolute",
-    left: HOME.textX,
-    top: HOME.spinnerY,
-    transform: "translateY(-50%)",
-  } as const;
   return (
-    <>
+    <RisingLine rise={lineRise}>
       <div style={{ opacity: 0.42 }}>
         <CompletionLine
           className="type-label"
-          style={lineStyle}
+          style={COMPLETION_LINE_STYLE}
           pastVerb="Crunched"
           duration="45s"
           at={T9.exit.ghostLineAt}
@@ -252,12 +251,12 @@ function ExitLine() {
       >
         <CompletionLine
           className="type-label"
-          style={lineStyle}
+          style={COMPLETION_LINE_STYLE}
           pastVerb="Crunched"
           duration="45s"
         />
       </Layer>
-    </>
+    </RisingLine>
   );
 }
 
@@ -310,15 +309,16 @@ function Plate() {
   );
 }
 
+/** The plate hands over to the shared home shot once the completion line has risen away. */
+const HOME_FROM = T9.exit.riseAt + T9.exit.riseDur;
+
 export default function Tip09SuggestionsSegment() {
   return (
     <During from={T9.start} to={T9.end}>
-      <ScrollbackWhip at={T9.exit.whipAt} dur={T9.exit.whipDur} distance={1080}>
+      <During from={T9.start - 1} to={HOME_FROM}>
         <Plate />
-        <div style={{ ...FILL, transform: "translateY(-1080px)" }}>
-          <HomeRest pile={9} from={T9.exit.whipAt} to={Number.POSITIVE_INFINITY} />
-        </div>
-      </ScrollbackWhip>
+      </During>
+      <HomeRest pile={9} from={HOME_FROM} to={Number.POSITIVE_INFINITY} />
     </During>
   );
 }

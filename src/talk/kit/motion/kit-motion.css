@@ -122,14 +122,24 @@
 
 .km-rr-mask {
   display: block;
-  clip-path: inset(-0.6em -0.2em 0 -0.2em);
+
+  /* Wide right inset leaves room for the loose tracking the line lands with */
+  clip-path: inset(-0.6em -2em 0 -0.3em);
   white-space: nowrap;
 }
 
 .km-rr-word {
   display: inline-block;
+}
+
+.km-rr-glyph {
+  display: inline-block;
   transform: translate3d(0, 112%, 0);
-  will-change: transform;
+  transform-origin: 0 100%;
+}
+
+.km-rr-numeral {
+  transform-origin: 50% 100%;
 }
 
 .km-rr-rule {
@@ -139,8 +149,27 @@
   width: 100%;
   height: 4px;
   background: var(--clay);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--clay) 55%, transparent);
   transform: scaleX(0);
   transform-origin: 0 50%;
+}
+
+/* A slow travelling highlight, so the rule still reads as alive in a slo-mo hold */
+.km-rr-glint {
+  position: absolute;
+  top: -10px;
+  left: 0;
+  width: 22%;
+  height: 24px;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--clay) 25%, #fff8ee) 0 18%,
+    color-mix(in srgb, var(--clay) 60%, transparent) 45%,
+    transparent
+  );
+  opacity: 0;
+  mix-blend-mode: screen;
+  pointer-events: none;
 }
 
 /* Stamp */

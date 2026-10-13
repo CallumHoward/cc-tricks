@@ -7,16 +7,19 @@ import { NOTION_SHOWNOTES } from "#/talk/shownotes-url";
 import OutroSegment from "./view";
 
 describe("OutroSegment", () => {
-  it("should set the thesis with its italic phrase at the thesis stop", () => {
+  it("should show the bot without the thesis sentence or the link at the thesis stop", () => {
     renderAt(285.5, <OutroSegment />);
-    expect(screen.getByText("context")).toBeVisible();
-    expect(screen.getByText("management.")).toBeVisible();
+    expect(screen.getByRole("img", { name: "the bot" })).toBeVisible();
+    expect(screen.queryByText(/context management/i)).toBeNull();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("should show the shownotes QR and the references at the last stop", () => {
+  it("should link the label beside the QR to the show notes at the last stop", () => {
     renderAt(293.5, <OutroSegment />);
     expect(screen.getByTitle(`QR code linking to ${NOTION_SHOWNOTES}`)).toBeInTheDocument();
-    expect(screen.getByText("Orchestrating Parallel Agents")).toBeVisible();
-    expect(screen.getByText("Shownotes,")).toBeVisible();
+    const link = screen.getByRole("link");
+    expect(link).toBeVisible();
+    expect(link).toHaveAttribute("href", NOTION_SHOWNOTES);
+    expect(link).toHaveAttribute("target", "_blank");
   });
 });

@@ -83,6 +83,3 @@ export const LAYA_BARS: readonly LayaBar[] = [
 ];
 
 export const LAYA_INPUT = LAYA_RUN.state.subject;
-
-export const LAYA_FOOT =
-  "Laya: 421M parameters, ~33 ms per decision, runs locally on Apple Silicon";

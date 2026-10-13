@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { qrModules } from "#/talk/kit/data/logic";
+import { maxStep, sampleSpan } from "#/talk/segments/shared/test-utils";
 
 import {
   barWidthAt,
@@ -8,18 +9,17 @@ import {
   elapsedSeconds,
   ESTIMATED_WALL,
   flightStart,
-  homeY,
+  homeCrane,
   INK_FROM,
+  LABEL,
   OUT,
   PLATE,
+  plateCrane,
   plateFed,
   plateRules,
   QR,
   RECAP,
-  revealEdge,
-  REVEAL_SLANT,
   SCROLLBACK,
-  thesisLines,
   tileAt,
 } from "./tracks";
 
@@ -27,9 +27,8 @@ const { size: n, modules } = qrModules("http://localhost:3000/shownotes");
 const held = modules.slice(-10);
 const px = QR.size / n;
 const settle = OUT.qrAt - 0.8;
-// The reference column as rendered (px)
-const REFS_LEFT = 820;
-const REFS_BOTTOM = 725;
+// The label's bottom edge as rendered (one 56 px line, plus descenders)
+const LABEL_BOTTOM = LABEL.top + 84;
 
 describe("outro tracks", () => {
   it("should land every tile exactly on its held-back module by the settle time", () => {
@@ -79,12 +78,6 @@ describe("outro tracks", () => {
     );
   });
 
-  it("should split the thesis at its italic phrase", () => {
-    expect(
-      thesisLines("It's basically all about context management.", "context management"),
-    ).toEqual(["It's basically all about", "context management."]);
-  });
-
   it("should recap all eleven completion lines in talk order", () => {
     expect(RECAP).toHaveLength(11);
     expect(RECAP[0]).toEqual({ pastVerb: "Churned", duration: "1m 30s" });
@@ -110,31 +103,34 @@ describe("outro tracks", () => {
     }
   });
 
-  it("should keep flying tiles below the reference column", () => {
+  it("should keep flying tiles below the show notes label", () => {
     const tops = Array.from({ length: 10 }, (_, i) =>
       Array.from({ length: 21 }, (_, k) =>
         tileAt(i, flightStart(i) + (k / 20) * OUT.flyDur, held, n),
       ),
     )
       .flat()
-      .filter((t) => t.x > REFS_LEFT - t.size / 2)
+      .filter((t) => t.x > LABEL.left - t.size / 2)
       .map((t) => t.y - t.size / 2);
     expect(tops.length).toBeGreaterThan(0);
-    expect(Math.min(...tops)).toBeGreaterThan(REFS_BOTTOM);
+    expect(Math.min(...tops)).toBeGreaterThan(LABEL_BOTTOM);
   });
 
   it("should hold the home shot at identity through the match cut", () => {
-    expect(OUT.whip - OUT.start).toBeGreaterThanOrEqual(0.2);
-    for (const tau of [OUT.start, OUT.start + 0.05, OUT.whip]) expect(homeY(tau)).toBe(0);
+    expect(OUT.craneIn - OUT.start).toBeGreaterThanOrEqual(0.2);
+    for (const tau of [OUT.start, OUT.start + 0.05, OUT.craneIn])
+      expect(homeCrane(tau)).toEqual({ y: 0, scale: 1 });
   });
 
-  it("should settle the recap on tip 1 before the bone plate sweeps in", () => {
-    expect(OUT.whip + OUT.whipDur).toBeLessThanOrEqual(OUT.recapAt);
+  it("should settle the recap on tip 1 before the camera cranes on to the bar", () => {
+    expect(OUT.craneIn + OUT.craneInDur).toBeLessThanOrEqual(OUT.recapAt);
     expect(OUT.wipeFrom - (OUT.recapAt + OUT.recapDur)).toBeGreaterThanOrEqual(0.3);
   });
 
-  it("should sweep the bone plate's edge from off the left to off the right", () => {
-    expect(revealEdge(OUT.wipeFrom) + REVEAL_SLANT).toBeLessThanOrEqual(0);
-    expect(revealEdge(OUT.wipeTo) - REVEAL_SLANT).toBeGreaterThanOrEqual(1920);
+  it("should crane on to the bar over at least 0.35 s without jumping", () => {
+    expect(OUT.wipeDur).toBeGreaterThanOrEqual(0.35);
+    const ys = sampleSpan((tau) => plateCrane(tau).y, OUT.wipeFrom, OUT.wipeDur);
+    expect(maxStep(ys)).toBeLessThan(1080 / 20);
+    expect(plateCrane(OUT.wipeFrom + OUT.wipeDur)).toEqual({ y: 1080, scale: 1 });
   });
 });

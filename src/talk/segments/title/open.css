@@ -86,9 +86,11 @@
 .so-sky {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(circle at var(--sun-x) var(--sun-y), var(--clay-wash-35) 0, transparent 30%),
-    linear-gradient(180deg, var(--bg-deep) 0%, var(--bg) 70%);
+  background: radial-gradient(
+    circle at var(--sun-x) var(--sun-y),
+    var(--clay-wash-35) 0,
+    transparent 30%
+  );
 }
 
 .so-horizon {
@@ -130,11 +132,6 @@
   white-space: nowrap;
   color: var(--soft);
   letter-spacing: 0.02em;
-}
-
-/* Spoiler */
-.so-spoiler-kicker {
-  color: var(--clay);
 }
 
 /* Foreword: composer */
@@ -243,10 +240,10 @@
   visibility: hidden;
 }
 
+/* Only the horizon rule: the shared backdrop shows through the floor */
 .fw-floor {
   position: absolute;
   border-top: 3px solid var(--hairline);
-  background: linear-gradient(180deg, var(--bg-deep), var(--void));
 }
 
 .fw-light {
@@ -287,18 +284,25 @@
   box-shadow: inset 4px 0 0 var(--clay);
 }
 
-/* Taste lines: display serif, numerals hanging in clay */
-.fw-taste-line {
+/* Taste and care: one display word each, letters rising from a baseline mask */
+.fw-word {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: flex;
+  clip-path: inset(-0.4em -1em 0 -1em);
+  padding-bottom: 0.08em;
   color: var(--text);
   white-space: nowrap;
 }
 
-.fw-taste-line + .fw-taste-line {
-  margin-top: 0.45em;
+.fw-word > span {
+  display: inline-block;
+  transform: translate3d(0, 118%, 0);
+  will-change: transform;
 }
 
-.fw-taste-num {
-  flex: none;
-  width: 1.15em;
+.fw-word-care {
+  color: var(--clay-hi);
+  font-style: italic;
 }

@@ -5,21 +5,14 @@ import { mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import process from "node:process";
 
-import { chromium } from "@playwright/test";
-
+import { openStagePage } from "./stage-page.ts";
 import { frameFileName, parseStillsArgs, stillUrl, type StillFrame } from "./stills-args.ts";
 
 const args = parseStillsArgs(process.argv.slice(2), (path) => readFileSync(path, "utf8"));
 const out = resolve(args.out);
 mkdirSync(join(out, "labels"), { recursive: true });
 
-// New headless Chrome gets a real GPU adapter (WebGPU + WebGL); headless-shell renders black.
-const browser = await chromium.launch({ channel: "chrome" });
-const page = await browser.newPage({
-  viewport: { width: 1920, height: 1080 },
-  deviceScaleFactor: 1,
-});
-page.on("pageerror", (error) => console.error(`[page] ${error.message}`));
+const { browser, page } = await openStagePage();
 
 const shots: string[] = [];
 for (const [i, frame] of args.frames.entries()) {

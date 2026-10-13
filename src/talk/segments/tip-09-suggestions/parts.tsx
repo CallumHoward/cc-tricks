@@ -53,6 +53,28 @@ export function Layer({
   );
 }
 
+/** Glides its children up and fades them as `rise(τ)` runs 0 → 1. */
+export function RisingLine({
+  rise,
+  children,
+}: {
+  rise: (tau: number) => number;
+  children: ReactNode;
+}) {
+  return (
+    <Layer
+      style={FILL}
+      write={(el, frame) => {
+        const u = rise(frame.tau);
+        put(el, "transform", `translate3d(0, ${num(-96 * u, 2)}px, 0)`);
+        put(el, "opacity", num(1 - u, 3));
+      }}
+    >
+      {children}
+    </Layer>
+  );
+}
+
 /**
  * The submitted prompt as it sits in the transcript: `❯ text`, rising through its mask at `at` and
  * sinking back at `outAt`.

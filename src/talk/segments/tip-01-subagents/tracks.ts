@@ -1,8 +1,9 @@
 import { clamp, inOutCubic, inOutExpo, outCubic, outExpo, prog } from "#/engine/motion/ease";
-import { keys, sampleKeys } from "#/engine/motion/track";
+import { SPRINGS } from "#/engine/motion/spring";
 import type { StyleValues } from "#/engine/stage/applier";
+import { springFrom } from "#/talk/kit/motion/schedule";
 import { BOT_HOME } from "#/talk/segments/shared/home";
-import { foldFlat, hopArc, hopFlight, whipScroll } from "#/talk/segments/shared/tip-turn";
+import { completionRise, hopArc, hopFlight, plateExit } from "#/talk/segments/shared/tip-turn";
 
 /** Visible window of this segment (registry: start + tail → next start + tail). */
 export const WIN = Object.freeze({ start: 47.4, end: 69.9 });
@@ -19,12 +20,12 @@ export const TURN = Object.freeze({
   spinnerAt: 48.45,
 });
 
-/** Exit: fold → completion line → pocket → whip → home shot with one tile. */
+/** Exit: plate dollies out → completion line → pocket → line rises away → home shot with one tile. */
 export const EXIT = Object.freeze({
   fold: 68.5,
-  foldEnd: 68.85,
+  foldEnd: 69.0,
   dockUp: 68.6,
-  completeAt: 68.8,
+  completeAt: 68.9,
   pocketAt: 69.15,
   whipAt: 69.42,
   whipEnd: 69.8,
@@ -42,156 +43,107 @@ export function dockY(tau: number): number {
 
 // Tip 1 · t1-agents ------------------------------------------------------------------------------
 
-export const ROW = Object.freeze({ left: 200, width: 1100, mainTop: 542, top0: 592, gap: 46 });
-
-export const rowTop = (i: number): number => ROW.top0 + i * ROW.gap;
-
-export const SUBAGENTS = [
-  { action: "Normalizing voice gains", tokens: 171_900, lag: 230 },
-  { action: "Reading _measure.js", tokens: 150_500, lag: 240 },
-  { action: "Removing clip paths", tokens: 217_600, lag: 215 },
-  { action: "Writing S5 bars", tokens: 162_900, lag: 245 },
-  { action: "Inspecting fold shading", tokens: 231_200, lag: 225 },
-] as const;
-
-/** Spokes snap off the ✳ 0.25 apart (cues 49.1 … 50.0) and fly 0.36 to their bullets. */
-const SPOKE = Object.freeze({ first: 49.1, gap: 0.25, flight: 0.36 });
-
-export function spokeLaunch(i: number): number {
-  return i === 0 ? SPOKE.first : SPOKE.first + 0.15 + (i - 1) * SPOKE.gap;
-}
-
-export const spokeLand = (i: number): number => spokeLaunch(i) + SPOKE.flight;
-
-/** The big ✳ grows out of the spinner glyph, sheds five spokes, then sinks back into it. */
-const STAR = Object.freeze({ x: 218, y: 500, grow: 48.95, sink: 50.25, size: 150 });
-
-/** Spoke angles (deg) of an 8-spoke ✳; the first five snap off. */
-export const SPOKE_ANGLES = [90, 45, 135, 0, 180, 270, 225, 315] as const;
-
-export type SpokeState = {
-  x: number;
-  y: number;
-  rotate: number;
-  /** 0 = spoke capsule, 1 = bullet ring */
-  ring: number;
-  visible: boolean;
-};
-
-/** Where a spoke is at τ: on the star, mid-arc, or landed as row i's bullet. */
-export function spokeAt(i: number, tau: number): SpokeState {
-  const angle = SPOKE_ANGLES[i] ?? 0;
-  const grow = starScale(tau);
-  const r = (STAR.size / 2) * 0.55 * grow;
-  const rad = (angle * Math.PI) / 180;
-  const home = { x: STAR.x + Math.cos(rad) * r, y: STAR.y + Math.sin(rad) * r };
-  if (i >= SUBAGENTS.length) {
-    return { ...home, rotate: angle, ring: 0, visible: grow > 0.02 };
-  }
-  const launch = spokeLaunch(i);
-  const u = prog(tau, launch, launch + SPOKE.flight, outCubic);
-  if (u <= 0) return { ...home, rotate: angle, ring: 0, visible: grow > 0.02 };
-  const target = { x: ROW.left + 9, y: rowTop(i) + 23.4 };
-  // Arc: overshoot right, then fall into the bullet column.
-  const bulge = Math.sin(u * Math.PI) * 120;
-  return {
-    x: home.x + (target.x - home.x) * u + bulge,
-    y: home.y + (target.y - home.y) * u,
-    rotate: angle + 270 * u,
-    ring: prog(u, 0.55, 1),
-    visible: tau < spokeLand(i) + 0.12,
-  };
-}
-
-/** Scale of the overlay ✳ relative to its full size (0 hidden). */
-export function starScale(tau: number): number {
-  const grow = prog(tau, STAR.grow, STAR.grow + 0.16, outExpo);
-  const sink = prog(tau, STAR.sink, STAR.sink + 0.3, inOutExpo);
-  const small = 36 / STAR.size;
-  if (tau < STAR.grow) return 0;
-  if (tau >= STAR.sink + 0.3) return 0;
-  return small + (1 - small) * grow - (1 - small) * sink;
-}
-
-/** Hold ticks: each subagent counter steps its last digit up at these τ, avoiding the stills. */
-export const TICKS = Object.freeze({ at: [52.8, 53.8] as const, snap: 0.1 });
-
-/**
- * Subagent counters: roll up and detent on a whole last digit by 51.2, then tick one digit at a
- * time through the hold, resting on whole digits between the 0.1 τ-s snaps.
- */
-export function subagentTokens(i: number): (tau: number) => number {
-  const a = SUBAGENTS[i] ?? SUBAGENTS[0];
-  const base = a.tokens - 100 * TICKS.at.length;
-  const roll = keys([spokeLand(i), 0], [51.2, base, outCubic]);
-  return (tau) => {
-    if (tau < 51.2) return sampleKeys(roll, tau);
-    const steps = TICKS.at.reduce((n, t) => n + prog(tau, t, t + TICKS.snap, outCubic), 0);
-    return base + 100 * steps;
-  };
-}
-
-/** The "See:" label types, then the YAML card types its first line. */
-export const LABEL_AT = 50.3;
-export const YAML_AT = 55.45;
-
-export const MAIN_TOKENS_FINAL = 97_300;
-export const MAIN_TOKENS = keys([49.0, 0], [50.6, MAIN_TOKENS_FINAL, outCubic]);
-
-/** Context bar under each counter: full width is a 250k window. */
-export const CONTEXT = Object.freeze({
-  capacity: 250_000,
-  left: 830,
-  top: 40,
-  width: 270,
-  height: 5,
+/** The real subagent TUI screenshot (1786×886), framed as a floating window. */
+export const SHOT = Object.freeze({
+  src: "/talk/refs/subagents-tui.webp",
+  left: 200,
+  top: 290,
+  width: 1150,
+  height: Math.round((1150 * 886) / 1786),
+  /** Screenshot px → frame px. */
+  k: 1150 / 1786,
 });
 
-export const contextFill = (tokens: number): number => clamp(tokens / CONTEXT.capacity);
-export const SPINNER_TOKENS = keys([48.6, 0], [50.9, 97_300, outCubic]);
-export const SPINNER_ELAPSED = keys([48.6, 0], [50.9, 1769, outCubic]);
-export const SPINNER_VERB = [
-  { at: 0, verb: "Orchestrating" },
-  { at: 50.9, verb: "Onioning" },
-] as const;
+/** The five general-purpose rows in screenshot px (x, y, w, h). */
+const ROWS_PX = Object.freeze({ x: 24, y: 572, w: 1676, h: 270 });
 
-/** Rows fold into the agent card: each squashes onto the main row, staggered. */
-export function rowFold(i: number, tau: number): StyleValues {
-  const start = HOLD_END.agents + i * 0.04;
-  const k = prog(tau, start, start + 0.32, inOutExpo);
-  const y = (ROW.mainTop - (i < 0 ? ROW.mainTop : rowTop(i))) * k;
-  return { y, scaleY: 1 - 0.85 * k, opacity: 1 - k };
+/** The rows' highlight box in frame px, relative to the card. */
+export const ROWS_BOX = Object.freeze({
+  left: ROWS_PX.x * SHOT.k,
+  top: ROWS_PX.y * SHOT.k,
+  width: ROWS_PX.w * SHOT.k,
+  height: ROWS_PX.h * SHOT.k,
+});
+
+const SHOT_IN = 49.05;
+const SHOT_SPRING = SPRINGS.LIFT;
+const SHOT_OUT = Object.freeze({ start: HOLD_END.agents, end: HOLD_END.agents + 0.5 });
+
+export type Cam3D = {
+  x: number;
+  y: number;
+  scale: number;
+  rotateX: number;
+  rotateY: number;
+  opacity: number;
+};
+
+/**
+ * Crane in: the window rises from below tipped back 32°, settles flat on a slow spring by `at −
+ * 0.8`, floats on ambient time through the stop, then dollies back and fades.
+ */
+export function shotCam(tau: number, rho: number): Cam3D {
+  const k = springFrom(tau, SHOT_IN, SHOT_SPRING);
+  const out = prog(tau, SHOT_OUT.start, SHOT_OUT.end, inOutCubic);
+  const float = prog(tau, SHOT_IN + 0.4, SHOT_IN + 1.6, inOutCubic) * (1 - out);
+  return {
+    x: 0,
+    y: 300 * (1 - k) - 70 * out + float * 10 * Math.sin(rho * 0.9),
+    scale: 0.84 + 0.16 * k - 0.08 * out + float * 0.012 * (1 - Math.cos(rho * 0.55)),
+    rotateX: 32 * (1 - k) + 10 * out + float * 2.2 * Math.sin(rho * 0.7 + 1),
+    rotateY: float * 3.2 * Math.sin(rho * 0.45),
+    opacity: prog(tau, SHOT_IN, SHOT_IN + 0.3) * (1 - out),
+  };
 }
 
-/** Spinner line folds with the rows; it does not return. */
-export function spinnerFold(tau: number): StyleValues {
-  const u = prog(tau, HOLD_END.agents, HOLD_END.agents + 0.35, inOutExpo);
-  return { y: 42 * u, scaleY: 1 - 0.85 * u, opacity: 1 - u };
+/** The dim-all-but-the-rows mask opens from the main row down over the five subagents. */
+export function rowsReveal(tau: number): { open: number; glow: number } {
+  const open = prog(tau, 50.35, 51.0, inOutCubic);
+  return { open, glow: prog(tau, 50.55, 51.15, outCubic) };
 }
+
+/** The spinner line hands off to the window, which carries the same line at its top. */
+export function spinnerOut(tau: number): StyleValues {
+  const u = prog(tau, SHOT_IN, SHOT_IN + 0.4, inOutCubic);
+  return { y: -36 * u, opacity: 1 - u };
+}
+
+/** The previous-talk link rises in under the window once it has landed. */
+export function linkIn(tau: number): StyleValues {
+  const u = springFrom(tau, 50.6, SPRINGS.LAND);
+  const out = prog(tau, SHOT_OUT.start, SHOT_OUT.end - 0.1, inOutCubic);
+  return { y: 24 * (1 - u) - 40 * out, opacity: Math.min(1, u * 2) * (1 - out) };
+}
+
+/** The "See:" label and the YAML card's first line. */
+export const YAML_AT = 55.45;
 
 // Tip 1 · t1-model-effort ------------------------------------------------------------------------
 
 export const CARD = Object.freeze({ left: 200, top: 400, width: 1240, chX: 20.4, lineH: 45.9 });
 
 /** Centre y of YAML line `i` inside the CodeBlock. */
-export const cardLineY = (i: number): number =>
-  CARD.top + 54 + 28 + CARD.lineH * i + CARD.lineH / 2;
+const cardLineY = (i: number): number => CARD.top + 54 + 28 + CARD.lineH * i + CARD.lineH / 2;
 
 /** Left x of column `col` in the YAML panel. */
-export const cardColX = (col: number): number => CARD.left + 40 + col * CARD.chX;
+const cardColX = (col: number): number => CARD.left + 40 + col * CARD.chX;
 
-const CARD_OPEN = Object.freeze({ start: 54.85, end: 55.5 });
-export const CARD_CLOSE = Object.freeze({ start: 60, end: 60.4 });
+const CARD_IN = 54.9;
+export const CARD_CLOSE = Object.freeze({ start: 60, end: 60.45 });
 
-/** The card unfolds from the folded row line and folds back into it for the advisor. */
+/** The card rises in on a spring as the screenshot dollies away, and lifts out for the advisor. */
 export function cardFrame(tau: number): StyleValues {
-  const open = prog(tau, CARD_OPEN.start, CARD_OPEN.end, outExpo);
-  const close = prog(tau, CARD_CLOSE.start, CARD_CLOSE.end, inOutExpo);
-  const k = open * (1 - close);
+  const k = springFrom(tau, CARD_IN, SPRINGS.LIFT);
+  const close = prog(tau, CARD_CLOSE.start, CARD_CLOSE.end, inOutCubic);
   return {
-    scaleY: Math.max(0.004, k),
-    opacity: tau < CARD_OPEN.start || close >= 1 ? 0 : 1,
+    y: 120 * (1 - k) - 60 * close,
+    opacity: Math.min(1, prog(tau, CARD_IN, CARD_IN + 0.3)) * (1 - close),
   };
+}
+
+/** Ambient float of the card: a slow tilt that keeps the stop alive. */
+export function cardFloat(rho: number): { rotateX: number; rotateY: number } {
+  return { rotateX: 1.6 * Math.sin(rho * 0.6 + 0.5), rotateY: 2.6 * Math.sin(rho * 0.42) };
 }
 
 /** Chip slots: `haiku` on line 3 col 7, `low` on line 4 col 8 (with 0.4ch padding each side). */
@@ -214,7 +166,7 @@ export function chipCover(i: number): { left: number; top: number; width: number
 export function chipAt(i: number, tau: number): StyleValues {
   const c = CHIPS[i] ?? CHIPS[0];
   const slot = { x: cardColX(c.col) - 0.4 * CARD.chX, y: cardLineY(c.line) - 23 };
-  if (tau < c.launch || tau >= CARD_CLOSE.start + 0.05) return { x: slot.x, y: slot.y, scale: 0 };
+  if (tau < c.launch) return { x: slot.x, y: slot.y, scale: 0 };
   if (i === 1) {
     const u = prog(tau, c.launch, c.land, outExpo);
     const drift = tau < c.land ? 6 : 6 * (1 - clamp((tau - c.land) / 2.5));
@@ -244,7 +196,6 @@ export const ADV = Object.freeze({
   rowsAt: 62.55,
   cratesAt: 63.4,
   summaryAt: 64.6,
-  l2At: 64.45,
 });
 
 /** The scan bar's sweep: it reads the transcript stack, then leaves. */
@@ -339,7 +290,8 @@ export function botOffset(tau: number): { x: number; y: number } {
 
 // Exit -----------------------------------------------------------------------------------------
 
-/** Everything on the plate folds into the completion line at the spinner row. */
-export const plateFold = (tau: number): StyleValues => foldFlat(tau, EXIT.fold, EXIT.foldEnd);
+/** The plate dollies back and fades before the completion line appears. */
+export const plateOut = (tau: number): StyleValues => plateExit(tau, EXIT.fold, EXIT.foldEnd);
 
-export const whipUp = (tau: number): StyleValues => whipScroll(tau, EXIT.whipAt, EXIT.whipEnd);
+export const completionOut = (tau: number): StyleValues =>
+  completionRise(tau, EXIT.whipAt, EXIT.whipEnd);
