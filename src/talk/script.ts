@@ -520,7 +520,7 @@ export const SCRIPT = {
         ],
         labels: [],
         footnotes: [],
-        stamps: ["NOT CLAUDE CODE"],
+        stamps: [],
       },
       {
         headline: "Cloud sessions credit",
@@ -534,7 +534,7 @@ export const SCRIPT = {
         lines: ["Artifact work uses 50% less of your 5-hour limit."],
         labels: ["Claude and Cowork · not Claude Code · not weekly"],
         footnotes: ["Ends Friday 16 Oct, 5:59 PM AEDT"],
-        stamps: [],
+        stamps: ["NOT CLAUDE CODE"],
       },
     ],
     sources: [

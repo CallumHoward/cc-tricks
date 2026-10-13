@@ -86,12 +86,12 @@ describe("tip 10 tracks", () => {
     });
   });
 
-  it("should keep stamps on the API credits and cloud tickets only", () => {
+  it("should keep stamps on the cloud and artifact tickets only", () => {
     expect(CARDS.map((card, i) => ticketCopy(card, i).stamp)).toEqual([
       undefined,
-      "NOT CLAUDE CODE",
-      "CLOSED",
       undefined,
+      "CLOSED",
+      "NOT CLAUDE CODE",
     ]);
   });
 

@@ -52,9 +52,21 @@ const colX = (col: number) => BOARD.left + (col % 2) * (colW(0) * BOARD.scale + 
 const HEAD = { top: 196, scale: 0.54 };
 /** Stamp centres as fractions of their ticket's rendered box, inside its body. */
 const STAMP_AT: Readonly<Record<number, { x: number; y: number }>> = {
-  1: { x: 0.68, y: 0.79 },
   2: { x: 0.5, y: 0.8 },
+  3: { x: 0.71, y: 0.13 },
 };
+
+/** How each stamp lands: CLOSED last and tilted right, NOT CLAUDE CODE first and tilted left. */
+const stampLook = (text: string) =>
+  text === "CLOSED"
+    ? { settleBy: T10.closedSettle, rotate: 6 }
+    : { settleBy: T10.notCcSettle, rotate: -4 };
+
+/** A stamp's place on its ticket, from the ticket's rendered box. */
+function stampPlace(index: number, col: number) {
+  const at = STAMP_AT[index] ?? { x: 0.6, y: 0.7 };
+  return { left: colX(col) + colW(col) * BOARD.scale * at.x, top: ROW_H * at.y };
+}
 
 const PEEK_ACTS: readonly Act[] = [
   { kind: "surprised", at: T10.peekAt + 0.3, dur: 0.3 },
@@ -153,9 +165,11 @@ function BoardTicket({ index }: { index: number }) {
 
 function Rail({ row, rate }: { row: 0 | 1; rate: number }) {
   const top = BOARD.railTops[row];
-  const stamps = [0, 1]
-    .map((col) => ({ col, index: row * 2 + col }))
-    .filter(({ index }) => CARDS[index]?.stamp);
+  const stamps = [0, 1].flatMap((col) => {
+    const index = row * 2 + col;
+    const text = CARDS[index]?.stamp;
+    return text ? [{ col, index, text }] : [];
+  });
   return (
     <>
       <Layer
@@ -189,7 +203,7 @@ function Rail({ row, rate }: { row: 0 | 1; rate: number }) {
       >
         <BoardTicket index={row * 2} />
         <BoardTicket index={row * 2 + 1} />
-        {stamps.map(({ col, index }) => (
+        {stamps.map(({ col, index, text }) => (
           <Layer
             key={index}
             style={FILL}
@@ -198,14 +212,10 @@ function Rail({ row, rate }: { row: 0 | 1; rate: number }) {
             }
           >
             <Stamp
-              text={CARDS[index]?.stamp ?? ""}
-              settleBy={index === 1 ? T10.notCcSettle : T10.closedSettle}
-              rotate={index === 1 ? -4 : 6}
+              text={text}
+              {...stampLook(text)}
               seed={index + 2}
-              style={{
-                left: colX(col) + colW(col) * BOARD.scale * (STAMP_AT[index]?.x ?? 0.6),
-                top: ROW_H * (STAMP_AT[index]?.y ?? 0.7),
-              }}
+              style={stampPlace(index, col)}
             />
           </Layer>
         ))}
